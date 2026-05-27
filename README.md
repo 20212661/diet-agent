@@ -15,7 +15,45 @@
 - 📊 **工作流仪表盘** — 可视化「买菜→做饭→反馈」全流程
 - 💬 **AI 聊天** — 自然语言操作一切（"我今天很累" → 低能量方案）
 
-## 🚀 快速开始
+## � 系统展示
+
+### 工作流仪表盘
+
+![仪表盘](docs/images/dashboard.png)
+
+> 主界面：工作流进度 + 快捷操作 + 食材库存 + AI 聊天
+
+### 首次启动引导向导
+
+![引导向导 Step 1](docs/images/onboarding-step1.png)
+
+> 4 步引导：饮食目标 → 厨房配置 → 常备食材 → 开始使用
+
+### AI 聊天交互
+
+![AI 聊天](docs/images/chat.png)
+
+> 自然语言操作：生成做饭计划、搜索菜谱、记录三餐
+
+### 终端模式（TUI）
+
+![TUI 终端](docs/images/tui.png)
+
+> `diet-agent --tui` 在终端中与 AI 聊天，适合调试和快速操作
+
+### CLI 一键启动
+
+```
+🍺 晚饭工作流 — 个人饮食管理智能体
+
+用法:
+  diet-agent              启动 Web 服务（默认 http://localhost:3001）
+  diet-agent --tui        启动终端聊天模式
+  diet-agent --port 8080  指定端口
+  diet-agent --help       显示帮助
+```
+
+## �🚀 快速开始
 
 ### 1. 安装
 
@@ -35,12 +73,13 @@ cp .env.example .env
 
 ```env
 # DeepSeek（推荐，性价比高）
-DEEPSEEK_API_KEY=sk-xxx
+DEEPSEEK_API_KEY=sk-your-deepseek-key-here
 
 # 或者 智谱 GLM（国内访问稳定）
-ZAI_API_KEY=xxx.xxx
+ZAI_API_KEY=your-zai-key-here
 
 # 或者 OpenAI / Anthropic / OpenRouter
+OPENAI_API_KEY=your-openai-key-here
 ```
 
 > 💡 不设置 `MODEL_PROVIDER` 时会自动检测已配置的 Key，优先级：DeepSeek → GLM → OpenAI → Anthropic → OpenRouter。
@@ -48,10 +87,14 @@ ZAI_API_KEY=xxx.xxx
 ### 3. 启动
 
 ```bash
-# 开发模式（推荐）
+# 方式一：全局命令（推荐）
+npm link          # 首次需要注册
+diet-agent        # 一键启动
+
+# 方式二：开发模式
 npm run dev
 
-# 编译后启动
+# 方式三：编译后启动
 npm run build && npm start
 ```
 
