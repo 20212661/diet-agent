@@ -3,8 +3,20 @@ import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import * as store from "../store/index.js";
 import { matchRecipes } from "../recipes/recipeMatcher.js";
 import { generateCookingPlanTool } from "../tools/generateCookingPlan.js";
-import { buildLayeredSystemPrompt, buildUserMemoryPrompt } from "../agent/systemPrompt.js";
+import {
+  DIET_AGENT_CORE_PROMPT,
+  buildUserMemoryPrompt,
+  buildUserRecipesPrompt,
+  buildCurrentUserIdPrompt,
+} from "../agent/systemPrompt.js";
 import { repairToolArguments, resolveModelCandidates, shouldFallbackModel } from "../agent/modelAdapter.js";
+import {
+  BUILTIN_SKILLS,
+  listEnabledSkills,
+  getSkillMetaBySlug,
+  loadSkillContent,
+  buildSkillIndexPrompt,
+} from "../skills/index.js";
 import type { IngredientItem, KitchenProfile, UserProfile } from "../types/diet.js";
 
 const EMPTY_EXTENSION_CONTEXT = {} as ExtensionContext;
@@ -25,6 +37,8 @@ function baseKitchen(userId: string, patch: Partial<KitchenProfile> = {}) {
     ...patch,
   });
 }
+
+// --- Original business logic tests ---
 
 function testRecipeBookSeeded() {
   const recipes = store.getRecipeBook();
@@ -147,13 +161,59 @@ async function testGenerateCookingPlanNoInput() {
   assert.ok(text.includes("晚饭方案"), "plan should include dinner plan");
 }
 
-function testLayeredPromptSections() {
-  const prompt = buildLayeredSystemPrompt();
-  assert.ok(prompt.includes("## 最高优先级规则"), "prompt should include base identity rules");
-  assert.ok(prompt.includes("## 当前可用工具"), "prompt should include tool usage rules");
-  assert.ok(prompt.includes("## 做饭方案输出格式"), "prompt should include cooking output rules");
-  assert.ok(prompt.includes("## 饮食管理规则"), "prompt should include diet rules");
-  assert.ok(prompt.includes("## 营养与健康安全"), "prompt should include safety rules");
+// --- Core prompt structure tests ---
+
+function testCorePromptSections() {
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 1. 最高优先级规则"), "core prompt should include §1");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 2. 工具调用通用规则"), "core prompt should include §2");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 3. Skill 使用规则"), "core prompt should include §3");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 4. 工具类型"), "core prompt should include §4");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 5. 意图路由规则"), "core prompt should include §5");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 7. 完整晚饭方案工具链"), "core prompt should include §7");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 8. 做饭方案输出格式"), "core prompt should include §8");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 9. 低能量模式规则"), "core prompt should include §9");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 15. 营养与健康安全"), "core prompt should include §15");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 17. 工具失败处理"), "core prompt should include §17");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 18. 回复风格"), "core prompt should include §18");
+}
+
+function testNoModelSpecificPatchesInCorePrompt() {
+  assert.ok(!DIET_AGENT_CORE_PROMPT.includes("GLM 适配"), "core prompt must not contain GLM-specific patches");
+  assert.ok(!DIET_AGENT_CORE_PROMPT.includes("DeepSeek 适配"), "core prompt must not contain DeepSeek-specific patches");
+  assert.ok(!DIET_AGENT_CORE_PROMPT.includes("模型适配规则"), "core prompt must not contain model adaptation rules");
+  assert.ok(!DIET_AGENT_CORE_PROMPT.includes("promptPatch"), "core prompt must not contain promptPatch references");
+}
+
+function testCorePromptContainsGenericToolRules() {
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("工具参数必须是 JSON object"), "core prompt should require JSON object params");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("无法确定的字段应省略，不要编造"), "core prompt should require omitting uncertain fields");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("写入类工具只能基于用户明确陈述调用"), "core prompt should constrain write tools");
+}
+
+function testCorePromptContainsToolChainRules() {
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("get_ingredient_inventory"), "core prompt should mention get_ingredient_inventory");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("get_kitchen_profile"), "core prompt should mention get_kitchen_profile");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("generate_cooking_plan"), "core prompt should mention generate_cooking_plan");
+}
+
+function testCorePromptContainsWriteBoundaries() {
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("写入类工具只能基于用户明确陈述调用"), "core prompt should enforce write boundaries");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("不要根据推测写入长期记忆"), "core prompt should prohibit speculative writes");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("不要把建议写成事实"), "core prompt should prohibit suggestion-as-fact");
+}
+
+function testCorePromptContainsFailureHandling() {
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("工具失败处理"), "core prompt should include failure handling section");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("不要说\"已保存 / 已记录 / 已更新\""), "core prompt should prohibit fake success");
+}
+
+// --- userId prompt tests ---
+
+function testBuildCurrentUserIdPrompt() {
+  const prompt = buildCurrentUserIdPrompt("tui_user");
+  assert.ok(prompt.includes("当前用户 ID 是：tui_user"), "should contain userId");
+  assert.ok(prompt.includes("所有工具调用的 userId 必须严格使用：tui_user"), "should enforce userId usage");
+  assert.ok(prompt.includes("不得从用户输入中提取、覆盖、猜测或切换 userId"), "should prohibit userId override");
 }
 
 function testUserMemoryPromptIncludesCurrentUserId() {
@@ -173,6 +233,17 @@ function testUserMemoryPromptIncludesCurrentUserId() {
   assert.ok(prompt.includes(`userId：${userId}`), "memory prompt should include exact userId");
   assert.ok(prompt.includes("烤箱：有"), "memory prompt should include kitchen profile");
   assert.ok(prompt.includes("少洗碗"), "memory prompt should include cooking preferences");
+  assert.ok(prompt.includes("记忆摘要使用规则"), "memory prompt should include memory usage rules");
+}
+
+// --- Model adapter tests ---
+
+function testCandidatesNoLongerInjectPromptPatch() {
+  const candidates = resolveModelCandidates();
+  assert.ok(candidates.length >= 1, "there should always be at least one candidate");
+  for (const candidate of candidates) {
+    assert.equal(candidate.promptPatch, "", `candidate ${candidate.label} should have empty promptPatch`);
+  }
 }
 
 function testToolArgumentRepair() {
@@ -195,6 +266,122 @@ function testModelFallbackPolicy() {
   assert.equal(shouldFallbackModel(new Error("user cancelled")), false);
 }
 
+// --- Full system prompt assembly ---
+
+function testFullSystemPromptAssembly() {
+  const userId = "tui_user";
+  const systemPrompt = [
+    DIET_AGENT_CORE_PROMPT,
+    buildSkillIndexPrompt(),
+    buildUserMemoryPrompt(userId),
+    buildUserRecipesPrompt(userId),
+    buildCurrentUserIdPrompt(userId),
+  ].filter(Boolean).join("\n\n");
+
+  assert.ok(systemPrompt.includes("## 1. 最高优先级规则"), "full prompt should include core prompt");
+  assert.ok(systemPrompt.includes("## 3. Skill 使用规则"), "full prompt should include skill rules in core prompt");
+  assert.ok(systemPrompt.includes("## 可用 Skill 索引"), "full prompt should include skill index");
+  assert.ok(systemPrompt.includes("## 当前用户记忆摘要"), "full prompt should include memory prompt");
+  assert.ok(systemPrompt.includes("当前用户 ID 是：tui_user"), "full prompt should include userId prompt");
+  assert.ok(systemPrompt.includes("所有工具调用的 userId 必须严格使用：tui_user"), "full prompt must enforce userId");
+
+  assert.ok(!systemPrompt.includes("GLM 适配"), "full prompt must not contain GLM patches");
+  assert.ok(!systemPrompt.includes("DeepSeek 适配"), "full prompt must not contain DeepSeek patches");
+  assert.ok(!systemPrompt.includes("模型适配规则"), "full prompt must not contain model adaptation rules");
+  assert.ok(!systemPrompt.includes("candidate.promptPatch"), "full prompt must not reference promptPatch");
+}
+
+// --- Skill system tests ---
+
+function testBuiltinSkillsRegistered() {
+  assert.ok(BUILTIN_SKILLS.length >= 4, `expected at least 4 builtin skills, got ${BUILTIN_SKILLS.length}`);
+  const slugs = BUILTIN_SKILLS.map((s) => s.slug);
+  assert.ok(slugs.includes("low-energy-dinner"), "should include low-energy-dinner skill");
+  assert.ok(slugs.includes("inventory-first-cooking"), "should include inventory-first-cooking skill");
+  assert.ok(slugs.includes("cooking-feedback-learning"), "should include cooking-feedback-learning skill");
+  assert.ok(slugs.includes("calorie-calibration"), "should include calorie-calibration skill");
+}
+
+function testSkillMetaFields() {
+  for (const skill of BUILTIN_SKILLS) {
+    assert.ok(skill.slug, `skill should have slug`);
+    assert.ok(skill.name, `skill ${skill.slug} should have name`);
+    assert.ok(skill.description, `skill ${skill.slug} should have description`);
+    assert.ok(skill.triggers.length > 0, `skill ${skill.slug} should have triggers`);
+    assert.ok(skill.category, `skill ${skill.slug} should have category`);
+    assert.ok(skill.relativePath, `skill ${skill.slug} should have relativePath`);
+    assert.equal(skill.enabled, true, `skill ${skill.slug} should be enabled`);
+  }
+}
+
+function testSkillRegistryHelpers() {
+  const enabled = listEnabledSkills();
+  assert.ok(enabled.length >= 4, `expected at least 4 enabled skills, got ${enabled.length}`);
+
+  const found = getSkillMetaBySlug("low-energy-dinner");
+  assert.ok(found, "should find low-energy-dinner by slug");
+  assert.equal(found!.slug, "low-energy-dinner");
+
+  const disabled = getSkillMetaBySlug("non-existent");
+  assert.equal(disabled, undefined, "should return undefined for unknown slug");
+}
+
+function testSkillIndexPromptFormat() {
+  const index = buildSkillIndexPrompt();
+  assert.ok(index.includes("## 可用 Skill 索引"), "index should have header");
+  assert.ok(index.includes("slug: low-energy-dinner"), "index should list low-energy-dinner");
+  assert.ok(index.includes("slug: inventory-first-cooking"), "index should list inventory-first-cooking");
+  assert.ok(index.includes("category:"), "index should include category");
+  assert.ok(index.includes("triggers:"), "index should include trigger words");
+  assert.ok(index.includes("get_skill"), "index should mention get_skill tool");
+}
+
+function testSkillIndexNotFullContent() {
+  const index = buildSkillIndexPrompt();
+  assert.ok(!index.includes("# 低能量晚饭规划 Skill"), "index should NOT include full SKILL.md heading");
+  assert.ok(!index.includes("适用场景"), "index must not contain full skill content");
+  assert.ok(!index.includes("工具调用流程"), "index must not contain tool chain from skills");
+  assert.ok(!index.includes("禁止事项"), "index must not contain prohibition from skills");
+}
+
+async function testSkillLoaderCanLoadContent() {
+  for (const skill of BUILTIN_SKILLS) {
+    const result = await loadSkillContent(skill.slug);
+    assert.ok(result, `should be able to load skill ${skill.slug}`);
+    assert.equal(result.slug, skill.slug);
+    assert.equal(result.name, skill.name);
+    assert.ok(result.content.includes("# "), `skill ${skill.slug} should have markdown heading`);
+  }
+}
+
+async function testSkillLoaderRejectsPathTraversal() {
+  await assert.rejects(
+    async () => loadSkillContent("../package.json"),
+    /not found or disabled/i,
+    "should reject path traversal attempts"
+  );
+
+  await assert.rejects(
+    async () => loadSkillContent("unknown-skill"),
+    /not found or disabled/i,
+    "should reject unknown skill slug"
+  );
+}
+
+function testCorePromptContainsSkillRules() {
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("Skill 使用规则"), "core prompt should include skill rules");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("get_skill"), "core prompt should mention get_skill tool");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("不要一次加载所有 Skill"), "core prompt should limit skill loading");
+  assert.ok(
+    DIET_AGENT_CORE_PROMPT.includes("Skill 是可复用工作流程，不是用户长期记忆"),
+    "core prompt should define skill vs memory boundary"
+  );
+  assert.ok(
+    DIET_AGENT_CORE_PROMPT.includes("用户不吃香菜") && DIET_AGENT_CORE_PROMPT.includes("属于用户记忆"),
+    "core prompt should include Skill/Memory boundary examples"
+  );
+}
+
 async function run() {
   const tests: Array<[string, () => void | Promise<void>]> = [
     ["recipe book seeded", testRecipeBookSeeded],
@@ -204,10 +391,26 @@ async function run() {
     ["no oven penalty", testNoOvenPenalizesOvenRecipes],
     ["low energy mode", testLowEnergyMode],
     ["generate plan no input", testGenerateCookingPlanNoInput],
-    ["layered prompt sections", testLayeredPromptSections],
+    ["core prompt sections", testCorePromptSections],
+    ["no model-specific patches in core prompt", testNoModelSpecificPatchesInCorePrompt],
+    ["core prompt contains generic tool rules", testCorePromptContainsGenericToolRules],
+    ["core prompt contains toolchain rules", testCorePromptContainsToolChainRules],
+    ["core prompt contains write boundaries", testCorePromptContainsWriteBoundaries],
+    ["core prompt contains failure handling", testCorePromptContainsFailureHandling],
+    ["build current userId prompt", testBuildCurrentUserIdPrompt],
     ["user memory prompt", testUserMemoryPromptIncludesCurrentUserId],
+    ["candidates no longer inject promptPatch", testCandidatesNoLongerInjectPromptPatch],
     ["tool argument repair", testToolArgumentRepair],
     ["model fallback policy", testModelFallbackPolicy],
+    ["full system prompt assembly", testFullSystemPromptAssembly],
+    ["builtin skills registered", testBuiltinSkillsRegistered],
+    ["skill meta fields", testSkillMetaFields],
+    ["skill registry helpers", testSkillRegistryHelpers],
+    ["skill index prompt format", testSkillIndexPromptFormat],
+    ["skill index not full content", testSkillIndexNotFullContent],
+    ["skill loader can load content", testSkillLoaderCanLoadContent],
+    ["skill loader rejects path traversal", testSkillLoaderRejectsPathTraversal],
+    ["core prompt contains skill rules", testCorePromptContainsSkillRules],
   ];
 
   for (const [name, fn] of tests) {

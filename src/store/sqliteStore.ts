@@ -151,6 +151,45 @@ function createTables(db: Database.Database): void {
 
     CREATE INDEX IF NOT EXISTS idx_cooking_feedback_user ON cooking_feedback(user_id);
 
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_chat_messages_user_time ON chat_messages(user_id, created_at);
+
+    CREATE TABLE IF NOT EXISTS user_recipes (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      ingredients_json TEXT NOT NULL DEFAULT '[]',
+      steps_json TEXT NOT NULL DEFAULT '[]',
+      estimated_calories INTEGER,
+      tags_json TEXT NOT NULL DEFAULT '[]',
+      active_minutes INTEGER,
+      total_minutes INTEGER,
+      source TEXT NOT NULL DEFAULT 'user',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_user_recipes_user ON user_recipes(user_id);
+
+    CREATE TABLE IF NOT EXISTS calorie_corrections (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      recipe_name TEXT NOT NULL,
+      original_calories INTEGER,
+      corrected_calories INTEGER NOT NULL,
+      source TEXT NOT NULL DEFAULT 'builtin',
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_calorie_corrections_user ON calorie_corrections(user_id);
+
     CREATE TABLE IF NOT EXISTS recipe_book (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -333,6 +372,8 @@ function getDb(): Database.Database {
   _db = new Database(DB_PATH);
   _db.pragma("journal_mode = WAL");
   _db.pragma("foreign_keys = ON");
+  _db.pragma("busy_timeout = 5000");
+  _db.pragma("synchronous = NORMAL");
   createTables(_db);
   runMigrations(_db);
   migrateRecipeBook(_db);
@@ -350,13 +391,11 @@ console.log(`📦 SQLite 存储已初始化: ${DB_PATH}`);
 
 // ---- 用户画像 ----
 
-export function upsertUserProfile(
+const _upsertUserProfileBody = (
+  db: Database.Database,
   userId: string,
   patch: Omit<UpdateUserProfileInput, "userId">
-): UserProfile {
-  const db = getDb();
-
-  // 先读取已有记录
+): UserProfile => {
   const row = db.prepare("SELECT * FROM user_profiles WHERE user_id = ?").get(userId) as
     | Record<string, unknown>
     | undefined;
@@ -432,6 +471,14 @@ export function upsertUserProfile(
   );
 
   return merged;
+};
+
+export function upsertUserProfile(
+  userId: string,
+  patch: Omit<UpdateUserProfileInput, "userId">
+): UserProfile {
+  const db = getDb();
+  return (db.transaction(_upsertUserProfileBody) as typeof _upsertUserProfileBody)(db, userId, patch);
 }
 
 export function getUserProfile(userId: string): UserProfile | undefined {
@@ -461,12 +508,11 @@ export function getUserProfile(userId: string): UserProfile | undefined {
 
 // ---- 厨房画像 ----
 
-export function upsertKitchenProfile(
+const _upsertKitchenProfileBody = (
+  db: Database.Database,
   userId: string,
   patch: Partial<Omit<KitchenProfile, "userId" | "updatedAt">>
-): KitchenProfile {
-  const db = getDb();
-
+): KitchenProfile => {
   const row = db.prepare("SELECT * FROM kitchen_profiles WHERE user_id = ?").get(userId) as
     | Record<string, unknown>
     | undefined;
@@ -527,6 +573,14 @@ export function upsertKitchenProfile(
   );
 
   return merged;
+};
+
+export function upsertKitchenProfile(
+  userId: string,
+  patch: Partial<Omit<KitchenProfile, "userId" | "updatedAt">>
+): KitchenProfile {
+  const db = getDb();
+  return (db.transaction(_upsertKitchenProfileBody) as typeof _upsertKitchenProfileBody)(db, userId, patch);
 }
 
 export function getKitchenProfile(userId: string): KitchenProfile {
@@ -605,7 +659,8 @@ function mergeItems(base: IngredientItem, patch: IngredientItem): IngredientItem
   return result;
 }
 
-export function upsertIngredientInventory(
+const _upsertIngredientInventoryBody = (
+  db: Database.Database,
   userId: string,
   patch: {
     availableIngredients?: string[] | IngredientItem[];
@@ -613,9 +668,7 @@ export function upsertIngredientInventory(
     replaceAvailable?: boolean;
     replaceShoppingList?: boolean;
   }
-): IngredientInventory {
-  const db = getDb();
-
+): IngredientInventory => {
   const row = db.prepare("SELECT * FROM ingredient_inventory WHERE user_id = ?").get(userId) as
     | Record<string, unknown>
     | undefined;
@@ -655,6 +708,19 @@ export function upsertIngredientInventory(
     shoppingList: finalShopping,
     updatedAt: now,
   };
+};
+
+export function upsertIngredientInventory(
+  userId: string,
+  patch: {
+    availableIngredients?: string[] | IngredientItem[];
+    shoppingList?: string[] | IngredientItem[];
+    replaceAvailable?: boolean;
+    replaceShoppingList?: boolean;
+  }
+): IngredientInventory {
+  const db = getDb();
+  return (db.transaction(_upsertIngredientInventoryBody) as typeof _upsertIngredientInventoryBody)(db, userId, patch);
 }
 
 export function getIngredientInventory(userId: string): IngredientInventory {
@@ -680,14 +746,13 @@ export function getIngredientInventory(userId: string): IngredientInventory {
   };
 }
 
-/** 更新单个食材的状态（如标记用完、过期、丢弃） */
-export function updateIngredientStatus(
+const _updateIngredientStatusBody = (
+  db: Database.Database,
   userId: string,
   itemName: string,
   status: IngredientItem["status"],
   note?: string
-): IngredientItem | null {
-  const db = getDb();
+): IngredientItem | null => {
   const row = db.prepare("SELECT * FROM ingredient_inventory WHERE user_id = ?").get(userId) as
     | Record<string, unknown>
     | undefined;
@@ -698,7 +763,6 @@ export function updateIngredientStatus(
 
   let updated: IngredientItem | null = null;
 
-  // 先在已有食材里找
   for (const item of available) {
     if (item.name === itemName || item.name.includes(itemName) || itemName.includes(item.name)) {
       item.status = status;
@@ -706,7 +770,6 @@ export function updateIngredientStatus(
       updated = item;
     }
   }
-  // 再在购物清单里找
   if (!updated) {
     for (const item of shopping) {
       if (item.name === itemName || item.name.includes(itemName) || itemName.includes(item.name)) {
@@ -726,6 +789,16 @@ export function updateIngredientStatus(
   }
 
   return updated;
+};
+
+export function updateIngredientStatus(
+  userId: string,
+  itemName: string,
+  status: IngredientItem["status"],
+  note?: string
+): IngredientItem | null {
+  const db = getDb();
+  return (db.transaction(_updateIngredientStatusBody) as typeof _updateIngredientStatusBody)(db, userId, itemName, status, note);
 }
 
 // ---- 饮食记录 ----
@@ -965,8 +1038,10 @@ export function getRecipeBook(): RecipeRecord[] {
   });
 }
 
-export function upsertRecipe(recipe: Omit<RecipeRecord, "updatedAt">): RecipeRecord {
-  const db = getDb();
+const _upsertRecipeBody = (
+  db: Database.Database,
+  recipe: Omit<RecipeRecord, "updatedAt">
+): RecipeRecord => {
   const now = nowISO();
   const mode = recipe.mode ?? recipe.modes?.[0] ?? "quick";
 
@@ -1052,6 +1127,260 @@ export function upsertRecipe(recipe: Omit<RecipeRecord, "updatedAt">): RecipeRec
   );
 
   return { ...recipe, updatedAt: now };
+};
+
+export function upsertRecipe(recipe: Omit<RecipeRecord, "updatedAt">): RecipeRecord {
+  const db = getDb();
+  return (db.transaction(_upsertRecipeBody) as typeof _upsertRecipeBody)(db, recipe);
+}
+
+// ---- 聊天记录 ----
+
+export interface ChatMessage {
+  id: string;
+  userId: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  createdAt: string;
+}
+
+export function saveChatMessage(userId: string, role: ChatMessage["role"], content: string): void {
+  const db = getDb();
+  const id = generateId("msg");
+  const now = nowISO();
+  db.prepare(`
+    INSERT INTO chat_messages (id, user_id, role, content, created_at)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(id, userId, role, content, now);
+}
+
+export function getRecentChatMessages(userId: string, limit = 50): ChatMessage[] {
+  const db = getDb();
+  const rows = db.prepare(
+    "SELECT * FROM chat_messages WHERE user_id = ? ORDER BY created_at DESC LIMIT ?"
+  ).all(userId, limit) as Record<string, unknown>[];
+
+  return rows
+    .reverse()
+    .map((row) => ({
+      id: row.id as string,
+      userId: row.user_id as string,
+      role: row.role as ChatMessage["role"],
+      content: row.content as string,
+      createdAt: row.created_at as string,
+    }));
+}
+
+export function searchChatMessages(userId: string, keyword: string, limit = 10): ChatMessage[] {
+  const db = getDb();
+  const pattern = `%${keyword}%`;
+  const rows = db.prepare(
+    "SELECT * FROM chat_messages WHERE user_id = ? AND content LIKE ? ORDER BY created_at DESC LIMIT ?"
+  ).all(userId, pattern, limit) as Record<string, unknown>[];
+
+  return rows
+    .reverse()
+    .map((row) => ({
+      id: row.id as string,
+      userId: row.user_id as string,
+      role: row.role as ChatMessage["role"],
+      content: row.content as string,
+      createdAt: row.created_at as string,
+    }));
+}
+
+export function getAllChatMessages(userId: string): ChatMessage[] {
+  const db = getDb();
+  const rows = db.prepare(
+    "SELECT * FROM chat_messages WHERE user_id = ? ORDER BY created_at ASC"
+  ).all(userId) as Record<string, unknown>[];
+
+  return rows.map((row) => ({
+    id: row.id as string,
+    userId: row.user_id as string,
+    role: row.role as ChatMessage["role"],
+    content: row.content as string,
+    createdAt: row.created_at as string,
+  }));
+}
+
+// ---- 用户自定义菜谱 ----
+
+export interface UserRecipe {
+  id: string;
+  userId: string;
+  name: string;
+  ingredients: string[];
+  steps: string[];
+  estimatedCalories?: number;
+  tags: string[];
+  activeMinutes?: number;
+  totalMinutes?: number;
+  source: "user" | "api";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function addUserRecipe(input: {
+  userId: string;
+  name: string;
+  ingredients: string[];
+  steps: string[];
+  estimatedCalories?: number;
+  tags?: string[];
+  activeMinutes?: number;
+  totalMinutes?: number;
+  source?: "user" | "api";
+}): UserRecipe {
+  const db = getDb();
+  const id = generateId("urec");
+  const now = nowISO();
+  const recipe: UserRecipe = {
+    id,
+    userId: input.userId,
+    name: input.name,
+    ingredients: input.ingredients,
+    steps: input.steps,
+    estimatedCalories: input.estimatedCalories,
+    tags: input.tags ?? [],
+    activeMinutes: input.activeMinutes,
+    totalMinutes: input.totalMinutes,
+    source: input.source ?? "user",
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  db.prepare(`
+    INSERT INTO user_recipes (id, user_id, name, ingredients_json, steps_json,
+      estimated_calories, tags_json, active_minutes, total_minutes, source, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    recipe.id, recipe.userId, recipe.name,
+    stringifyJson(recipe.ingredients), stringifyJson(recipe.steps),
+    recipe.estimatedCalories ?? null, stringifyJson(recipe.tags),
+    recipe.activeMinutes ?? null, recipe.totalMinutes ?? null,
+    recipe.source, recipe.createdAt, recipe.updatedAt
+  );
+
+  return recipe;
+}
+
+export function getUserRecipes(userId: string): UserRecipe[] {
+  const db = getDb();
+  const rows = db.prepare("SELECT * FROM user_recipes WHERE user_id = ? ORDER BY created_at DESC").all(userId) as Record<string, unknown>[];
+  return rows.map(row => ({
+    id: row.id as string,
+    userId: row.user_id as string,
+    name: row.name as string,
+    ingredients: parseJsonArray<string>(row.ingredients_json as string),
+    steps: parseJsonArray<string>(row.steps_json as string),
+    estimatedCalories: (row.estimated_calories as number) ?? undefined,
+    tags: parseJsonArray<string>(row.tags_json as string),
+    activeMinutes: (row.active_minutes as number) ?? undefined,
+    totalMinutes: (row.total_minutes as number) ?? undefined,
+    source: (row.source as "user" | "api") ?? "user",
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  }));
+}
+
+export function searchUserRecipes(userId: string, keyword: string): UserRecipe[] {
+  const db = getDb();
+  const pattern = `%${keyword}%`;
+  const rows = db.prepare(
+    "SELECT * FROM user_recipes WHERE user_id = ? AND (name LIKE ? OR ingredients_json LIKE ? OR tags_json LIKE ?) ORDER BY created_at DESC"
+  ).all(userId, pattern, pattern, pattern) as Record<string, unknown>[];
+  return rows.map(row => ({
+    id: row.id as string,
+    userId: row.user_id as string,
+    name: row.name as string,
+    ingredients: parseJsonArray<string>(row.ingredients_json as string),
+    steps: parseJsonArray<string>(row.steps_json as string),
+    estimatedCalories: (row.estimated_calories as number) ?? undefined,
+    tags: parseJsonArray<string>(row.tags_json as string),
+    activeMinutes: (row.active_minutes as number) ?? undefined,
+    totalMinutes: (row.total_minutes as number) ?? undefined,
+    source: (row.source as "user" | "api") ?? "user",
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  }));
+}
+
+export function deleteUserRecipe(userId: string, recipeId: string): boolean {
+  const db = getDb();
+  const result = db.prepare("DELETE FROM user_recipes WHERE id = ? AND user_id = ?").run(recipeId, userId);
+  return result.changes > 0;
+}
+
+// ---- 热量校准 ----
+
+export interface CalorieCorrection {
+  id: string;
+  userId: string;
+  recipeName: string;
+  originalCalories?: number;
+  correctedCalories: number;
+  source: string;
+  createdAt: string;
+}
+
+export function addCalorieCorrection(input: {
+  userId: string;
+  recipeName: string;
+  originalCalories?: number;
+  correctedCalories: number;
+  source?: string;
+}): CalorieCorrection {
+  const db = getDb();
+  const id = generateId("cal");
+  const now = nowISO();
+  const entry: CalorieCorrection = {
+    id,
+    userId: input.userId,
+    recipeName: input.recipeName,
+    originalCalories: input.originalCalories,
+    correctedCalories: input.correctedCalories,
+    source: input.source ?? "user",
+    createdAt: now,
+  };
+
+  db.prepare(`
+    INSERT INTO calorie_corrections (id, user_id, recipe_name, original_calories, corrected_calories, source, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(id, entry.userId, entry.recipeName, entry.originalCalories ?? null, entry.correctedCalories, entry.source, now);
+
+  return entry;
+}
+
+export function getCalorieCorrections(userId: string): CalorieCorrection[] {
+  const db = getDb();
+  const rows = db.prepare("SELECT * FROM calorie_corrections WHERE user_id = ? ORDER BY created_at DESC").all(userId) as Record<string, unknown>[];
+  return rows.map(row => ({
+    id: row.id as string,
+    userId: row.user_id as string,
+    recipeName: row.recipe_name as string,
+    originalCalories: (row.original_calories as number) ?? undefined,
+    correctedCalories: row.corrected_calories as number,
+    source: row.source as string,
+    createdAt: row.created_at as string,
+  }));
+}
+
+export function getLatestCalorieCorrection(userId: string, recipeName: string): CalorieCorrection | undefined {
+  const db = getDb();
+  const row = db.prepare(
+    "SELECT * FROM calorie_corrections WHERE user_id = ? AND recipe_name = ? ORDER BY created_at DESC LIMIT 1"
+  ).get(userId, recipeName) as Record<string, unknown> | undefined;
+  if (!row) return undefined;
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    recipeName: row.recipe_name as string,
+    originalCalories: (row.original_calories as number) ?? undefined,
+    correctedCalories: row.corrected_calories as number,
+    source: row.source as string,
+    createdAt: row.created_at as string,
+  };
 }
 
 // ---- 清除用户数据 ----
@@ -1064,6 +1393,9 @@ export function clearUserData(userId: string): void {
     db.prepare("DELETE FROM ingredient_inventory WHERE user_id = ?").run(userId);
     db.prepare("DELETE FROM meal_logs WHERE user_id = ?").run(userId);
     db.prepare("DELETE FROM cooking_feedback WHERE user_id = ?").run(userId);
+    db.prepare("DELETE FROM chat_messages WHERE user_id = ?").run(userId);
+    db.prepare("DELETE FROM user_recipes WHERE user_id = ?").run(userId);
+    db.prepare("DELETE FROM calorie_corrections WHERE user_id = ?").run(userId);
   });
   del();
 }

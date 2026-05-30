@@ -76,7 +76,7 @@ function makeCandidate(kind: ModelAdapterKind, label: string, model?: Model<any>
     label,
     model,
     supportsTools: kind !== "sdk-default",
-    promptPatch: buildModelPromptPatch(kind),
+    promptPatch: "",
   };
 }
 
@@ -116,31 +116,6 @@ export function resolveModelCandidates(): ModelCandidate[] {
     seen.add(candidate.key);
     return true;
   });
-}
-
-export function buildModelPromptPatch(kind: ModelAdapterKind): string {
-  const common = [
-    "## 模型适配规则",
-    "如果需要调用工具，只能使用系统提供的工具名和参数 schema。",
-    "工具参数必须是 JSON object，不要把 JSON 放进 markdown 代码块。",
-    "无法确定字段时省略该字段，不要编造。",
-  ];
-
-  if (kind === "glm") {
-    common.push(
-      "GLM 适配：工具参数必须保持扁平清晰；数组字段必须传数组，不要传逗号分隔字符串。",
-      "GLM 适配：涉及食材、购物清单、厨房条件、反馈时，先调用对应工具，再根据工具结果回复。"
-    );
-  }
-
-  if (kind === "deepseek") {
-    common.push(
-      "DeepSeek 适配：优先一次只调用最相关的工具；不要在同一轮里重复调用同一个写入工具。",
-      "DeepSeek 适配：回复时保留工具返回的结构，不要扩写成无法执行的泛泛建议。"
-    );
-  }
-
-  return common.join("\n");
 }
 
 export function shouldFallbackModel(err: unknown): boolean {

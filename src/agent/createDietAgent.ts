@@ -10,9 +10,14 @@ import {
   type AgentSessionEvent,
   type CreateAgentSessionOptions,
 } from "@earendil-works/pi-coding-agent";
+import { mkdirSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
-import { GLM_STRICT_COOKING_AGENT_PROMPT, buildUserMemoryPrompt } from "./systemPrompt.js";
+import { DIET_AGENT_CORE_PROMPT, buildUserMemoryPrompt, buildUserRecipesPrompt, buildCurrentUserIdPrompt } from "./systemPrompt.js";
+import { buildSkillIndexPrompt } from "../skills/index.js";
 import * as sessionStore from "./sessionStore.js";
+import * as store from "../store/index.js";
 import {
   resolveModelCandidates,
   shouldFallbackModel,
@@ -32,6 +37,8 @@ import { searchRecipesTool } from "../tools/searchRecipes.js";
 import { updateIngredientInventoryTool } from "../tools/updateIngredientInventory.js";
 import { updateKitchenProfileTool } from "../tools/updateKitchenProfile.js";
 import { updateUserProfileTool } from "../tools/updateUserProfile.js";
+import { searchFoodApiTool } from "../tools/searchFoodApi.js";
+import { getSkillTool } from "../tools/getSkill.js";
 
 const baseCustomTools = [
   logMealTool,
@@ -47,10 +54,23 @@ const baseCustomTools = [
   searchRecipesTool,
   generateCookingPlanTool,
   logCookingFeedbackTool,
+  searchFoodApiTool,
+  getSkillTool,
 ];
 
 const processingMap = new Map<string, Promise<string>>();
 const sessionModelKeyMap = new Map<string, string>();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const SESSIONS_ROOT = join(__dirname, "..", "..", "data", "sessions");
+
+function getUserSessionDir(userId: string): string {
+  const safeName = userId.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const dir = join(SESSIONS_ROOT, safeName);
+  mkdirSync(dir, { recursive: true });
+  return dir;
+}
 
 async function getOrCreateSession(userId: string, candidate: ModelCandidate) {
   const existing = sessionStore.getSession(userId);
@@ -79,15 +99,12 @@ async function getOrCreateSession(userId: string, candidate: ModelCandidate) {
     noThemes: true,
     noContextFiles: true,
     systemPromptOverride: () => [
-      GLM_STRICT_COOKING_AGENT_PROMPT,
-      candidate.promptPatch,
+      DIET_AGENT_CORE_PROMPT,
+      buildSkillIndexPrompt(),
       buildUserMemoryPrompt(userId),
-      [
-        "## 当前用户 ID",
-        `当前用户 ID 是：${userId}`,
-        `所有工具调用的 userId 必须严格使用：${userId}`,
-      ].join("\n"),
-    ].join("\n\n"),
+      buildUserRecipesPrompt(userId),
+      buildCurrentUserIdPrompt(userId),
+    ].filter(Boolean).join("\n\n"),
     appendSystemPromptOverride: () => [],
   });
   await resourceLoader.reload();
@@ -97,7 +114,7 @@ async function getOrCreateSession(userId: string, candidate: ModelCandidate) {
     authStorage,
     modelRegistry,
     resourceLoader,
-    sessionManager: SessionManager.inMemory(cwd),
+    sessionManager: SessionManager.continueRecent(cwd, getUserSessionDir(userId)),
     settingsManager,
     noTools: "builtin",
     customTools: wrapToolsForUser(userId, baseCustomTools),
@@ -140,7 +157,10 @@ async function doSendWithFallback(
   for (let attempt = 0; attempt < Math.min(maxAttempts, candidates.length); attempt++) {
     const candidate = candidates[attempt];
     try {
-      return await doSend(userId, message, candidate);
+      const result = await doSend(userId, message, candidate);
+      store.saveChatMessage(userId, "user", message);
+      store.saveChatMessage(userId, "assistant", result.reply);
+      return result;
     } catch (err) {
       lastError = err;
       console.warn(`[MODEL fallback] userId=${userId} model=${candidate.label} failed: ${errorText(err)}`);
