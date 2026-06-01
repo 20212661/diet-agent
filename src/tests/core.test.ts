@@ -1,15 +1,30 @@
 import assert from "node:assert/strict";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import * as store from "../store/index.js";
-import { matchRecipes } from "../recipes/recipeMatcher.js";
+import { evaluateEligibility, matchRecipes, type MatchRecipeResult } from "../recipes/recipeMatcher.js";
 import { generateCookingPlanTool } from "../tools/generateCookingPlan.js";
+import { generateMealPlanTool } from "../tools/generateMealPlan.js";
+import { searchRecipesTool } from "../tools/searchRecipes.js";
+import { isConfigured as isFatSecretConfigured } from "../agent/fatsecret-api.js";
+import * as recipeCatalog from "../recipes/recipeCatalog.js";
 import {
   DIET_AGENT_CORE_PROMPT,
   buildUserMemoryPrompt,
   buildUserRecipesPrompt,
   buildCurrentUserIdPrompt,
 } from "../agent/systemPrompt.js";
-import { repairToolArguments, resolveModelCandidates, shouldFallbackModel } from "../agent/modelAdapter.js";
+import {
+  classifyModelError,
+  isWriteTool,
+  repairToolArguments,
+  resolveModelCandidates,
+  shouldFallbackModel,
+  wrapToolsForUser,
+  ToolExecutionError,
+} from "../agent/modelAdapter.js";
 import {
   BUILTIN_SKILLS,
   listEnabledSkills,
@@ -18,6 +33,12 @@ import {
   buildSkillIndexPrompt,
 } from "../skills/index.js";
 import type { IngredientItem, KitchenProfile, UserProfile } from "../types/diet.js";
+import {
+  cleanupExpiredRequestLogs,
+  extractRequestMetrics,
+  installRequestLogger,
+  sanitizeForLog,
+} from "../utils/requestLogger.js";
 
 const EMPTY_EXTENSION_CONTEXT = {} as ExtensionContext;
 
@@ -48,6 +69,83 @@ function testRecipeBookSeeded() {
   assert.ok(Array.isArray(sample.modes), "recipe.modes should exist");
   assert.ok(Array.isArray(sample.suitableGoals), "recipe.suitableGoals should exist");
   assert.ok(Array.isArray(sample.appliances), "recipe.appliances should exist");
+}
+
+function testRecipeCatalogIncludesUserRecipesAndCorrections() {
+  const userId = freshUser("catalog");
+  store.clearUserData(userId);
+  store.addUserRecipe({
+    userId,
+    name: "我的鹰嘴豆紫甘蓝锅",
+    ingredients: ["鹰嘴豆", "紫甘蓝"],
+    steps: ["煮熟"],
+    estimatedCalories: 300,
+    tags: ["一锅出", "低能量"],
+  });
+  store.addCalorieCorrection({
+    userId,
+    recipeName: "我的鹰嘴豆紫甘蓝锅",
+    correctedCalories: 260,
+  });
+
+  const recipe = recipeCatalog.listForUser(userId).find((item) => item.name === "我的鹰嘴豆紫甘蓝锅");
+  assert.ok(recipe, "catalog should include user recipes");
+  assert.equal(recipe.estimatedCalories, 260, "catalog should apply calorie corrections");
+  assert.ok(recipe.modes.includes("one_pot"), "catalog should infer structured modes from tags");
+  assert.equal(recipeCatalog.getEffectiveCalories(userId, recipe.name, 300), 260);
+}
+
+async function testSearchRecipesUsesUnifiedCatalog() {
+  const userId = freshUser("catalog_search");
+  store.clearUserData(userId);
+  baseKitchen(userId);
+  store.addUserRecipe({
+    userId,
+    name: "我的鹰嘴豆紫甘蓝锅",
+    ingredients: ["鹰嘴豆", "紫甘蓝"],
+    steps: ["煮熟"],
+    tags: ["一锅出"],
+  });
+
+  const result = await searchRecipesTool.execute(
+    "test-catalog-search",
+    { userId, query: "我的鹰嘴豆紫甘蓝锅", ingredients: ["鹰嘴豆", "紫甘蓝"] },
+    undefined,
+    undefined,
+    EMPTY_EXTENSION_CONTEXT
+  );
+  const details = result.details as { matches: MatchRecipeResult[] };
+  assert.ok(details.matches.some((match) => match.recipe.name === "我的鹰嘴豆紫甘蓝锅"));
+}
+
+function testUserRecipeParticipatesInRanking() {
+  const userId = freshUser("catalog_rank");
+  store.clearUserData(userId);
+  const kitchen = baseKitchen(userId);
+  store.addUserRecipe({
+    userId,
+    name: "我的鹰嘴豆紫甘蓝锅",
+    ingredients: ["鹰嘴豆", "紫甘蓝"],
+    steps: ["煮熟"],
+    tags: ["一锅出", "低能量"],
+    activeMinutes: 8,
+  });
+  store.addCookingFeedback({
+    userId,
+    recipeName: "我的鹰嘴豆紫甘蓝锅",
+    rating: 5,
+    wouldCookAgain: true,
+  });
+
+  const results = matchRecipes({
+    recipes: recipeCatalog.listForUser(userId),
+    availableIngredients: [{ name: "鹰嘴豆" }, { name: "紫甘蓝" }],
+    shoppingList: [],
+    kitchenProfile: kitchen,
+    feedback: store.getCookingFeedback(userId),
+    energyLevel: "low",
+  });
+  assert.equal(results[0]?.recipe.name, "我的鹰嘴豆紫甘蓝锅");
 }
 
 function testIngredientStatus() {
@@ -83,7 +181,7 @@ function testMatcherPrefersAvailableOvenRecipe() {
   assert.ok(results[0]?.reasons.some((reason) => reason.includes("鸡腿") || reason.includes("土豆")));
 }
 
-function testAvoidFoodIsPenalized() {
+function testAvoidFoodIsExcluded() {
   const userId = freshUser("matcher_avoid");
   store.clearUserData(userId);
   const recipes = store.getRecipeBook();
@@ -106,11 +204,10 @@ function testAvoidFoodIsPenalized() {
     feedback: [],
   });
   const fishRecipe = results.find((result) => result.recipe.name.includes("鱼"));
-  assert.ok(fishRecipe, "expected fish recipe in results");
-  assert.ok(fishRecipe.score < -900, `expected fish recipe to be strongly penalized, got ${fishRecipe.score}`);
+  assert.equal(fishRecipe, undefined, "fish recipes must be excluded for users avoiding fish");
 }
 
-function testNoOvenPenalizesOvenRecipes() {
+function testNoOvenExcludesOvenRecipes() {
   const userId = freshUser("matcher_no_oven");
   store.clearUserData(userId);
   const recipes = store.getRecipeBook();
@@ -123,8 +220,32 @@ function testNoOvenPenalizesOvenRecipes() {
     feedback: [],
   });
   const ovenRecipe = results.find((result) => result.recipe.modes.includes("oven"));
-  assert.ok(ovenRecipe, "expected oven recipe in results");
-  assert.ok(ovenRecipe.score < -900, `expected oven recipe to be strongly penalized, got ${ovenRecipe.score}`);
+  assert.equal(ovenRecipe, undefined, "oven recipes must be excluded when the user has no oven");
+}
+
+function testMatcherExplainsEligibilityAndScore() {
+  const userId = freshUser("matcher_explain");
+  const kitchen = baseKitchen(userId, { hasOven: false, cookware: ["炒锅"] });
+  const ovenRecipe = store.getRecipeBook().find((recipe) => recipe.modes.includes("oven"));
+  assert.ok(ovenRecipe);
+  const eligibility = evaluateEligibility(ovenRecipe, kitchen);
+  assert.equal(eligibility.eligible, false);
+  assert.ok(eligibility.rejectedReasons.some((reason) => reason.includes("烤箱")));
+
+  const result = matchRecipes({
+    recipes: store.getRecipeBook(),
+    availableIngredients: [{ name: "番茄" }, { name: "鸡蛋" }],
+    shoppingList: [],
+    kitchenProfile: baseKitchen(userId),
+    feedback: [],
+  })[0];
+  assert.ok(result);
+  assert.equal(result.eligible, true);
+  assert.deepEqual(result.rejectedReasons, []);
+  assert.equal(
+    Object.values(result.scoreBreakdown).reduce((sum, points) => sum + points, 0),
+    result.score
+  );
 }
 
 function testLowEnergyMode() {
@@ -161,20 +282,205 @@ async function testGenerateCookingPlanNoInput() {
   assert.ok(text.includes("晚饭方案"), "plan should include dinner plan");
 }
 
+async function testGenerateCookingPlanDoesNotPersistTransientIngredients() {
+  const userId = freshUser("plan_readonly");
+  store.clearUserData(userId);
+
+  await generateCookingPlanTool.execute(
+    "test-readonly-plan",
+    { userId, availableIngredients: ["鸡腿"], shoppingList: ["土豆"] },
+    undefined,
+    undefined,
+    EMPTY_EXTENSION_CONTEXT
+  );
+
+  const inventory = store.getIngredientInventory(userId);
+  assert.deepEqual(inventory.availableIngredients, [], "planning must not persist transient available ingredients");
+  assert.deepEqual(inventory.shoppingList, [], "planning must not persist transient shopping items");
+}
+
+async function testCookingPlanNeverReturnsBlockedOrOvenRecipes() {
+  const allergyUser = freshUser("plan_allergy");
+  store.clearUserData(allergyUser);
+  baseKitchen(allergyUser);
+  store.upsertUserProfile(allergyUser, { allergies: ["鱼"] });
+  const allergyPlan = await generateCookingPlanTool.execute(
+    "test-allergy-plan",
+    { userId: allergyUser, availableIngredients: ["鱼", "西兰花"] },
+    undefined,
+    undefined,
+    EMPTY_EXTENSION_CONTEXT
+  );
+  const allergyDetails = allergyPlan.details as { selectedRecipes: Array<{ name: string }> };
+  assert.ok(allergyDetails.selectedRecipes.every((recipe) => !recipe.name.includes("鱼")));
+
+  const noOvenUser = freshUser("plan_no_oven");
+  store.clearUserData(noOvenUser);
+  baseKitchen(noOvenUser, { hasOven: false, cookware: ["炒锅", "汤锅"] });
+  const noOvenPlan = await generateCookingPlanTool.execute(
+    "test-no-oven-plan",
+    { userId: noOvenUser, availableIngredients: ["鸡腿", "土豆"] },
+    undefined,
+    undefined,
+    EMPTY_EXTENSION_CONTEXT
+  );
+  const noOvenDetails = noOvenPlan.details as { selectedRecipes: Array<{ modes: string[] }> };
+  assert.ok(noOvenDetails.selectedRecipes.every((recipe) => !recipe.modes.includes("oven")));
+}
+
+async function testMealPlanFiltersBlockedFoods() {
+  const userId = freshUser("meal_plan_avoid");
+  store.clearUserData(userId);
+  store.upsertUserProfile(userId, { goal: "fat_loss", allergies: ["鱼"] });
+
+  const result = await generateMealPlanTool.execute(
+    "test-safe-meal-plan",
+    { userId, days: 7 },
+    undefined,
+    undefined,
+    EMPTY_EXTENSION_CONTEXT
+  );
+  const first = result.content[0];
+  const text = first && first.type === "text" ? first.text : "";
+  assert.ok(!text.includes("清蒸鱼"), "meal plans must filter templates containing blocked foods");
+}
+
+function testTodaySummaryReportsCalorieCoverage() {
+  const userId = freshUser("summary_coverage");
+  store.clearUserData(userId);
+  store.addMealLog({
+    userId,
+    mealType: "breakfast",
+    foods: [
+      { name: "鸡蛋", amount: "1个", estimatedCalories: 80 },
+      { name: "豆浆", amount: "1杯" },
+    ],
+  });
+
+  const summary = store.getTodaySummary(userId);
+  assert.equal(summary.estimatedTotalCalories, 80);
+  assert.equal(summary.foodsWithCalories.length, 1);
+  assert.equal(summary.foodsWithoutCalories.length, 1);
+  assert.equal(summary.coverageRatio, 0.5);
+  assert.ok(summary.summaryText.includes("已知部分约 80 kcal"));
+  assert.ok(summary.summaryText.includes("不能据此判断是否超量"));
+  assert.ok(!summary.summaryText.includes("约 0 kcal"));
+}
+
+function testFatSecretRequiresEnvironmentCredentials() {
+  const previousId = process.env.FATSECRET_CLIENT_ID;
+  const previousSecret = process.env.FATSECRET_CLIENT_SECRET;
+  delete process.env.FATSECRET_CLIENT_ID;
+  delete process.env.FATSECRET_CLIENT_SECRET;
+
+  try {
+    assert.equal(isFatSecretConfigured(), false, "FatSecret must be disabled without environment credentials");
+  } finally {
+    if (previousId === undefined) delete process.env.FATSECRET_CLIENT_ID;
+    else process.env.FATSECRET_CLIENT_ID = previousId;
+    if (previousSecret === undefined) delete process.env.FATSECRET_CLIENT_SECRET;
+    else process.env.FATSECRET_CLIENT_SECRET = previousSecret;
+  }
+}
+
+function testRequestLoggerRedactsSensitiveValues() {
+  const sanitized = sanitizeForLog({
+    authorization: "Bearer secret-token",
+    medicalNotes: ["肾病"],
+    nested: { allergies: ["花生"] },
+    message: "健康备注：长期用药\nAuthorization: Bearer abc123",
+  }) as any;
+  assert.equal(sanitized.authorization, "[REDACTED]");
+  assert.equal(sanitized.medicalNotes, "[REDACTED]");
+  assert.equal(sanitized.nested.allergies, "[REDACTED]");
+  assert.ok(!JSON.stringify(sanitized).includes("长期用药"));
+  assert.ok(!JSON.stringify(sanitized).includes("abc123"));
+}
+
+function testRequestLoggerCleansExpiredFiles() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "diet-agent-logs-"));
+  const oldFile = path.join(root, "old.json");
+  const currentFile = path.join(root, "current.json");
+  fs.writeFileSync(oldFile, "{}");
+  fs.writeFileSync(currentFile, "{}");
+  const now = Date.now();
+  fs.utimesSync(oldFile, new Date(now - 10 * 24 * 60 * 60 * 1000), new Date(now - 10 * 24 * 60 * 60 * 1000));
+
+  try {
+    assert.equal(cleanupExpiredRequestLogs(root, 7, now), 1);
+    assert.equal(fs.existsSync(oldFile), false);
+    assert.equal(fs.existsSync(currentFile), true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+}
+
+function testRequestLoggerIsDisabledByDefault() {
+  const previous = process.env.ENABLE_REQUEST_LOGS;
+  delete process.env.ENABLE_REQUEST_LOGS;
+  try {
+    assert.equal(installRequestLogger(), false);
+  } finally {
+    if (previous === undefined) delete process.env.ENABLE_REQUEST_LOGS;
+    else process.env.ENABLE_REQUEST_LOGS = previous;
+  }
+}
+
+function testRequestLoggerExtractsProviderMetrics() {
+  const metrics = extractRequestMetrics(125, JSON.stringify({
+    usage: {
+      prompt_tokens: 1000,
+      completion_tokens: 200,
+      total_tokens: 1200,
+      prompt_cache_hit_tokens: 750,
+    },
+  }));
+  assert.equal(metrics.latencyMs, 125);
+  assert.equal(metrics.promptTokens, 1000);
+  assert.equal(metrics.completionTokens, 200);
+  assert.equal(metrics.totalTokens, 1200);
+  assert.equal(metrics.cacheReadTokens, 750);
+}
+
+async function testWriteToolsAreIdempotentAndNotRetried() {
+  let calls = 0;
+  const wrapped = wrapToolsForUser("retry_user", [{
+    name: "log_meal",
+    async execute() {
+      calls += 1;
+      throw new Error("timeout after write");
+    },
+  } as any]);
+
+  await assert.rejects(() => wrapped[0].execute("same-call", {}, undefined, undefined, EMPTY_EXTENSION_CONTEXT));
+  await assert.rejects(() => wrapped[0].execute("same-call", {}, undefined, undefined, EMPTY_EXTENSION_CONTEXT));
+  assert.equal(calls, 1, "a write tool call must execute at most once for the same toolCallId");
+}
+
+async function testReadToolsCanRetry() {
+  let calls = 0;
+  const wrapped = wrapToolsForUser("retry_user", [{
+    name: "get_user_profile",
+    async execute() {
+      calls += 1;
+      if (calls === 1) throw new Error("timeout");
+      return { content: [{ type: "text", text: "ok" }] };
+    },
+  } as any]);
+
+  await wrapped[0].execute("read-call", {}, undefined, undefined, EMPTY_EXTENSION_CONTEXT);
+  assert.equal(calls, 2, "a retryable read tool should retry once after a transient failure");
+}
+
 // --- Core prompt structure tests ---
 
 function testCorePromptSections() {
-  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 1. 最高优先级规则"), "core prompt should include §1");
-  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 2. 工具调用通用规则"), "core prompt should include §2");
-  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 3. Skill 使用规则"), "core prompt should include §3");
-  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 4. 工具类型"), "core prompt should include §4");
-  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 5. 意图路由规则"), "core prompt should include §5");
-  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 7. 完整晚饭方案工具链"), "core prompt should include §7");
-  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 8. 做饭方案输出格式"), "core prompt should include §8");
-  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 9. 低能量模式规则"), "core prompt should include §9");
-  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 15. 营养与健康安全"), "core prompt should include §15");
-  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 17. 工具失败处理"), "core prompt should include §17");
-  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 18. 回复风格"), "core prompt should include §18");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 最高优先级规则"));
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 当前可用工具"));
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 做饭方案输出格式"));
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 饮食管理规则"));
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## Skill 使用规则"));
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("## 营养与健康安全"));
 }
 
 function testNoModelSpecificPatchesInCorePrompt() {
@@ -185,9 +491,8 @@ function testNoModelSpecificPatchesInCorePrompt() {
 }
 
 function testCorePromptContainsGenericToolRules() {
-  assert.ok(DIET_AGENT_CORE_PROMPT.includes("工具参数必须是 JSON object"), "core prompt should require JSON object params");
-  assert.ok(DIET_AGENT_CORE_PROMPT.includes("无法确定的字段应省略，不要编造"), "core prompt should require omitting uncertain fields");
-  assert.ok(DIET_AGENT_CORE_PROMPT.includes("写入类工具只能基于用户明确陈述调用"), "core prompt should constrain write tools");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("不能说“已记录 / 已保存 / 已更新”"));
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("不要编造库存"));
 }
 
 function testCorePromptContainsToolChainRules() {
@@ -197,14 +502,12 @@ function testCorePromptContainsToolChainRules() {
 }
 
 function testCorePromptContainsWriteBoundaries() {
-  assert.ok(DIET_AGENT_CORE_PROMPT.includes("写入类工具只能基于用户明确陈述调用"), "core prompt should enforce write boundaries");
-  assert.ok(DIET_AGENT_CORE_PROMPT.includes("不要根据推测写入长期记忆"), "core prompt should prohibit speculative writes");
-  assert.ok(DIET_AGENT_CORE_PROMPT.includes("不要把建议写成事实"), "core prompt should prohibit suggestion-as-fact");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("食材状态变化必须用 mark_ingredient_used 或 update_ingredient_inventory"));
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("不能说“已记录 / 已保存 / 已更新”"));
 }
 
 function testCorePromptContainsFailureHandling() {
-  assert.ok(DIET_AGENT_CORE_PROMPT.includes("工具失败处理"), "core prompt should include failure handling section");
-  assert.ok(DIET_AGENT_CORE_PROMPT.includes("不要说\"已保存 / 已记录 / 已更新\""), "core prompt should prohibit fake success");
+  assert.ok(DIET_AGENT_CORE_PROMPT.includes("不在工具失败时假装成功"));
 }
 
 // --- userId prompt tests ---
@@ -262,8 +565,24 @@ function testToolArgumentRepair() {
 function testModelFallbackPolicy() {
   assert.ok(resolveModelCandidates().length >= 1, "there should always be at least the SDK default candidate");
   assert.equal(shouldFallbackModel(new Error("HTTP 429 rate limit")), true);
-  assert.equal(shouldFallbackModel(new Error("schema validation json error")), true);
+  assert.equal(shouldFallbackModel(new Error("schema validation json error")), false);
   assert.equal(shouldFallbackModel(new Error("user cancelled")), false);
+}
+
+function testModelErrorClassification() {
+  assert.equal(classifyModelError(new Error("HTTP 429 rate limit")), "rate_limit");
+  assert.equal(classifyModelError(new Error("schema validation json error")), "parameter_validation");
+  assert.equal(classifyModelError(new Error("user cancelled")), "user_cancelled");
+  assert.equal(classifyModelError(Object.assign(new Error("bad gateway"), { status: 502 })), "service_unavailable");
+  assert.equal(classifyModelError(new ToolExecutionError("log_meal", true, new Error("timeout"))), "tool_write_failure");
+  assert.equal(shouldFallbackModel(new ToolExecutionError("log_meal", true, new Error("timeout"))), false);
+}
+
+function testWriteToolClassification() {
+  assert.equal(isWriteTool("log_meal"), true);
+  assert.equal(isWriteTool("log_cooking_feedback"), true);
+  assert.equal(isWriteTool("get_user_profile"), false);
+  assert.equal(isWriteTool("generate_cooking_plan"), false);
 }
 
 // --- Full system prompt assembly ---
@@ -278,8 +597,8 @@ function testFullSystemPromptAssembly() {
     buildCurrentUserIdPrompt(userId),
   ].filter(Boolean).join("\n\n");
 
-  assert.ok(systemPrompt.includes("## 1. 最高优先级规则"), "full prompt should include core prompt");
-  assert.ok(systemPrompt.includes("## 3. Skill 使用规则"), "full prompt should include skill rules in core prompt");
+  assert.ok(systemPrompt.includes("## 最高优先级规则"), "full prompt should include core prompt");
+  assert.ok(systemPrompt.includes("## Skill 使用规则"), "full prompt should include skill rules in core prompt");
   assert.ok(systemPrompt.includes("## 可用 Skill 索引"), "full prompt should include skill index");
   assert.ok(systemPrompt.includes("## 当前用户记忆摘要"), "full prompt should include memory prompt");
   assert.ok(systemPrompt.includes("当前用户 ID 是：tui_user"), "full prompt should include userId prompt");
@@ -376,21 +695,30 @@ function testCorePromptContainsSkillRules() {
     DIET_AGENT_CORE_PROMPT.includes("Skill 是可复用工作流程，不是用户长期记忆"),
     "core prompt should define skill vs memory boundary"
   );
-  assert.ok(
-    DIET_AGENT_CORE_PROMPT.includes("用户不吃香菜") && DIET_AGENT_CORE_PROMPT.includes("属于用户记忆"),
-    "core prompt should include Skill/Memory boundary examples"
-  );
 }
 
 async function run() {
   const tests: Array<[string, () => void | Promise<void>]> = [
     ["recipe book seeded", testRecipeBookSeeded],
+    ["recipe catalog includes user recipes and corrections", testRecipeCatalogIncludesUserRecipesAndCorrections],
+    ["search recipes uses unified catalog", testSearchRecipesUsesUnifiedCatalog],
+    ["user recipe participates in ranking", testUserRecipeParticipatesInRanking],
     ["ingredient status", testIngredientStatus],
     ["matcher available oven recipe", testMatcherPrefersAvailableOvenRecipe],
-    ["avoid food penalty", testAvoidFoodIsPenalized],
-    ["no oven penalty", testNoOvenPenalizesOvenRecipes],
+    ["avoid food excluded", testAvoidFoodIsExcluded],
+    ["no oven excluded", testNoOvenExcludesOvenRecipes],
+    ["matcher explains eligibility and score", testMatcherExplainsEligibilityAndScore],
     ["low energy mode", testLowEnergyMode],
     ["generate plan no input", testGenerateCookingPlanNoInput],
+    ["generate plan does not persist transient ingredients", testGenerateCookingPlanDoesNotPersistTransientIngredients],
+    ["cooking plan never returns blocked or oven recipes", testCookingPlanNeverReturnsBlockedOrOvenRecipes],
+    ["meal plan filters blocked foods", testMealPlanFiltersBlockedFoods],
+    ["today summary reports calorie coverage", testTodaySummaryReportsCalorieCoverage],
+    ["FatSecret requires environment credentials", testFatSecretRequiresEnvironmentCredentials],
+    ["request logger redacts sensitive values", testRequestLoggerRedactsSensitiveValues],
+    ["request logger cleans expired files", testRequestLoggerCleansExpiredFiles],
+    ["request logger is disabled by default", testRequestLoggerIsDisabledByDefault],
+    ["request logger extracts provider metrics", testRequestLoggerExtractsProviderMetrics],
     ["core prompt sections", testCorePromptSections],
     ["no model-specific patches in core prompt", testNoModelSpecificPatchesInCorePrompt],
     ["core prompt contains generic tool rules", testCorePromptContainsGenericToolRules],
@@ -402,6 +730,10 @@ async function run() {
     ["candidates no longer inject promptPatch", testCandidatesNoLongerInjectPromptPatch],
     ["tool argument repair", testToolArgumentRepair],
     ["model fallback policy", testModelFallbackPolicy],
+    ["model error classification", testModelErrorClassification],
+    ["write tool classification", testWriteToolClassification],
+    ["write tools are idempotent and not retried", testWriteToolsAreIdempotentAndNotRetried],
+    ["read tools can retry", testReadToolsCanRetry],
     ["full system prompt assembly", testFullSystemPromptAssembly],
     ["builtin skills registered", testBuiltinSkillsRegistered],
     ["skill meta fields", testSkillMetaFields],

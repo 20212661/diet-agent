@@ -9,8 +9,11 @@ import { join } from "node:path";
 const DB_DIR = join(import.meta.dirname, "..", "data");
 const DB_PATH = join(DB_DIR, "diet-agent.sqlite");
 
-const CLIENT_ID = process.env.FATSECRET_CLIENT_ID || "4c095531df124880ad1eb3ddce30d587";
-const CLIENT_SECRET = process.env.FATSECRET_CLIENT_SECRET || "5afb5e0fcc5344449c016b9aca0c1380";
+const CLIENT_ID = process.env.FATSECRET_CLIENT_ID?.trim();
+const CLIENT_SECRET = process.env.FATSECRET_CLIENT_SECRET?.trim();
+if (!CLIENT_ID || !CLIENT_SECRET) {
+  throw new Error("Set FATSECRET_CLIENT_ID and FATSECRET_CLIENT_SECRET before seeding FatSecret data.");
+}
 
 const TOKEN_URL = "https://oauth.fatsecret.com/connect/token";
 const API_URL = "https://platform.fatsecret.com/rest/server.api";

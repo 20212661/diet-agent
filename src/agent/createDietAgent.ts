@@ -16,9 +16,11 @@ import { fileURLToPath } from "node:url";
 
 import { DIET_AGENT_CORE_PROMPT, buildUserMemoryPrompt, buildUserRecipesPrompt, buildCurrentUserIdPrompt } from "./systemPrompt.js";
 import { buildSkillIndexPrompt } from "../skills/index.js";
+import { sortToolsByName, UserPrefixCache } from "./immutablePrefix.js";
 import * as sessionStore from "./sessionStore.js";
 import * as store from "../store/index.js";
 import {
+  classifyModelError,
   resolveModelCandidates,
   shouldFallbackModel,
   wrapToolsForUser,
@@ -40,7 +42,7 @@ import { updateUserProfileTool } from "../tools/updateUserProfile.js";
 import { searchFoodApiTool } from "../tools/searchFoodApi.js";
 import { getSkillTool } from "../tools/getSkill.js";
 
-const baseCustomTools = [
+const baseCustomTools = sortToolsByName([
   logMealTool,
   getTodaySummaryTool,
   updateUserProfileTool,
@@ -56,7 +58,7 @@ const baseCustomTools = [
   logCookingFeedbackTool,
   searchFoodApiTool,
   getSkillTool,
-];
+]);
 
 const processingMap = new Map<string, Promise<string>>();
 const sessionModelKeyMap = new Map<string, string>();
@@ -98,13 +100,21 @@ async function getOrCreateSession(userId: string, candidate: ModelCandidate) {
     noPromptTemplates: true,
     noThemes: true,
     noContextFiles: true,
-    systemPromptOverride: () => [
-      DIET_AGENT_CORE_PROMPT,
-      buildSkillIndexPrompt(),
-      buildUserMemoryPrompt(userId),
-      buildUserRecipesPrompt(userId),
-      buildCurrentUserIdPrompt(userId),
-    ].filter(Boolean).join("\n\n"),
+    systemPromptOverride: (() => {
+      const prefixCache = new UserPrefixCache(
+        userId,
+        [
+          DIET_AGENT_CORE_PROMPT,
+          buildSkillIndexPrompt(),
+          buildCurrentUserIdPrompt(userId),
+        ],
+        (uid) => [
+          buildUserMemoryPrompt(uid),
+          buildUserRecipesPrompt(uid),
+        ].filter(Boolean).join("\n\n"),
+      );
+      return () => prefixCache.get();
+    })(),
     appendSystemPromptOverride: () => [],
   });
   await resourceLoader.reload();
@@ -114,7 +124,7 @@ async function getOrCreateSession(userId: string, candidate: ModelCandidate) {
     authStorage,
     modelRegistry,
     resourceLoader,
-    sessionManager: SessionManager.continueRecent(cwd, getUserSessionDir(userId)),
+    sessionManager: SessionManager.create(cwd, getUserSessionDir(userId)),
     settingsManager,
     noTools: "builtin",
     customTools: wrapToolsForUser(userId, baseCustomTools),
@@ -163,7 +173,8 @@ async function doSendWithFallback(
       return result;
     } catch (err) {
       lastError = err;
-      console.warn(`[MODEL fallback] userId=${userId} model=${candidate.label} failed: ${errorText(err)}`);
+      const category = classifyModelError(err);
+      console.warn(`[MODEL fallback] userId=${userId} model=${candidate.label} category=${category} failed: ${errorText(err)}`);
       resetUserSession(userId);
       if (!shouldFallbackModel(err) || attempt >= maxAttempts - 1) break;
       console.warn(`[MODEL fallback] retrying with next candidate...`);

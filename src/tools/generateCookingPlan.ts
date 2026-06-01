@@ -4,6 +4,7 @@ import type { ToolDefinition, ExtensionContext } from "@earendil-works/pi-coding
 import { defineTool } from "@earendil-works/pi-coding-agent";
 import * as store from "../store/index.js";
 import { matchRecipes, type MatchRecipeResult } from "../recipes/recipeMatcher.js";
+import * as recipeCatalog from "../recipes/recipeCatalog.js";
 import type { IngredientItem, RecipeRecord } from "../types/diet.js";
 
 const Params = Type.Object({
@@ -21,6 +22,10 @@ type ParamsType = Static<typeof Params>;
 
 function names(items: { name: string }[]) {
   return items.map((item) => item.name);
+}
+
+function toItems(items: string[] | undefined): IngredientItem[] {
+  return (items ?? []).map((name) => ({ name }));
 }
 
 export const generateCookingPlanTool: ToolDefinition<typeof Params> = defineTool({
@@ -41,25 +46,21 @@ export const generateCookingPlanTool: ToolDefinition<typeof Params> = defineTool
     _onUpdate?: unknown,
     _ctx?: ExtensionContext
   ) {
-    if (params.availableIngredients || params.shoppingList) {
-      store.upsertIngredientInventory(params.userId, {
-        availableIngredients: params.availableIngredients,
-        shoppingList: params.shoppingList,
-        replaceAvailable: false,
-        replaceShoppingList: false,
-      });
-    }
-
     const kitchen = store.getKitchenProfile(params.userId);
     const inventory = store.getIngredientInventory(params.userId);
     const dietProfile = store.getUserProfile(params.userId);
     const feedback = store.getCookingFeedback(params.userId);
-    const recipes = store.getRecipeBook();
+    const recipes = recipeCatalog.listForUser(params.userId);
 
     // 只取 status 为 available 或无 status 的食材
-    const availableItems: IngredientItem[] = inventory.availableIngredients.filter(
-      (item) => !item.status || item.status === "available"
-    );
+    const availableItems: IngredientItem[] = [
+      ...inventory.availableIngredients.filter((item) => !item.status || item.status === "available"),
+      ...toItems(params.availableIngredients),
+    ];
+    const shoppingItems: IngredientItem[] = [
+      ...inventory.shoppingList,
+      ...toItems(params.shoppingList),
+    ];
 
     // 按过期紧急度排序：快过期排前面，再按 expiresAt 升序
     availableItems.sort((a, b) => {
@@ -81,7 +82,7 @@ export const generateCookingPlanTool: ToolDefinition<typeof Params> = defineTool
     const matches = matchRecipes({
       recipes,
       availableIngredients: availableItems,
-      shoppingList: inventory.shoppingList,
+      shoppingList: shoppingItems,
       kitchenProfile: kitchen,
       userProfile: dietProfile,
       feedback,
@@ -136,25 +137,10 @@ export const generateCookingPlanTool: ToolDefinition<typeof Params> = defineTool
       }
     }
 
-    // Fallback：如果 matcher 没有结果（极端情况），尝试找 quick/one_pot/low_energy 菜谱
-    if (!mainResult && recipes.length > 0) {
-      const fallbackRecipe =
-        recipes.find((r) => (r.modes ?? []).includes("low_energy")) ??
-        recipes.find((r) => (r.modes ?? []).includes("quick")) ??
-        recipes.find((r) => (r.modes ?? []).includes("one_pot")) ??
-        recipes[0];
-      mainResult = {
-        recipe: fallbackRecipe,
-        score: 0,
-        reasons: ["基于默认推荐（未找到符合条件的精确匹配），请灵活调整"],
-        missingIngredients: [],
-      };
-    }
-
-    // 如果仍然没有菜谱（极端情况）
+    // 没有符合硬约束的菜谱时，不得使用不安全的兜底推荐。
     if (!mainResult) {
       return {
-        content: [{ type: "text" as const, text: "菜谱库为空，请先更新菜谱数据。" }],
+        content: [{ type: "text" as const, text: "没有找到符合忌口、过敏和厨房条件的安全菜谱。请补充可用厨具、调整限制或添加合适菜谱。" }],
         details: {
           userId: params.userId,
           kitchen,
@@ -177,11 +163,9 @@ export const generateCookingPlanTool: ToolDefinition<typeof Params> = defineTool
 
     const ownedNames = [...new Set([
       ...availableItems.map((item) => item.name),
-      ...(params.availableIngredients ?? []),
     ])];
     const shoppingNames = [...new Set([
-      ...names(inventory.shoppingList),
-      ...(params.shoppingList ?? []),
+      ...names(shoppingItems),
     ])];
     // 去重合并，用于总计
     const uniqueAvailable = [...new Set([...ownedNames, ...shoppingNames])];
@@ -307,13 +291,27 @@ export const generateCookingPlanTool: ToolDefinition<typeof Params> = defineTool
       }
     }
 
+    const planText = lines.join("\n");
+    const selectedDishes = [main, side].filter((r): r is RecipeRecord => r !== undefined);
+
+    store.saveMealPlan({
+      userId: params.userId,
+      mealType: "dinner",
+      dishes: selectedDishes.map((r) => r.name),
+      ingredients: [...new Set([...ownedNames, ...shoppingNames])],
+      missingIngredients: missing,
+      activeMinutes,
+      totalMinutes,
+      fullPlan: planText,
+    });
+
     return {
-      content: [{ type: "text" as const, text: lines.join("\n") }],
+      content: [{ type: "text" as const, text: planText }],
       details: {
         userId: params.userId,
         kitchen,
         inventory,
-        selectedRecipes: [main, side].filter((r): r is RecipeRecord => r !== undefined),
+        selectedRecipes: selectedDishes,
         activeMinutes,
         totalMinutes,
         missingIngredients: missing,

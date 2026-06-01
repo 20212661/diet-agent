@@ -585,6 +585,128 @@ class ChatBubble implements Component {
   }
 }
 
+// ─── 右侧信息面板（Overlay） ─────────────────────────
+class SidebarPanel implements Component {
+  private cachedLines: string[] = [];
+  private cachedWidth = 0;
+  private cachedTime = 0;
+
+  constructor(private userId: string) {}
+
+  invalidate() { this.cachedWidth = 0; }
+
+  render(width: number): string[] {
+    if (width === this.cachedWidth && Date.now() - this.cachedTime < 5000) {
+      return this.cachedLines;
+    }
+    this.cachedWidth = width;
+    this.cachedTime = Date.now();
+
+    const w = Math.max(width - 2, 20);
+    const lines: string[] = [];
+
+    // ── 今日摘要 ──
+    lines.push(bold(cyan("  📊 今日概况")));
+    lines.push(gray("  " + "─".repeat(w - 4)));
+    const summary = store.getTodaySummary(this.userId);
+    if (summary.meals.length === 0) {
+      lines.push(dim("  暂无饮食记录"));
+    } else {
+      const goal = store.getUserProfile(this.userId);
+      const target = goal?.goal === "fat_loss" ? "减脂" : goal?.goal === "muscle_gain" ? "增肌" : "维持";
+      const kcal = summary.estimatedTotalCalories;
+      lines.push(`  已摄入 ${bold(String(kcal))} kcal`);
+      if (goal) lines.push(`  目标：${target}`);
+      const pct = goal?.goal === "fat_loss" ? Math.min(100, Math.round(kcal / 1800 * 100))
+                : goal?.goal === "muscle_gain" ? Math.min(100, Math.round(kcal / 2500 * 100))
+                : Math.min(100, Math.round(kcal / 2000 * 100));
+      const filled = Math.round(pct / 100 * (w - 6));
+      const bar = green("█".repeat(filled)) + dim("░".repeat(Math.max(0, w - 6 - filled)));
+      lines.push(`  ${bar} ${pct}%`);
+
+      const mealLabel: Record<string, string> = { breakfast: "早", lunch: "午", dinner: "晚", snack: "加餐", unknown: "?" };
+      const mealIcons: Record<string, string> = { breakfast: "🌅", lunch: "☀️", dinner: "🌙", snack: "🍎", unknown: "🍽️" };
+      const mealsByType = new Map<string, typeof summary.meals>();
+      for (const m of summary.meals) {
+        const arr = mealsByType.get(m.mealType) ?? [];
+        arr.push(m);
+        mealsByType.set(m.mealType, arr);
+      }
+      lines.push("");
+      for (const [type, meals] of mealsByType) {
+        const icon = mealIcons[type] ?? "🍽️";
+        lines.push(`  ${icon} ${mealLabel[type] ?? type}`);
+        for (const meal of meals.slice(0, 2)) {
+          const foods = meal.foods.map(f => f.name).join("、");
+          const kcal2 = meal.foods.reduce((s, f) => s + (f.estimatedCalories ?? 0), 0);
+          const line = foods.length > w - 10 ? foods.slice(0, w - 13) + "..." : foods;
+          lines.push(dim(`    ${line}`));
+          if (kcal2 > 0) lines.push(dim(`    ${kcal2} kcal`));
+        }
+      }
+    }
+
+    // ── 今日做饭计划 ──
+    lines.push("");
+    lines.push(bold(cyan("  🍳 今日计划")));
+    lines.push(gray("  " + "─".repeat(w - 4)));
+    const plans = store.getTodayMealPlans(this.userId);
+    if (plans.length === 0) {
+      lines.push(dim("  暂无计划"));
+      lines.push(dim("  /plan 或 /tired 生成"));
+    } else {
+      for (const plan of plans) {
+        const statusIcon = plan.status === "cooked" ? "✅" : plan.status === "cancelled" ? "❌" : "📋";
+        lines.push(`  ${statusIcon} ${plan.dishes.join(" + ")}`);
+        lines.push(dim(`    主动${plan.activeMinutes}min / 总${plan.totalMinutes}min`));
+        if (plan.missingIngredients.length > 0) {
+          lines.push(yellow(`    需购: ${plan.missingIngredients.join("、")}`));
+        }
+      }
+    }
+
+    // ── 食材库存 ──
+    lines.push("");
+    lines.push(bold(cyan("  📦 食材库存")));
+    lines.push(gray("  " + "─".repeat(w - 4)));
+    const inv = store.getIngredientInventory(this.userId);
+    const available = inv.availableIngredients.filter(i => !i.status || i.status === "available");
+    if (available.length === 0) {
+      lines.push(dim("  暂无食材记录"));
+    } else {
+      const expiring = available.filter(i => i.expiresSoon);
+      if (expiring.length > 0) {
+        lines.push(yellow(`  ⚠ ${expiring.length} 项快过期`));
+        for (const item of expiring.slice(0, 3)) {
+          lines.push(dim(`    ${item.name} ${item.expiresAt ?? ""}`));
+        }
+      }
+      lines.push(`  可用 ${available.length} 项`);
+      for (const item of available.slice(0, 8)) {
+        const info = item.amount ?? "";
+        lines.push(dim(`    ${item.name}${info ? " " + info : ""}`));
+      }
+      if (available.length > 8) lines.push(dim(`    ... 等 ${available.length} 项`));
+    }
+
+    if (inv.shoppingList.length > 0) {
+      lines.push("");
+      lines.push(`  🛒 购物清单 (${inv.shoppingList.length})`);
+      for (const item of inv.shoppingList.slice(0, 5)) {
+        lines.push(dim(`    ${item.name}`));
+      }
+    }
+
+    // ── 底部 ──
+    lines.push("");
+    lines.push(gray("  " + "─".repeat(w - 4)));
+    lines.push(dim("  Tab 切换面板 │ F2 刷新"));
+
+    this.cachedLines = lines;
+    return lines;
+  }
+}
+
 // ─── 主 TUI 应用 ──────────────────────────────────
 export async function startChatTUI(userId: string) {
   const terminal = new ProcessTerminal();
@@ -602,7 +724,7 @@ export async function startChatTUI(userId: string) {
   inputBox.addChild(input);
 
   const statusText = new Text(
-    gray(` ${bold("Ctrl+C")} 退出 │ ${bold("Enter")} 发送 │ 用户: ${cyan(userId)} │ ${bold("/help")} 命令列表`),
+    gray(` ${bold("Ctrl+C")} 退出 │ ${bold("Enter")} 发送 │ ${bold("Tab")} 面板 │ 用户: ${cyan(userId)} │ ${bold("/help")} 命令列表`),
     0, 0
   );
 
@@ -623,19 +745,7 @@ export async function startChatTUI(userId: string) {
 
   const welcomeMd = new Markdown(welcomeText, 1, 0, chatMarkdownTheme);
 
-  // 加载历史消息
-  const history = store.getRecentChatMessages(userId, 50);
-
   tui.addChild(welcomeMd);
-
-  if (history.length > 0) {
-    const separator = new Markdown(gray("── 以上是历史消息 ──\n"), 1, 0, chatMarkdownTheme);
-    for (const msg of history) {
-      const role = msg.role as "user" | "assistant" | "system";
-      messagesContainer.addChild(new ChatBubble(role, msg.content));
-    }
-    tui.addChild(separator);
-  }
 
   tui.addChild(messagesContainer);
   tui.addChild(loader);
@@ -645,6 +755,24 @@ export async function startChatTUI(userId: string) {
   loader.stop();
   loader.setMessage("");
   tui.setFocus(input);
+
+  // ─── 右侧信息面板 Overlay ─────────────────────────
+  const sidebar = new SidebarPanel(userId);
+  const sidebarHandle = tui.showOverlay(sidebar, {
+    anchor: "top-right",
+    width: 32,
+    maxHeight: "80%",
+    offsetX: 0,
+    offsetY: 1,
+    nonCapturing: true,
+  });
+  let sidebarVisible = true;
+
+  function toggleSidebar() {
+    sidebarVisible = !sidebarVisible;
+    sidebarHandle.setHidden(!sidebarVisible);
+    if (sidebarVisible) sidebar.invalidate();
+  }
 
   // ─── 消息处理 ──────────────────────────────────
   let isWaiting = false;
@@ -684,6 +812,7 @@ export async function startChatTUI(userId: string) {
       const result = parseAndLogMeal(userId, arg);
       if (result) {
         messagesContainer.addChild(new ChatBubble("system", result));
+        sidebar.invalidate();
         tui.requestRender();
         return;
       }
@@ -722,6 +851,7 @@ export async function startChatTUI(userId: string) {
       const arg = text.trim().split(/\s+/).slice(1).join(" ");
       const result = handleCalibrateCommand(userId, arg);
       messagesContainer.addChild(new ChatBubble("system", result));
+      sidebar.invalidate();
       tui.requestRender();
       return;
     }
@@ -768,6 +898,7 @@ export async function startChatTUI(userId: string) {
     }
 
     isWaiting = false;
+    sidebar.invalidate();
     tui.requestRender();
   }
 
@@ -782,6 +913,15 @@ export async function startChatTUI(userId: string) {
     if (matchesKey(data, "ctrl+c")) {
       tui.stop();
       process.exit(0);
+    }
+    if (matchesKey(data, "tab")) {
+      toggleSidebar();
+      return { consume: true };
+    }
+    if (matchesKey(data, "f2")) {
+      sidebar.invalidate();
+      if (sidebarVisible) tui.requestRender();
+      return { consume: true };
     }
     return undefined;
   });

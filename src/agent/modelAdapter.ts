@@ -12,7 +12,42 @@ export interface ModelCandidate {
   promptPatch: string;
 }
 
+export type ModelErrorCategory =
+  | "rate_limit"
+  | "timeout"
+  | "network"
+  | "service_unavailable"
+  | "tool_write_failure"
+  | "tool_failure"
+  | "parameter_validation"
+  | "user_cancelled"
+  | "authentication"
+  | "unknown";
+
+export class ToolExecutionError extends Error {
+  constructor(
+    public readonly toolName: string,
+    public readonly isWrite: boolean,
+    cause: unknown,
+  ) {
+    super(`Tool ${toolName} failed: ${errorText(cause)}`, { cause });
+    this.name = "ToolExecutionError";
+  }
+}
+
 const TOOL_RETRY_COUNT = Number(process.env.TOOL_RETRY_COUNT ?? "1");
+const WRITE_TOOL_NAMES = new Set([
+  "log_meal",
+  "update_user_profile",
+  "update_kitchen_profile",
+  "update_ingredient_inventory",
+  "mark_ingredient_used",
+  "log_cooking_feedback",
+]);
+
+export function isWriteTool(toolName: string): boolean {
+  return WRITE_TOOL_NAMES.has(toolName);
+}
 
 export function createDeepSeekChatModel(): Model<"openai-completions"> | undefined {
   if (!process.env.DEEPSEEK_API_KEY) return undefined;
@@ -25,7 +60,7 @@ export function createDeepSeekChatModel(): Model<"openai-completions"> | undefin
     baseUrl: "https://api.deepseek.com",
     reasoning: false,
     input: ["text"],
-    cost: { input: 0.27, output: 1.1, cacheRead: 0, cacheWrite: 0 },
+    cost: { input: 0.27, output: 1.1, cacheRead: 0.07, cacheWrite: 0 },
     contextWindow: 65536,
     maxTokens: 8192,
     compat: {
@@ -119,27 +154,50 @@ export function resolveModelCandidates(): ModelCandidate[] {
 }
 
 export function shouldFallbackModel(err: unknown): boolean {
-  const text = errorText(err).toLowerCase();
   return [
-    "rate limit",
-    "429",
+    "rate_limit",
     "timeout",
-    "timed out",
-    "econnreset",
-    "socket hang up",
-    "overloaded",
-    "503",
-    "502",
-    "500",
-    "tool",
-    "json",
-    "schema",
-    "invalid_request",
-  ].some((needle) => text.includes(needle));
+    "network",
+    "service_unavailable",
+  ].includes(classifyModelError(err));
+}
+
+export function classifyModelError(err: unknown): ModelErrorCategory {
+  if (err instanceof ToolExecutionError) {
+    return err.isWrite ? "tool_write_failure" : "tool_failure";
+  }
+
+  const text = errorText(err).toLowerCase();
+  const status = extractStatus(err);
+
+  if (["aborterror", "user cancelled", "user canceled", "cancelled", "canceled"].some((needle) => text.includes(needle))) {
+    return "user_cancelled";
+  }
+  if (status === 401 || status === 403 || ["unauthorized", "forbidden", "invalid api key", "invalid_api_key", "authentication"].some((needle) => text.includes(needle))) {
+    return "authentication";
+  }
+  if (status === 429 || text.includes("rate limit") || text.includes("too many requests")) {
+    return "rate_limit";
+  }
+  if (["timeout", "timed out", "etimedout"].some((needle) => text.includes(needle))) {
+    return "timeout";
+  }
+  if (["econnreset", "econnrefused", "enotfound", "socket hang up", "network error", "fetch failed"].some((needle) => text.includes(needle))) {
+    return "network";
+  }
+  if ([500, 502, 503, 504].includes(status) || ["overloaded", "service unavailable", "bad gateway"].some((needle) => text.includes(needle))) {
+    return "service_unavailable";
+  }
+  if (["schema", "validation", "invalid_request", "invalid request", "invalid json", "json parse"].some((needle) => text.includes(needle))) {
+    return "parameter_validation";
+  }
+  return "unknown";
 }
 
 export function wrapToolsForUser(userId: string, tools: ToolDefinition<any>[]): ToolDefinition<any>[] {
-  return tools.map((tool) => defineTool({
+  return tools.map((tool) => {
+    const completedWriteCalls = new Map<string, Promise<unknown>>();
+    return defineTool({
     ...tool,
     prepareArguments: (args: unknown) => {
       const repaired = repairToolArguments(tool.name, args, userId);
@@ -149,6 +207,18 @@ export function wrapToolsForUser(userId: string, tools: ToolDefinition<any>[]): 
       return repaired;
     },
     async execute(toolCallId, params, signal, onUpdate, ctx) {
+      if (isWriteTool(tool.name)) {
+        const existing = completedWriteCalls.get(toolCallId);
+        if (existing) return await existing as any;
+
+        const pending = tool.execute(toolCallId, params, signal, onUpdate, ctx)
+          .catch((err) => {
+            throw new ToolExecutionError(tool.name, true, err);
+          });
+        completedWriteCalls.set(toolCallId, pending);
+        return await pending;
+      }
+
       let lastError: unknown;
       for (let attempt = 0; attempt <= TOOL_RETRY_COUNT; attempt++) {
         try {
@@ -159,9 +229,10 @@ export function wrapToolsForUser(userId: string, tools: ToolDefinition<any>[]): 
           if (!isRetryableToolError(err) || attempt >= TOOL_RETRY_COUNT) break;
         }
       }
-      throw lastError;
+      throw new ToolExecutionError(tool.name, false, lastError);
     },
-  }));
+    });
+  });
 }
 
 export function repairToolArguments(toolName: string, args: unknown, userId: string): any {
@@ -238,4 +309,11 @@ function isRetryableToolError(err: unknown): boolean {
 function errorText(err: unknown): string {
   if (err instanceof Error) return `${err.name}: ${err.message}`;
   return String(err);
+}
+
+function extractStatus(err: unknown): number {
+  if (!err || typeof err !== "object") return 0;
+  const value = (err as any).status ?? (err as any).statusCode ?? (err as any).code;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
 }

@@ -7,18 +7,16 @@
 const TOKEN_URL = "https://oauth.fatsecret.com/connect/token";
 const API_URL = "https://platform.fatsecret.com/rest/server.api";
 
-// 内置默认凭证（免费 API，无限请求），用户可通过 .env 覆盖
-const DEFAULT_CLIENT_ID = "4c095531df124880ad1eb3ddce30d587";
-const DEFAULT_CLIENT_SECRET = "5afb5e0fcc5344449c016b9aca0c1380";
-
 let cachedToken: string | null = null;
 let tokenExpiresAt = 0;
 
 function getCredentials(): { clientId: string; clientSecret: string } {
-  return {
-    clientId: process.env.FATSECRET_CLIENT_ID || DEFAULT_CLIENT_ID,
-    clientSecret: process.env.FATSECRET_CLIENT_SECRET || DEFAULT_CLIENT_SECRET,
-  };
+  const clientId = process.env.FATSECRET_CLIENT_ID?.trim();
+  const clientSecret = process.env.FATSECRET_CLIENT_SECRET?.trim();
+  if (!clientId || !clientSecret) {
+    throw new Error("FatSecret API is not configured. Set FATSECRET_CLIENT_ID and FATSECRET_CLIENT_SECRET.");
+  }
+  return { clientId, clientSecret };
 }
 
 async function getAccessToken(): Promise<string> {
@@ -171,5 +169,8 @@ export async function getFoodNutrition(foodId: string): Promise<{
 }
 
 export function isConfigured(): boolean {
-  return true;
+  return Boolean(
+    process.env.FATSECRET_CLIENT_ID?.trim() &&
+    process.env.FATSECRET_CLIENT_SECRET?.trim()
+  );
 }

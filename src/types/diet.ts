@@ -59,6 +59,9 @@ export interface TodaySummary {
   date: string;
   meals: MealLog[];
   estimatedTotalCalories: number;
+  foodsWithCalories: MealFood[];
+  foodsWithoutCalories: MealFood[];
+  coverageRatio: number;
   summaryText: string;
 }
 

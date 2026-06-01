@@ -190,6 +190,23 @@ function createTables(db: Database.Database): void {
 
     CREATE INDEX IF NOT EXISTS idx_calorie_corrections_user ON calorie_corrections(user_id);
 
+    CREATE TABLE IF NOT EXISTS meal_plans (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      date TEXT NOT NULL,
+      meal_type TEXT NOT NULL DEFAULT 'dinner',
+      dishes TEXT NOT NULL DEFAULT '[]',
+      ingredients TEXT NOT NULL DEFAULT '[]',
+      missing_ingredients TEXT NOT NULL DEFAULT '[]',
+      active_minutes INTEGER NOT NULL DEFAULT 0,
+      total_minutes INTEGER NOT NULL DEFAULT 0,
+      full_plan TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'planned',
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_meal_plans_user_date ON meal_plans(user_id, date);
+
     CREATE TABLE IF NOT EXISTS recipe_book (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -866,13 +883,15 @@ export function getAllMealLogs(userId: string): MealLog[] {
 export function getTodaySummary(userId: string, date?: string): TodaySummary {
   const targetDate = date ?? todayDate();
   const meals = getMealLogsByDate(userId, targetDate);
+  const foods = meals.flatMap((meal) => meal.foods);
+  const foodsWithCalories = foods.filter((food) => food.estimatedCalories != null);
+  const foodsWithoutCalories = foods.filter((food) => food.estimatedCalories == null);
+  const coverageRatio = foods.length === 0 ? 0 : foodsWithCalories.length / foods.length;
 
-  const estimatedTotalCalories = meals.reduce((sum, meal) => {
-    return (
-      sum +
-      meal.foods.reduce((s, f) => s + (f.estimatedCalories ?? 0), 0)
-    );
-  }, 0);
+  const estimatedTotalCalories = foodsWithCalories.reduce(
+    (sum, food) => sum + food.estimatedCalories!,
+    0
+  );
 
   const mealTypeLabel: Record<string, string> = {
     breakfast: "早餐",
@@ -892,17 +911,24 @@ export function getTodaySummary(userId: string, date?: string): TodaySummary {
       const foodDesc = meal.foods
         .map((f) => `${f.name}${f.amount ? " " + f.amount : ""}`)
         .join("、");
-      const cal = meal.foods.reduce(
-        (s, f) => s + (f.estimatedCalories ?? 0),
+      const foodsWithKnownCalories = meal.foods.filter((food) => food.estimatedCalories != null);
+      const knownCalories = foodsWithKnownCalories.reduce(
+        (sum, food) => sum + food.estimatedCalories!,
         0
       );
-      lines.push(
-        `- ${typeLabel}: ${foodDesc}（约 ${cal} kcal，粗略估算）`
-      );
+      const unknownCount = meal.foods.length - foodsWithKnownCalories.length;
+      const calorieText = unknownCount === 0
+        ? `约 ${knownCalories} kcal，粗略估算`
+        : `已知部分约 ${knownCalories} kcal，另有 ${unknownCount} 项未估算`;
+      lines.push(`- ${typeLabel}: ${foodDesc}（${calorieText}）`);
     }
-    lines.push(
-      `\n当日合计粗略估算热量: 约 ${estimatedTotalCalories} kcal`
-    );
+    const coveragePercent = Math.round(coverageRatio * 100);
+    if (foodsWithoutCalories.length === 0) {
+      lines.push(`\n当日合计粗略估算热量: 约 ${estimatedTotalCalories} kcal`);
+    } else {
+      lines.push(`\n当日已知部分粗略估算热量: 约 ${estimatedTotalCalories} kcal`);
+      lines.push(`热量覆盖率: ${coveragePercent}%（${foodsWithoutCalories.length} 项食物缺少热量数据，不能据此判断是否超量）`);
+    }
   }
 
   return {
@@ -910,6 +936,9 @@ export function getTodaySummary(userId: string, date?: string): TodaySummary {
     date: targetDate,
     meals,
     estimatedTotalCalories,
+    foodsWithCalories,
+    foodsWithoutCalories,
+    coverageRatio,
     summaryText: lines.join("\n"),
   };
 }
@@ -1200,6 +1229,86 @@ export function getAllChatMessages(userId: string): ChatMessage[] {
     userId: row.user_id as string,
     role: row.role as ChatMessage["role"],
     content: row.content as string,
+    createdAt: row.created_at as string,
+  }));
+}
+
+// ---- 今日做饭计划 ----
+
+export interface MealPlan {
+  id: string;
+  userId: string;
+  date: string;
+  mealType: string;
+  dishes: string[];
+  ingredients: string[];
+  missingIngredients: string[];
+  activeMinutes: number;
+  totalMinutes: number;
+  fullPlan: string;
+  status: "planned" | "cooked" | "cancelled";
+  createdAt: string;
+}
+
+export function saveMealPlan(input: {
+  userId: string;
+  mealType?: string;
+  dishes: string[];
+  ingredients: string[];
+  missingIngredients: string[];
+  activeMinutes: number;
+  totalMinutes: number;
+  fullPlan: string;
+}): MealPlan {
+  const db = getDb();
+  const id = generateId("mp");
+  const now = nowISO();
+  const today = todayDate();
+  const plan: MealPlan = {
+    id,
+    userId: input.userId,
+    date: today,
+    mealType: input.mealType ?? "dinner",
+    dishes: input.dishes,
+    ingredients: input.ingredients,
+    missingIngredients: input.missingIngredients,
+    activeMinutes: input.activeMinutes,
+    totalMinutes: input.totalMinutes,
+    fullPlan: input.fullPlan,
+    status: "planned",
+    createdAt: now,
+  };
+  db.prepare(`
+    INSERT INTO meal_plans (id, user_id, date, meal_type, dishes, ingredients, missing_ingredients, active_minutes, total_minutes, full_plan, status, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id, input.userId, today, plan.mealType,
+    stringifyJson(plan.dishes),
+    stringifyJson(plan.ingredients),
+    stringifyJson(plan.missingIngredients),
+    plan.activeMinutes, plan.totalMinutes, plan.fullPlan,
+    plan.status, now
+  );
+  return plan;
+}
+
+export function getTodayMealPlans(userId: string): MealPlan[] {
+  const db = getDb();
+  const rows = db.prepare(
+    "SELECT * FROM meal_plans WHERE user_id = ? AND date = ? ORDER BY created_at ASC"
+  ).all(userId, todayDate()) as Record<string, unknown>[];
+  return rows.map((row) => ({
+    id: row.id as string,
+    userId: row.user_id as string,
+    date: row.date as string,
+    mealType: row.meal_type as string,
+    dishes: parseJsonArray(row.dishes as string),
+    ingredients: parseJsonArray(row.ingredients as string),
+    missingIngredients: parseJsonArray(row.missing_ingredients as string),
+    activeMinutes: row.active_minutes as number,
+    totalMinutes: row.total_minutes as number,
+    fullPlan: row.full_plan as string,
+    status: row.status as MealPlan["status"],
     createdAt: row.created_at as string,
   }));
 }

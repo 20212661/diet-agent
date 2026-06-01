@@ -17,6 +17,8 @@ export const toolUsagePrompt = `
 - search_recipes：搜索并评分菜谱候选，只返回候选和推荐理由。
 - generate_cooking_plan：生成完整晚饭方案、并行厨具安排、时间线和步骤。
 - log_cooking_feedback：记录用户对菜谱或做饭方案的反馈。
+- search_food_api：查询外部食物营养数据。
+- get_skill：按 slug 加载最相关的 Skill 工作流。
 
 ## 工具调用强约束
 - 用户说“我早上吃了一个包子一杯豆浆”：调用 log_meal。
@@ -38,4 +40,7 @@ export const toolUsagePrompt = `
 3. 需要完整做饭步骤、时间线和厨具并行安排时才用 generate_cooking_plan。
 4. 做饭完成后的评价必须用 log_cooking_feedback，不要塞进普通聊天。
 5. 食材状态变化必须用 mark_ingredient_used 或 update_ingredient_inventory。
+6. 写入类工具只能基于用户明确陈述调用，不要根据推测更新长期数据。
+7. 当用户确认了今晚要做的菜（无论通过哪种方式），必须调用 generate_cooking_plan 生成方案。禁止仅用文字回复而不调用工具。
+8. 如果用户说"就这个"、"可以"、"行"、"就吃这个"等确认了之前的候选菜谱，必须调用 generate_cooking_plan 保存最终方案。
 `.trim();

@@ -1,6 +1,7 @@
 /**
  * Seed FatSecret food data using English queries for accurate results
  */
+import "dotenv/config";
 import Database from "better-sqlite3";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -8,8 +9,11 @@ import { join } from "node:path";
 const DB_DIR = join(import.meta.dirname, "..", "data");
 const DB_PATH = join(DB_DIR, "diet-agent.sqlite");
 
-const CLIENT_ID = "4c095531df124880ad1eb3ddce30d587";
-const CLIENT_SECRET = "5afb5e0fcc5344449c016b9aca0c1380";
+const CLIENT_ID = process.env.FATSECRET_CLIENT_ID?.trim();
+const CLIENT_SECRET = process.env.FATSECRET_CLIENT_SECRET?.trim();
+if (!CLIENT_ID || !CLIENT_SECRET) {
+  throw new Error("Set FATSECRET_CLIENT_ID and FATSECRET_CLIENT_SECRET before seeding FatSecret data.");
+}
 
 let token = "";
 let tokenExp = 0;

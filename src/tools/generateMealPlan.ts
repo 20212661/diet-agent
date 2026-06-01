@@ -42,6 +42,26 @@ const PLAN_TEMPLATES: Record<string, { breakfast: string[]; lunch: string[]; din
   },
 };
 
+function norm(value: string): string {
+  return value.toLowerCase().trim();
+}
+
+function containsBlockedFood(option: string, blockedFoods: string[]): boolean {
+  const normalizedOption = norm(option);
+  return blockedFoods.some((food) => {
+    const normalizedFood = norm(food);
+    return normalizedFood.length > 0 && normalizedOption.includes(normalizedFood);
+  });
+}
+
+function pickSafeOption(options: string[], blockedFoods: string[]): string {
+  const safeOptions = options.filter((option) => !containsBlockedFood(option, blockedFoods));
+  if (safeOptions.length === 0) {
+    return "暂无符合当前忌口/过敏条件的安全模板，请补充可接受食材";
+  }
+  return safeOptions[Math.floor(Math.random() * safeOptions.length)];
+}
+
 export const generateMealPlanTool: ToolDefinition<typeof Params> = defineTool({
   name: "generate_meal_plan",
   label: "生成饮食计划",
@@ -84,16 +104,16 @@ export const generateMealPlanTool: ToolDefinition<typeof Params> = defineTool({
     lines.push("");
     lines.push("⚠️ 以下为参考模板，实际热量为粗略估算。请根据个人情况调整份量。");
 
-    const pickRandom = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+    const blockedFoods = [...avoidSet];
 
     for (let d = 0; d < clampedDays; d++) {
       const dayLabel = clampedDays === 1 ? "今天" : `第 ${d + 1} 天`;
       lines.push(`\n--- ${dayLabel} ---`);
 
-      const b = pickRandom(template.breakfast);
-      const l = pickRandom(template.lunch);
-      const din = pickRandom(template.dinner);
-      const s = pickRandom(template.snack);
+      const b = pickSafeOption(template.breakfast, blockedFoods);
+      const l = pickSafeOption(template.lunch, blockedFoods);
+      const din = pickSafeOption(template.dinner, blockedFoods);
+      const s = pickSafeOption(template.snack, blockedFoods);
 
       lines.push(`早餐: ${b}`);
       lines.push(`午餐: ${l}`);
@@ -115,8 +135,20 @@ export const generateMealPlanTool: ToolDefinition<typeof Params> = defineTool({
       "\n💡 建议：根据实际活动量适当增减，保持饮食多样化，注意饮水和蔬果摄入。"
     );
 
+    const planText = lines.join("\n");
+    store.saveMealPlan({
+      userId,
+      mealType: "daily_plan",
+      dishes: [goal === "fat_loss" ? "减脂饮食计划" : goal === "muscle_gain" ? "增肌饮食计划" : "均衡饮食计划"],
+      ingredients: [],
+      missingIngredients: [],
+      activeMinutes: 0,
+      totalMinutes: 0,
+      fullPlan: planText,
+    });
+
     return {
-      content: [{ type: "text" as const, text: lines.join("\n") }],
+      content: [{ type: "text" as const, text: planText }],
       details: { userId, days: clampedDays, goal },
     };
   },

@@ -123,6 +123,8 @@ npm run dev -- myname
 | `MODEL_ID` | 供应商默认 | 强制指定模型 ID |
 | `MODEL_FALLBACK_ATTEMPTS` | `2` | 模型降级尝试次数 |
 | `TOOL_RETRY_COUNT` | `1` | 工具调用重试次数 |
+| `ENABLE_REQUEST_LOGS` | 未设置 | 设为 `1` 时启用脱敏后的 LLM 请求诊断日志 |
+| `REQUEST_LOG_RETENTION_DAYS` | `7` | 请求诊断日志保留天数 |
 
 ## 🧩 支持的模型
 
@@ -136,7 +138,7 @@ npm run dev -- myname
 
 ## 🛠 AI 工具一览
 
-助手内置 13 个工具，AI 根据对话自动调用：
+助手内置 15 个工具，AI 根据对话自动调用：
 
 | 工具 | 说明 |
 |------|------|
@@ -153,6 +155,8 @@ npm run dev -- myname
 | `get_kitchen_profile` | 查询厨房配置 |
 | `update_kitchen_profile` | 更新灶眼、烤箱、厨具、偏好 |
 | `get_today_summary` | 查询今日（或指定日期）饮食记录和热量汇总 |
+| `search_food_api` | 通过 FatSecret 查询食物营养数据 |
+| `get_skill` | 按 slug 加载可复用工作流 |
 
 ## 📂 项目结构
 
@@ -173,14 +177,16 @@ src/
       dietPrompt.ts              # 饮食相关
       toolUsagePrompt.ts         # 工具使用指导
       safetyPrompt.ts            # 安全约束
+      skillUsagePrompt.ts        # Skill 加载规则
   recipes/
     recipeBook.ts                # 内置菜谱管理
     recipeMatcher.ts             # 菜谱匹配算法（按食材/时间/精力）
+    recipeCatalog.ts             # 内置菜谱 + 用户菜谱 + 热量校准统一入口
     recipeSeed.json              # 25 道菜谱种子数据
   store/
     index.ts                     # 统一导出
     sqliteStore.ts               # SQLite 持久化（WAL 模式）
-  tools/                         # 13 个 Agent 工具定义
+  tools/                         # 15 个 Agent 工具定义
     generateCookingPlan.ts
     generateMealPlan.ts
     getIngredientInventory.ts
@@ -194,6 +200,8 @@ src/
     updateIngredientInventory.ts
     updateKitchenProfile.ts
     updateUserProfile.ts
+    searchFoodApi.ts
+    getSkill.ts
   types/
     diet.ts                      # TypeScript 类型定义
   tests/
@@ -227,6 +235,17 @@ npm test             # 运行测试
 ## ⚠️ 当前限制
 
 1. **单用户设计**：userId 为字符串标识，无鉴权
-2. **热量估算**：未接入食物营养数据库，为粗略估算
-3. **会话无持久化**：Agent session 在内存中，重启后丢失（用户数据在 SQLite 中持久化）
-4. **API Key 明文**：存储在 .env 中，注意不要提交到版本控制
+2. **热量估算**：支持 FatSecret 查询和用户校准，但汇总仍为粗略估算；存在未知项时会显示覆盖率
+3. **会话存储**：Agent session 文件保存在 `data/sessions/`，用户业务数据保存在 SQLite
+4. **API Key 明文**：存储在 `.env` 中，注意不要提交到版本控制
+
+## 🧪 请求诊断日志
+
+请求日志默认关闭。需要诊断模型调用时，在 `.env` 中设置：
+
+```bash
+ENABLE_REQUEST_LOGS=1
+REQUEST_LOG_RETENTION_DAYS=7
+```
+
+日志写入 `logs/api-requests/`，启动时会清理超过保留期的文件。日志会脱敏认证信息、健康备注和过敏信息，并记录延迟、token、供应商返回的缓存命中 token。成本估算只有在配置 `LLM_*_COST_PER_MILLION` 后才会计算。本地 Prompt hash 只用于稳定前缀，不代表供应商缓存已经命中。
