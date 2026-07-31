@@ -159,7 +159,7 @@ describe("RecipeRetriever", () => {
     expect(result.recipes.length).toBeLessThanOrEqual(2);
     expect(result.recipes.every((r) => recipes.some((s) => s.id === r.id))).toBe(true);
     for (let i = 1; i < result.hits.length; i++) {
-      expect(result.hits[i].distance).toBeGreaterThanOrEqual(result.hits[i - 1].distance);
+      expect(result.hits[i].score).toBeLessThanOrEqual(result.hits[i - 1].score);
     }
     db.close();
   });
@@ -210,7 +210,7 @@ describe("search_recipes RAG 集成", () => {
   });
   afterEach(() => vi.restoreAllMocks());
 
-  it("无 embedding key 时退回纯 matcher（关键词预筛），不报错", async () => {
+  it("无 embedding key 时 FTS5 关键词通道仍工作（hybrid 升级）", async () => {
     const userId = freshUser("rag_nokey");
     store.clearUserData(userId);
     const result = await searchRecipesTool.execute(
@@ -222,6 +222,9 @@ describe("search_recipes RAG 集成", () => {
     );
     const text = result.content[0]?.type === "text" ? result.content[0].text : "";
     expect(text).toContain("菜谱候选");
-    expect(getRetriever()).resolves.toBeNull(); // RAG 确实关闭
+    const retriever = await getRetriever();
+    expect(retriever).not.toBeNull(); // FTS5 通道可用，不因无 embedding key 关闭
+    expect(retriever!.backends.fts).toBe(true);
+    expect(retriever!.backends.vector).toBeNull();
   });
 });
