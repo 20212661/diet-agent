@@ -360,6 +360,11 @@ function getDb(): Database.Database {
 getDb();
 console.log(`📦 SQLite 存储已初始化: ${DB_PATH}`);
 
+/** 暴露内部数据库连接，供 RAG 向量扩展等同库模块复用（向量与业务数据同库同连接）。 */
+export function getDatabase(): Database.Database {
+  return getDb();
+}
+
 // ==================================================================
 // 导出的存储接口
 // ==================================================================

@@ -4,6 +4,7 @@ import type { ToolDefinition, ExtensionContext } from "@earendil-works/pi-coding
 import { defineTool } from "@earendil-works/pi-coding-agent";
 import * as store from "../store/index.js";
 import { matchRecipes } from "../recipes/recipeMatcher.js";
+import { getRetriever } from "../rag/index.js";
 import type { EnergyLevel, IngredientItem } from "../types/diet.js";
 
 const Params = Type.Object({
@@ -52,7 +53,21 @@ export const searchRecipesTool: ToolDefinition<typeof Params> = defineTool({
     const inventory = store.getIngredientInventory(params.userId);
     const userProfile = store.getUserProfile(params.userId);
     const feedback = store.getCookingFeedback(params.userId);
-    const recipes = store.getRecipeBook().filter((recipe) => recipeTextMatches(recipe, params.query));
+    // 候选菜谱：有自然语言 query 时优先 RAG 语义召回（top-20），否则用关键词预筛
+    let recipes = store.getRecipeBook().filter((recipe) => recipeTextMatches(recipe, params.query));
+    if (params.query?.trim()) {
+      const retriever = await getRetriever();
+      if (retriever) {
+        try {
+          const recalled = await retriever.recall(params.query, 20);
+          if (recalled.recipes.length > 0) {
+            recipes = recalled.recipes;
+          }
+        } catch (e) {
+          console.warn(`[RAG] recall failed, fallback to keyword filter: ${(e as Error).message}`);
+        }
+      }
+    }
     const availableIngredients = [
       ...inventory.availableIngredients.filter((item) => !item.status || item.status === "available"),
       ...toItems(params.ingredients),
