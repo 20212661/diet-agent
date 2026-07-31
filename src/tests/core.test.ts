@@ -143,7 +143,7 @@ describe("菜谱匹配算法", () => {
       userProfile,
       feedback: [],
     });
-    const fishRecipe = results.find((r) => r.recipe.name.includes("鱼"));
+    const fishRecipe = results.find((r) => r.recipe.ingredients.some((i) => i.includes("鱼")));
     expect(fishRecipe).toBeTruthy();
     expect(fishRecipe!.score).toBeLessThan(-900);
   });
