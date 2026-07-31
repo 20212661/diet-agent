@@ -1,5 +1,10 @@
 # 🍳 晚饭工作流 — 个人饮食管理智能体（终端版）
 
+[![CI](https://github.com/20212661/diet-agent/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/20212661/diet-agent/actions/workflows/ci.yml)
+[![tested with vitest](https://img.shields.io/badge/tested%20with-vitest-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen?logo=node.js&logoColor=white)](https://nodejs.org)
+
 基于 **@earendil-works/pi-coding-agent** SDK 构建的智能晚饭管理助手。
 
 面向**独居/双人的下班做饭场景**，覆盖「买菜 → 入库 → 计划 → 做饭 → 反馈 → 周末备菜」完整循环。
@@ -154,13 +159,92 @@ logs/                            # 请求日志（自动创建，已被 gitignor
 | AI SDK | @earendil-works/pi-coding-agent |
 | 数据库 | SQLite (better-sqlite3) |
 | 运行时 | tsx (开发) / tsc + node (生产) |
+| 测试 | vitest + GitHub Actions |
+
+## 🏗 架构概览
+
+一条消息的完整链路：
+
+```
+用户输入 (TUI)
+    │
+    ▼
+Agent 编排层 ── 按 userId 串行化消息，避免并发写冲突
+    │  （系统提示词 = 分层静态提示词 + 动态用户记忆，实时从 SQLite 注入）
+    ▼
+多模型适配层 ── 候选链 DeepSeek→GLM→OpenAI…，按错误类型自动降级
+    │
+    ▼
+LLM 决策调用工具
+    │
+    ▼
+工具参数修复中间件 ── 统一兜底 LLM 输出的 数组 / 布尔 / 数字 / 缺失字段
+    │
+    ▼
+15 个领域工具 ── 读写 SQLite（画像 / 库存 / 三餐 / 反馈 / 周计划）
+    │
+    └─ 菜谱推荐走「确定性评分算法」，而非让 LLM 直接推荐
+    ▼
+回复 → TUI 渲染（Markdown）
+```
+
+**核心分工：LLM 负责「理解意图 + 编排 + 自然语言」，确定性算法负责「需要稳定可测的决策」**（菜谱排序、忌口过滤、时间约束、厨房匹配）。
+
+## 🔌 哪些是自研（SDK 边界）
+
+本项目基于 `@earendil-works/pi-*` 系列构建。诚实划分各自职责——面试时可以直接对照这张表：
+
+| 能力 | 提供方 |
+|------|--------|
+| Agent 主循环 / 工具调用协议 / 流式响应 | `pi-coding-agent` |
+| 终端 TUI 渲染框架 | `pi-tui` |
+| 各模型 SDK 封装（`getModel`） | `pi-ai` |
+| **业务领域模型**（菜谱 / 库存 / 画像 / 反馈 / 周计划） | ✅ 自研 |
+| **SQLite 持久化 + schema 迁移** | ✅ 自研 |
+| **多维度菜谱评分匹配算法** | ✅ 自研 |
+| **多模型候选链 + 错误感知降级** | ✅ 自研 |
+| **工具参数修复中间件** | ✅ 自研 |
+| **分层系统提示词 + 动态用户记忆注入** | ✅ 自研 |
+| **15 个领域工具** | ✅ 自研 |
+
+## 🧠 关键工程决策
+
+### 1. 用确定性评分算法推荐菜谱，而非纯让 LLM 推荐
+- **为什么**：菜谱推荐本质是「多维加权排序 + 硬约束（忌口 / 烤箱 / 时间）」。LLM 在这类任务上不稳定、不可复现、每次都耗 token；评分算法零额外成本、结果可复现、可单测。
+- **代价**：权重需手工调，菜谱必须维护结构化字段（食材 / 电器 / 难度…）。
+- **结果**：`recipeMatcher` 单测覆盖率 72%，LLM 只在它给的候选上做编排和润色。
+
+### 2. 工具参数修复中间件（`repairToolArguments`）
+- **为什么**：实测 GLM / DeepSeek 等模型经常把数组传成逗号字符串、布尔传成 `"是"`、漏填 `userId`。与其在每个工具里打补丁，不如在中间件统一兜底。
+- **代价**：多一层隐式类型转换。
+- **结果**：工具实现保持干净，工具调用成功率显著提升。
+
+### 3. 多模型候选链 + 错误感知降级
+- **为什么**：单一模型会 429 / 超时 / schema 报错。按错误文本判定是否切到下一个候选，并复用同一 `sessionDir`，fallback 时对话历史不丢。
+- **代价**：降级逻辑增加复杂度，需维护候选优先级。
+
+### 4. SQLite 存 JSON 字段而非完全范式化
+- **为什么**：单机应用、读多写少、字段随业务快速演进。JSON blob + 按列检测的 schema 迁移（`addColumnIfMissing`）比频繁 `ALTER TABLE` 轻。
+- **代价**：无法在 SQL 级查询数组内部元素。
+- **取舍**：对单机工具型应用是合理的——迭代速度优先于关系纯度。
+
+## ✅ 测试与持续集成
+
+- **框架**：vitest，15 个用例覆盖菜谱匹配、食材歧义保护、schema 迁移、工具参数修复、模型降级判定、周计划持久化等核心逻辑；用 `:memory:` SQLite 隔离，不污染生产数据。
+- **CI**：GitHub Actions 在 Node 20/22 上跑 `typecheck` + `test:coverage`，覆盖率产物作为 artifact 上传。
+- **关键模块覆盖率**：菜谱匹配 72%、周计划生成 91%、SQLite 存储 70%。
+
+```bash
+npm test               # 跑全部测试
+npm run test:watch     # watch 模式
+npm run test:coverage  # 生成覆盖率报告（coverage/）
+```
 
 ## 🛠 其他命令
 
 ```bash
 npm run build       # 编译到 dist/
 npm run typecheck   # 类型检查
-npm test            # 运行测试（菜谱匹配、工具、存储等 13 项）
 ```
 
 ## ⚠️ 当前限制
