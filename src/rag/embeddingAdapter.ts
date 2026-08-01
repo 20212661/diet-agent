@@ -10,7 +10,7 @@
  */
 import Database from "better-sqlite3";
 
-export type EmbeddingProvider = "openai" | "zai";
+export type EmbeddingProvider = "openai" | "zai" | "local";
 
 export interface EmbeddingConfig {
   provider: EmbeddingProvider;
@@ -37,6 +37,11 @@ const PROVIDER_DEFAULTS: Record<EmbeddingProvider, { model: string; baseUrl: str
     baseUrl: "https://open.bigmodel.cn/api/paas/v4",
     dim: 1024,
   },
+  local: {
+    model: "Xenova/bge-small-zh-v1.5",
+    baseUrl: "", // 本地模型，无 HTTP 调用
+    dim: 512,
+  },
 };
 
 /**
@@ -45,21 +50,23 @@ const PROVIDER_DEFAULTS: Record<EmbeddingProvider, { model: string; baseUrl: str
  * 都没有则返回 undefined（RAG 关闭，退回纯 matcher）。
  */
 export function resolveEmbeddingConfig(): EmbeddingConfig | undefined {
-  const explicit = process.env.EMBEDDING_PROVIDER as EmbeddingProvider | undefined;
-  if (explicit === "openai" && process.env.OPENAI_API_KEY) {
-    return makeConfig("openai");
-  }
-  if (explicit === "zai" && process.env.ZAI_API_KEY) {
-    return makeConfig("zai");
-  }
-  // 未显式指定：按已配置 key 自动选
+  const explicit = process.env.EMBEDDING_PROVIDER;
+  if (explicit === "off" || explicit === "none") return undefined; // 显式关闭向量通道（纯 FTS5）
+  if (explicit === "local") return makeConfig("local");
+  if (explicit === "openai" && process.env.OPENAI_API_KEY) return makeConfig("openai");
+  if (explicit === "zai" && process.env.ZAI_API_KEY) return makeConfig("zai");
+  // 未显式指定：按已配置 key 自动选；都没有则 fallback 到本地模型（零配置向量召回）
   if (process.env.ZAI_API_KEY) return makeConfig("zai");
   if (process.env.OPENAI_API_KEY) return makeConfig("openai");
-  return undefined;
+  return makeConfig("local");
 }
 
 function makeConfig(provider: EmbeddingProvider): EmbeddingConfig {
   const def = PROVIDER_DEFAULTS[provider];
+  if (provider === "local") {
+    // 本地模型：无 HTTP、无 key
+    return { provider, model: def.model, baseUrl: "", apiKey: "", dim: def.dim };
+  }
   const modelEnv = provider === "openai" ? process.env.OPENAI_EMBEDDING_MODEL : process.env.ZAI_EMBEDDING_MODEL;
   const apiKey = (provider === "openai" ? process.env.OPENAI_API_KEY : process.env.ZAI_API_KEY)!;
   return {
@@ -81,6 +88,12 @@ export function normalize(vector: number[]): number[] {
 }
 
 export async function embed(text: string, config: EmbeddingConfig): Promise<EmbeddingResult> {
+  if (config.provider === "local") {
+    // 动态 import，避免不用 local 时也加载 transformers.js（较重）
+    const { embedLocal } = await import("./localEmbedder.js");
+    const { vector, dim } = await embedLocal(text);
+    return { vector, dim, provider: "local" };
+  }
   const url = `${config.baseUrl}/embeddings`;
   const resp = await fetch(url, {
     method: "POST",

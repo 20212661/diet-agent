@@ -74,7 +74,7 @@ describe("embedding 适配", () => {
     expect(normalize([0, 0])).toEqual([0, 0]);
   });
 
-  it("resolveEmbeddingConfig：国内优先 ZAI，其次 OpenAI，都无则关闭", () => {
+  it("resolveEmbeddingConfig：国内优先 ZAI，其次 OpenAI，都无则 fallback 本地", () => {
     process.env.ZAI_API_KEY = "z";
     expect(resolveEmbeddingConfig()?.provider).toBe("zai");
 
@@ -83,7 +83,18 @@ describe("embedding 适配", () => {
     expect(resolveEmbeddingConfig()?.provider).toBe("openai");
 
     delete process.env.OPENAI_API_KEY;
+    expect(resolveEmbeddingConfig()?.provider).toBe("local"); // 零配置 fallback 本地模型
+  });
+
+  it("resolveEmbeddingConfig：EMBEDDING_PROVIDER=off 关闭向量通道（纯 FTS5）", () => {
+    process.env.EMBEDDING_PROVIDER = "off";
     expect(resolveEmbeddingConfig()).toBeUndefined();
+  });
+
+  it("resolveEmbeddingConfig：EMBEDDING_PROVIDER=local 显式用本地（即使有 key）", () => {
+    process.env.EMBEDDING_PROVIDER = "local";
+    process.env.OPENAI_API_KEY = "o";
+    expect(resolveEmbeddingConfig()?.provider).toBe("local");
   });
 
   it("resolveEmbeddingConfig：EMBEDDING_PROVIDER 显式优先", () => {
@@ -210,11 +221,12 @@ describe("search_recipes RAG 集成", () => {
   });
   afterEach(() => vi.restoreAllMocks());
 
-  it("无 embedding key 时 FTS5 关键词通道仍工作（hybrid 升级）", async () => {
-    const userId = freshUser("rag_nokey");
+  it("EMBEDDING_PROVIDER=off 时仅 FTS5 关键词通道（向量关闭，不触发本地模型下载）", async () => {
+    process.env.EMBEDDING_PROVIDER = "off";
+    const userId = freshUser("rag_off");
     store.clearUserData(userId);
     const result = await searchRecipesTool.execute(
-      "test-nokey",
+      "test-off",
       { userId, query: "鸡腿" },
       undefined,
       undefined,
@@ -223,8 +235,8 @@ describe("search_recipes RAG 集成", () => {
     const text = result.content[0]?.type === "text" ? result.content[0].text : "";
     expect(text).toContain("菜谱候选");
     const retriever = await getRetriever();
-    expect(retriever).not.toBeNull(); // FTS5 通道可用，不因无 embedding key 关闭
+    expect(retriever).not.toBeNull(); // FTS5 通道可用
     expect(retriever!.backends.fts).toBe(true);
-    expect(retriever!.backends.vector).toBeNull();
+    expect(retriever!.backends.vector).toBeNull(); // off → 向量关闭
   });
 });
