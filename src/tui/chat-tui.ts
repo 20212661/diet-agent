@@ -27,32 +27,10 @@ import { resolveModelRequests } from "../agent/modelAdapter.js";
 import * as store from "../store/index.js";
 import { deleteUserData, exportUserData, getBackupRetentionPolicy, getUserDataOverview } from "../privacy/userData.js";
 import { flushPendingRequestLogs } from "../utils/requestLogger.js";
+import { cyan, green, yellow, gray, bold, dim, chatMarkdownTheme } from "./theme.js";
+import { openProfilePanel } from "./profilePanel.js";
 
-// ─── ANSI 颜色辅助 ──────────────────────────────────
-const cyan = (s: string) => `\x1b[36m${s}\x1b[0m`;
-const green = (s: string) => `\x1b[32m${s}\x1b[0m`;
-const yellow = (s: string) => `\x1b[33m${s}\x1b[0m`;
-const gray = (s: string) => `\x1b[90m${s}\x1b[0m`;
-const bold = (s: string) => `\x1b[1m${s}\x1b[0m`;
-const dim = (s: string) => `\x1b[2m${s}\x1b[0m`;
 
-// ─── Markdown 主题 ──────────────────────────────────
-const chatMarkdownTheme = {
-  heading: (t: string) => bold(cyan(t)),
-  link: (t: string) => cyan(t),
-  linkUrl: (t: string) => gray(t),
-  code: (t: string) => yellow(t),
-  codeBlock: (t: string) => `\x1b[48;5;236m${t}\x1b[0m`,
-  codeBlockBorder: (t: string) => gray(t),
-  quote: (t: string) => `\x1b[32m${t}\x1b[0m`,
-  quoteBorder: (t: string) => green(t),
-  hr: (t: string) => gray(t),
-  listBullet: (t: string) => green(t),
-  bold: (t: string) => bold(t),
-  italic: (t: string) => `\x1b[3m${t}\x1b[0m`,
-  strikethrough: (t: string) => `\x1b[9m${t}\x1b[0m`,
-  underline: (t: string) => `\x1b[4m${t}\x1b[0m`,
-};
 
 // ─── 配置 ──────────────────────────────────────────
 const DEFAULT_USER = process.env.USER_ID ?? "tui_user";
@@ -165,7 +143,7 @@ export async function startChatTUI(userId?: string) {
 
   // 状态栏
   const statusText = new Text(
-    gray(` ${bold("Ctrl+C")} 退出 │ ${bold("Enter")} 发送 │ 用户: ${cyan(user)} │ 模型: ${cyan(activeModel)}`),
+    gray(` ${bold("Ctrl+C")} 退出 │ ${bold("Ctrl+P")} 我的档案 │ ${bold("Enter")} 发送 │ 用户: ${cyan(user)} │ 模型: ${cyan(activeModel)}`),
     0, 0
   );
 
@@ -399,8 +377,17 @@ export async function startChatTUI(userId?: string) {
 
   // 全局按键拦截
   tui.addInputListener((data: string) => {
-    // Ctrl+C 退出
+    // Ctrl+P：打开「我的档案」面板（直接读本地数据，不经过 AI）
+    if (matchesKey(data, "ctrl+p")) {
+      if (!tui.hasOverlay()) openProfilePanel(tui, user);
+      return { consume: true };
+    }
+    // Ctrl+C：面板开着则只关顶层 overlay（不退出），否则优雅退出
     if (matchesKey(data, "ctrl+c")) {
+      if (tui.hasOverlay()) {
+        tui.hideOverlay();
+        return { consume: true };
+      }
       shutdown(0);
     }
     return undefined;
