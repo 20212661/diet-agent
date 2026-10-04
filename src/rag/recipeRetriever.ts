@@ -54,7 +54,7 @@ export class RecipeRetriever {
     // 维度/provider 切换检测（仅向量通道相关）：不一致则 drop 向量表 + 清 hash
     if (config) {
       const prev = loadEmbeddingMeta(db);
-      if (prev && (prev.dim !== config.dim || prev.provider !== config.provider)) {
+      if (prev && (prev.dim !== config.dim || prev.provider !== config.provider || prev.model !== config.model)) {
         console.warn(
           `[RAG] embedding changed ${prev.provider}/${prev.dim} → ${config.provider}/${config.dim}, rebuilding vector index`
         );
@@ -70,7 +70,7 @@ export class RecipeRetriever {
     try {
       this.fts = new FtsStore(db);
     } catch (e) {
-      console.warn(`[RAG] FTS5 unavailable (${(e as Error).message}), keyword channel disabled`);
+      console.warn(`[RAG] FTS5 unavailable (errorType=${e instanceof Error ? e.name : typeof e}), keyword channel disabled`);
       this.fts = null;
     }
 
@@ -79,7 +79,7 @@ export class RecipeRetriever {
 
   /** 增量索引：文本未变且相关通道已有则复用，否则 embed + fts upsert。 */
   async indexRecipes(recipes: RecipeRecord[]): Promise<{ embedded: number; reused: number }> {
-    const tasks: Array<{ id: string; text: string }> = [];
+    const tasks: Array<{ id: string; text: string; hash: string }> = [];
     for (const r of recipes) {
       const text = buildRecipeText(r);
       const hash = hashRecipeText(text);
@@ -89,8 +89,9 @@ export class RecipeRetriever {
       if (this.textHashes.get(r.id) === hash && allChannelsHave) {
         continue; // 文本未变且所有存在的通道都有 → 复用
       }
-      tasks.push({ id: r.id, text });
-      this.textHashes.set(r.id, hash);
+      // 只有所有实际通道都成功写入后，才能提交 hash。提前写入会在
+      // embedding/FTS 中途失败时把旧索引误标成最新版本。
+      tasks.push({ id: r.id, text, hash });
     }
 
     let embedded = 0;
@@ -100,6 +101,7 @@ export class RecipeRetriever {
         this.vectors.upsert(t.id, vector);
       }
       this.fts?.upsert(t.id, t.text); // 本地 SQL，无 API 成本
+      this.textHashes.set(t.id, t.hash);
       this.saveTextHashes();
       embedded++;
     }
@@ -112,7 +114,7 @@ export class RecipeRetriever {
   async recall(query: string, topK: number): Promise<RecallResult> {
     const vectorPromise = this.vectors && this.config
       ? this.recallVector(query, RECALL_N).catch((e: unknown) => {
-          console.warn(`[RAG] vector channel failed: ${(e as Error).message}`);
+          console.warn(`[RAG] vector channel failed (errorType=${e instanceof Error ? e.name : typeof e})`);
           return [] as string[];
         })
       : Promise.resolve([] as string[]);
@@ -122,7 +124,7 @@ export class RecipeRetriever {
           try {
             resolve(this.fts!.search(query, RECALL_N));
           } catch (e) {
-            console.warn(`[RAG] fts channel failed: ${(e as Error).message}`);
+            console.warn(`[RAG] fts channel failed (errorType=${e instanceof Error ? e.name : typeof e})`);
             resolve([]);
           }
         })
@@ -220,7 +222,7 @@ export function getRetriever(): Promise<RecipeRetriever | null> {
       }
       return retriever;
     } catch (e) {
-      console.warn(`[RAG] retriever init failed (${(e as Error).message}), RAG disabled`);
+      console.warn(`[RAG] retriever init failed (errorType=${e instanceof Error ? e.name : typeof e}), RAG disabled`);
       return null;
     }
   })();

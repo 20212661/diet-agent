@@ -3,7 +3,8 @@ import type { Static } from "typebox";
 import type { ToolDefinition, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { defineTool } from "@earendil-works/pi-coding-agent";
 import * as store from "../store/index.js";
-import type { IngredientItem } from "../types/diet.js";
+import { isAvailable, type IngredientItem } from "../types/diet.js";
+import { isValidIsoDate } from "../utils/date.js";
 
 // 结构化食材 Schema
 const IngredientItemSchema = Type.Object({
@@ -82,6 +83,11 @@ export const updateIngredientInventoryTool: ToolDefinition<typeof Params> = defi
     const availableStructured = (params.availableItems ?? []) as IngredientItem[];
     const shoppingStrings = params.shoppingList ?? [];
     const shoppingStructured = (params.shoppingItems ?? []) as IngredientItem[];
+    for (const item of [...availableStructured, ...shoppingStructured]) {
+      if ((item.expiresAt && !isValidIsoDate(item.expiresAt)) || (item.purchasedAt && !isValidIsoDate(item.purchasedAt))) {
+        throw new Error("食材日期必须是有效的 YYYY-MM-DD 日期。");
+      }
+    }
 
     const inventory = store.upsertIngredientInventory(params.userId, {
       availableIngredients: availableStrings.length > 0 ? availableStrings : availableStructured.length > 0 ? availableStructured : undefined,
@@ -91,7 +97,7 @@ export const updateIngredientInventoryTool: ToolDefinition<typeof Params> = defi
     });
 
     const available = inventory.availableIngredients
-      .filter((item) => item.status === "available" || !item.status)
+      .filter(isAvailable)
       .map(formatItem)
       .join("\n  ") || "暂无";
     const shopping = inventory.shoppingList

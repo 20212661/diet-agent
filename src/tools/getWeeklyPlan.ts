@@ -58,11 +58,21 @@ export const getWeeklyPlanTool: ToolDefinition<typeof Params> = defineTool({
     for (const day of plan.days) {
       const label = DAY_LABELS[day.dayOfWeek] ?? `周${day.dayOfWeek}`;
       const check = day.completed ? "已完成" : "未做";
+      if (day.executionBlockedReason) {
+        lines.push(`- ${label} (${day.date}) [需重新安排]：当前过敏、忌口或设备条件不允许执行这道计划菜。请重新生成或更换安全菜谱。`);
+        continue;
+      }
       const sideText = day.sideRecipe ? ` + ${day.sideRecipe.name}` : "";
       lines.push(`- ${label} (${day.date}) [${check}]：${day.mainRecipe.name}${sideText}，主食：${day.staplesSuggestion}`);
       if (day.missingIngredients.length > 0) {
         lines.push(`  缺少食材：${day.missingIngredients.join("、")}`);
       }
+      const alreadyOnList = day.ingredientReadiness?.filter((item) => item.status === "already_on_list").map((item) => item.ingredient) ?? [];
+      const toAdd = day.ingredientReadiness?.filter((item) => item.status === "to_add_to_list").map((item) => item.ingredient) ?? [];
+      if (alreadyOnList.length > 0) lines.push(`  已列待购：${alreadyOnList.join("、")}`);
+      if (toAdd.length > 0) lines.push(`  待加入采购清单：${toAdd.join("、")}`);
+      const owned = day.ingredientReadiness?.filter((item) => item.status === "owned").map((item) => item.ingredient) ?? [];
+      if (owned.length > 0) lines.push(`  库存有（数量未核验）：${owned.join("、")}`);
     }
 
     const allMissing = [...new Set(plan.days.flatMap((d) => d.missingIngredients))];

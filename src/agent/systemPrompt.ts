@@ -1,4 +1,5 @@
 import * as store from "../store/index.js";
+import { isAvailable } from "../types/diet.js";
 import {
   baseIdentityPrompt,
   cookingPrompt,
@@ -42,6 +43,11 @@ export function buildUserMemoryPrompt(userId: string): string {
   if (userProfile) {
     lines.push(`- 目标：${userProfile.goal ?? "未记录"}`);
     if (userProfile.customGoal) lines.push(`- 自定义目标：${userProfile.customGoal}`);
+    if (userProfile.heightCm !== undefined) lines.push(`- 身高：${userProfile.heightCm} cm`);
+    if (userProfile.weightKg !== undefined) lines.push(`- 体重：${userProfile.weightKg} kg`);
+    if (userProfile.age !== undefined) lines.push(`- 年龄：${userProfile.age}`);
+    if (userProfile.gender) lines.push(`- 性别：${userProfile.gender}`);
+    if (userProfile.activityLevel) lines.push(`- 活动水平：${userProfile.activityLevel}`);
     lines.push(`- 忌口：${joinOrNone(userProfile.avoidFoods)}`);
     lines.push(`- 过敏：${joinOrNone(userProfile.allergies)}`);
     lines.push(`- 偏好：${joinOrNone(userProfile.preferences)}`);
@@ -55,6 +61,8 @@ export function buildUserMemoryPrompt(userId: string): string {
   if (kitchenProfile) {
     lines.push(`- 灶台数量：${kitchenProfile.burners}`);
     lines.push(`- 烤箱：${kitchenProfile.hasOven ? "有" : "没有"}`);
+    lines.push(`- 微波炉：${kitchenProfile.hasMicrowave ? "有" : "没有"}`);
+    lines.push(`- 电饭煲：${kitchenProfile.hasRiceCooker ? "有" : "没有"}`);
     lines.push(`- 厨具：${joinOrNone(kitchenProfile.cookware)}`);
     lines.push(`- 主动操作目标：${kitchenProfile.maxActiveMinutes} 分钟`);
     lines.push(`- 总耗时上限：${kitchenProfile.maxTotalMinutes} 分钟`);
@@ -66,7 +74,7 @@ export function buildUserMemoryPrompt(userId: string): string {
   lines.push("");
 
   lines.push("### 食材库存");
-  const available = inventory.availableIngredients.filter((item) => !item.status || item.status === "available");
+  const available = inventory.availableIngredients.filter(isAvailable);
   if (available.length > 0) {
     for (const item of available.slice(0, 20)) {
       const parts = [

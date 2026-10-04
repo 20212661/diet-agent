@@ -1,0 +1,24 @@
+import { esc, list, goalLabel, activityLabel, panel, tagList, detailRows, pageIntro, formInput, formSelect, formArea } from "./viewFormatters.js";
+
+export function profileEditor(profile) {
+  return `<form class="editor-form" data-save-form="profile"><div class="form-grid">${formSelect("饮食目标", "goal", profile?.goal, [["", "请选择"], ["fat_loss", "减脂"], ["muscle_gain", "增肌"], ["maintain", "维持体重"], ["healthier_eating", "更健康饮食"], ["custom", "自定义"]])}${formInput("自定义目标", "customGoal", profile?.customGoal ?? "", "text", `placeholder="例如：控制血糖波动"`)}${formInput("身高（cm）", "heightCm", profile?.heightCm ?? "", "number", `min="50" max="260" step="0.1"`)}${formInput("体重（kg）", "weightKg", profile?.weightKg ?? "", "number", `min="10" max="500" step="0.1"`)}${formInput("年龄", "age", profile?.age ?? "", "number", `min="1" max="120"`)}${formInput("性别", "gender", profile?.gender ?? "")}${formSelect("活动水平", "activityLevel", profile?.activityLevel, [["", "请选择"], ["low", "较少活动"], ["medium", "中等活动"], ["high", "高活动量"]])}${formArea("忌口", "avoidFoods", profile?.avoidFoods)}${formArea("过敏信息", "allergies", profile?.allergies)}${formArea("口味偏好", "preferences", profile?.preferences)}${formArea("健康备注", "medicalNotes", profile?.medicalNotes)}</div><div class="form-actions"><span>保存后，饮食助手会在下一条消息中读取最新资料。</span><button class="primary-button" type="submit">保存资料</button></div></form>`;
+}
+
+export function kitchenEditor(kitchen) {
+  const boolOptions = () => [["true", "有"], ["false", "没有"]].map(([option, label]) => [option, label]);
+  return `<form class="editor-form" data-save-form="kitchen"><div class="form-grid">${formInput("灶台数量", "burners", kitchen?.burners ?? 2, "number", `min="0" max="20"`)}${formSelect("烤箱", "hasOven", kitchen?.hasOven, boolOptions())}${formSelect("微波炉", "hasMicrowave", kitchen?.hasMicrowave, boolOptions())}${formSelect("电饭煲", "hasRiceCooker", kitchen?.hasRiceCooker, boolOptions())}${formInput("主动操作上限（分钟）", "maxActiveMinutes", kitchen?.maxActiveMinutes ?? 20, "number", `min="1" max="480"`)}${formInput("总耗时上限（分钟）", "maxTotalMinutes", kitchen?.maxTotalMinutes ?? 35, "number", `min="1" max="720"`)}${formArea("常用厨具", "cookware", kitchen?.cookware)}${formArea("口味偏好", "tastePreferences", kitchen?.tastePreferences)}${formArea("做饭偏好", "cookingPreferences", kitchen?.cookingPreferences)}</div><div class="form-actions"><span>下一次对话会使用这些厨房条件。</span><button class="primary-button" type="submit">保存厨房设置</button></div></form>`;
+}
+
+export function renderProfilePage(profile, description) {
+  const intro = pageIntro("YOUR PROFILE", "我的资料", description, `<button class="primary-button" data-chat-prompt="请通过工具更新我的饮食资料。">告诉助手来更新</button>`);
+  const body = `<div class="grid section-grid"><div>${panel("身体与目标", detailRows([["饮食目标", esc(goalLabel(profile?.goal))], ["自定义目标", esc(profile?.customGoal || "—")], ["身高", profile?.heightCm ? `${esc(profile.heightCm)} cm` : "—"], ["体重", profile?.weightKg ? `${esc(profile.weightKg)} kg` : "—"], ["年龄", profile?.age ? `${esc(profile.age)} 岁` : "—"], ["性别", esc(profile?.gender || "—")], ["活动水平", esc(activityLabel(profile?.activityLevel))]]), profile ? `更新于 ${profile.updatedAt?.slice(0, 10) ?? "—"}` : "尚未建立饮食画像")}${panel("健康备注", tagList(profile?.medicalNotes), "饮食建议需要留意")}</div><div>${panel("忌口与过敏", `<div class="detail-list"><div class="detail-line"><span class="detail-label">忌口</span><div class="detail-value wrap">${tagList(profile?.avoidFoods)}</div></div><div class="detail-line"><span class="detail-label">过敏</span><div class="detail-value wrap">${tagList(profile?.allergies)}</div></div></div>`, "推荐菜谱会避开这些食物")}${panel("口味偏好", tagList(profile?.preferences), "助手会优先考虑")}${panel("给助手的提示", `<p class="support-copy">这些资料会注入智能体上下文。你可以直接在右侧聊天里说“我最近在……”“请记住我不吃……”来更新。</p>`)}</div></div>`;
+  const editor = panel("编辑我的资料", profileEditor(profile), "这些长期信息会参与饮食建议；表单保存代表你确认写入本机数据");
+  return `${intro}${body}${editor}`;
+}
+
+export function renderKitchenPage(kitchen, description) {
+  const intro = pageIntro("KITCHEN SETUP", "厨房设置", description, `<button class="primary-button" data-chat-prompt="请通过工具更新我的厨房设备和做饭偏好。">告诉助手来更新</button>`);
+  const body = `<div class="grid section-grid"><div>${panel("厨房设备", detailRows([["炉灶", `${esc(kitchen?.burners ?? 0)} 个灶眼`], ["烤箱", kitchen?.hasOven ? "有" : "无"], ["微波炉", kitchen?.hasMicrowave ? "有" : "无"], ["电饭煲", kitchen?.hasRiceCooker ? "有" : "无"], ["常用厨具", esc(list(kitchen?.cookware).join("、") || "—"), true]]))}${panel("常用口味", tagList(kitchen?.tastePreferences))}</div><div>${panel("做饭节奏", detailRows([["主动操作时间", `${esc(kitchen?.maxActiveMinutes ?? "—")} 分钟`], ["总耗时上限", `${esc(kitchen?.maxTotalMinutes ?? "—")} 分钟`], ["做饭偏好", esc(list(kitchen?.cookingPreferences).join("、") || "—"), true]]))}${panel("为什么需要这些信息", `<p class="support-copy">智能体会优先推荐你现有设备能完成、主动操作时间符合预期的菜谱。资料只用于本机饮食建议。</p>`)}</div></div>`;
+  const editor = panel("编辑厨房设置", kitchenEditor(kitchen), "保存后智能体下次回复时会读取更新");
+  return `${intro}${body}${editor}`;
+}

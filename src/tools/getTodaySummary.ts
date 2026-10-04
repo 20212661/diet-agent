@@ -36,7 +36,9 @@ export const getTodaySummaryTool: ToolDefinition<typeof Params> = defineTool({
       content: [
         {
           type: "text" as const,
-          text: summary.summaryText + "\n\n⚠️ 以上热量均为粗略估算，仅供参考。",
+          text: summary.summaryText + (summary.estimatedTotalCalories !== undefined
+            ? "\n\n热量只对应记录中的食物与克数；USDA 通用食品数据可能与具体品种、品牌或烹饪添加物有差异。"
+            : "\n\n至少一项缺少可追溯热量数据，因此未显示当日热量合计。"),
         },
       ],
       details: summary,

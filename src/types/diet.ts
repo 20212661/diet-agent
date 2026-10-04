@@ -1,6 +1,7 @@
 /**
  * 饮食管理智能体 - 核心数据类型定义
  */
+import { isValidIsoDate } from "../utils/date.js";
 
 /** 用户目标类型 */
 export type UserGoal =
@@ -35,9 +36,26 @@ export interface UserProfile {
 }
 
 /** 单项食物记录 */
+export interface NutritionEstimate {
+  status: "verified" | "range" | "unavailable";
+  calories?: number;
+  lowerCalories?: number;
+  upperCalories?: number;
+  foodName: string;
+  amount: number;
+  unit: string;
+  grams?: number;
+  cookingMethod: string;
+  source: string;
+  sourceRecordId: string;
+  sourceVersion: string;
+}
+
 export interface MealFood {
   name: string;
   amount: string;
+  nutrition?: NutritionEstimate;
+  /** @deprecated Legacy untraceable value; never display or include in totals. */
   estimatedCalories?: number;
   note?: string;
 }
@@ -47,10 +65,12 @@ export interface MealLog {
   id: string;
   userId: string;
   date: string; // YYYY-MM-DD
+  operationId?: string;
   mealType: MealType;
   foods: MealFood[];
   note?: string;
   createdAt: string;
+  deletedAt?: string;
 }
 
 /** 今日饮食总结 */
@@ -58,7 +78,7 @@ export interface TodaySummary {
   userId: string;
   date: string;
   meals: MealLog[];
-  estimatedTotalCalories: number;
+  estimatedTotalCalories?: number;
   summaryText: string;
 }
 
@@ -81,8 +101,20 @@ export interface UpdateUserProfileInput {
 /** 添加饮食记录的输入参数 */
 export interface AddMealLogInput {
   userId: string;
+  operationId?: string;
+  date?: string;
   mealType: MealType;
   foods: MealFood[];
+  note?: string;
+}
+
+export interface UpdateMealLogInput {
+  userId: string;
+  operationId: string;
+  mealLogId: string;
+  date?: string;
+  mealType?: MealType;
+  foods?: MealFood[];
   note?: string;
 }
 
@@ -92,6 +124,8 @@ export interface KitchenProfile {
   userId: string;
   burners: number;
   hasOven: boolean;
+  hasMicrowave: boolean;
+  hasRiceCooker: boolean;
   cookware: string[];
   maxActiveMinutes: number;
   maxTotalMinutes: number;
@@ -107,11 +141,36 @@ export interface IngredientItem {
   unit?: string;
   category?: "protein" | "vegetable" | "staple" | "seasoning" | "dairy" | "fruit" | "other";
   storage?: "fridge" | "freezer" | "pantry" | "room_temp";
-  status?: "available" | "planned" | "used" | "expired" | "discarded";
+  status?: IngredientStatus;
   expiresAt?: string; // YYYY-MM-DD
   purchasedAt?: string; // YYYY-MM-DD
   expiresSoon?: boolean;
+  /** Computed from expiresAt using the local calendar date. */
+  isExpired?: boolean;
+  /** Computed from status by the inventory repository. */
+  isAvailable?: boolean;
   note?: string;
+}
+
+export type IngredientStatus = "available" | "planned" | "used" | "expired" | "discarded";
+
+/** The single availability rule used by inventory and recipe selection. */
+export function isExpired(item: Pick<IngredientItem, "expiresAt">): boolean {
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return isExpiredOn(item, today);
+}
+
+export function isExpiredOn(item: Pick<IngredientItem, "expiresAt">, date: string): boolean {
+  return Boolean(item.expiresAt && (!isValidIsoDate(item.expiresAt) || item.expiresAt < date));
+}
+
+export function isAvailable(item: Pick<IngredientItem, "status"> & Pick<IngredientItem, "expiresAt">): boolean {
+  return (item.status === undefined || item.status === "available") && !isExpired(item);
+}
+
+export function isAvailableOn(item: Pick<IngredientItem, "status" | "expiresAt">, date: string): boolean {
+  return (item.status === undefined || item.status === "available") && !isExpiredOn(item, date);
 }
 
 export interface IngredientInventory {
@@ -147,7 +206,7 @@ export interface CookingFeedback {
 }
 
 /** 菜谱餐次类型 */
-export type RecipeMealType = "breakfast" | "lunch" | "dinner";
+export type RecipeMealType = "breakfast" | "lunch" | "dinner" | "snack";
 
 /** 菜谱烹饪模式 */
 export type RecipeMode =
@@ -161,6 +220,19 @@ export type RecipeMode =
 
 /** 菜谱所需电器 */
 export type RecipeAppliance = "oven" | "stove" | "microwave" | "rice_cooker";
+
+/** 规范化过敏原 ID */
+export type AllergenId =
+  | "peanut"
+  | "tree_nut"
+  | "milk"
+  | "egg"
+  | "soy"
+  | "wheat"
+  | "gluten"
+  | "fish"
+  | "shellfish"
+  | "sesame";
 
 /** 菜谱（数据库存储版） */
 export interface RecipeRecord {
@@ -180,6 +252,10 @@ export interface RecipeRecord {
   ingredients: string[];
   /** 可选食材 */
   optionalIngredients: string[];
+  /** 必须和可选食材归一化后的稳定 ID */
+  ingredientIds: string[];
+  /** 从全部食材推导出的结构化过敏原标签 */
+  allergenTags: AllergenId[];
 
   /** 主要蛋白质来源 */
   primaryProtein?: string;
@@ -222,6 +298,8 @@ export interface RecipeRecord {
   freezerReuse?: string;
 
   /** 估算热量 kcal */
+  nutrition?: NutritionEstimate;
+  /** @deprecated Legacy untraceable value; never display or include in matching. */
   estimatedCalories?: number;
   /** 蛋白质水平 */
   proteinLevel?: "low" | "medium" | "high";
@@ -241,6 +319,8 @@ export interface WeeklyDayPlan {
     name: string;
     activeMinutes: number;
     totalMinutes: number;
+    nutrition?: NutritionEstimate;
+    /** @deprecated Legacy untraceable value; never display. */
     estimatedCalories?: number;
   };
   /** 配菜菜谱摘要（可选） */
@@ -254,10 +334,17 @@ export interface WeeklyDayPlan {
   staplesSuggestion: string;
   /** 推荐理由 */
   reasons: string[];
-  /** 缺少食材 */
+  /** Required ingredients absent from owned inventory, including items already on the shopping list. */
   missingIngredients: string[];
-  /** 当天是否已完成（与 meal_logs 交叉引用） */
+  /** Required ingredient state: owned, already on the shopping list, or still to add. */
+  ingredientReadiness?: IngredientReadiness[];
+  /** Explicit user action for this exact main recipe. */
   completed: boolean;
+  /** Informational only: an active dinner log exists for this date. */
+  hasDinnerLog?: boolean;
+  completedAt?: string;
+  /** Revalidated against the current profile and kitchen each time a plan is read. */
+  executionBlockedReason?: string;
 }
 
 /** 一周菜单计划 */
@@ -269,6 +356,54 @@ export interface WeeklyPlan {
   days: WeeklyDayPlan[];
   /** 计划状态 */
   status: "active" | "archived";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IngredientReadiness {
+  ingredient: string;
+  status: "owned" | "already_on_list" | "to_add_to_list";
+  /** Inventory quantities are free text, so presence never verifies the recipe quantity. */
+  quantityVerified?: false;
+}
+
+/** A single planned meal, backed by a recipe or a conservative fallback template. */
+export interface PlannedMeal {
+  mealType: Exclude<MealType, "unknown">;
+  source: "recipe" | "template" | "unavailable";
+  executionBlockedReason?: string;
+  appliances?: RecipeAppliance[];
+  cookware?: string[];
+  name: string;
+  recipeId?: string;
+  ingredients: string[];
+  activeMinutes?: number;
+  totalMinutes?: number;
+  missingIngredients: string[];
+  reasons: string[];
+  nutrition?: NutritionEstimate;
+}
+
+export interface MealPlanDay {
+  date: string;
+  meals: PlannedMeal[];
+}
+
+export interface MealPlanConstraints {
+  temporaryAvoidFoods: string[];
+  timeLimitMinutes: number;
+  energyLevel: EnergyLevel;
+  preferredStyles: string[];
+}
+
+/** Persisted one-to-seven-day meal plan. */
+export interface MealPlan {
+  userId: string;
+  startDate: string;
+  days: MealPlanDay[];
+  target?: string;
+  goal?: UserGoal;
+  constraints?: MealPlanConstraints;
   createdAt: string;
   updatedAt: string;
 }

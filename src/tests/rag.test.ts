@@ -74,16 +74,10 @@ describe("embedding 适配", () => {
     expect(normalize([0, 0])).toEqual([0, 0]);
   });
 
-  it("resolveEmbeddingConfig：国内优先 ZAI，其次 OpenAI，都无则 fallback 本地", () => {
+  it("resolveEmbeddingConfig：默认只启用 FTS5，不因存在 API Key 自动调用向量服务", () => {
     process.env.ZAI_API_KEY = "z";
-    expect(resolveEmbeddingConfig()?.provider).toBe("zai");
-
-    delete process.env.ZAI_API_KEY;
     process.env.OPENAI_API_KEY = "o";
-    expect(resolveEmbeddingConfig()?.provider).toBe("openai");
-
-    delete process.env.OPENAI_API_KEY;
-    expect(resolveEmbeddingConfig()?.provider).toBe("local"); // 零配置 fallback 本地模型
+    expect(resolveEmbeddingConfig()).toBeUndefined();
   });
 
   it("resolveEmbeddingConfig：EMBEDDING_PROVIDER=off 关闭向量通道（纯 FTS5）", () => {
@@ -147,17 +141,35 @@ describe("向量存储", () => {
     db.close();
   });
 
-  it("createVectorStore：优先 sqlite-vec 并自检后清空", () => {
+  it("createVectorStore：只清理探测向量，保留已有向量和相同距离的记录", () => {
     const db = new Database(":memory:");
+    const existing = new SqliteVecStore(db, 4);
+    existing.upsert("saved", [1, 0, 0, 0]);
     const s = createVectorStore(db, 4);
     expect(s.backend).toBe("sqlite-vec");
-    expect(s.size()).toBe(0); // 自检数据已清
+    expect(s.size()).toBe(1);
+    expect(s.has("saved")).toBe(true);
+    expect(s.knn([1, 0, 0, 0], 1)[0].id).toBe("saved");
     db.close();
   });
 });
 
 describe("RecipeRetriever", () => {
   afterEach(() => vi.restoreAllMocks());
+
+  it("重建检索器复用持久向量，切换同维度模型时重新索引", async () => {
+    const spy = mockFetchEmbed(8);
+    const db = new Database(":memory:");
+    const recipes = store.getRecipeBook().slice(0, 3);
+    await new RecipeRetriever(db, makeConfig(8)).indexRecipes(recipes);
+    spy.mockClear();
+    expect(await new RecipeRetriever(db, makeConfig(8)).indexRecipes(recipes)).toEqual({ embedded: 0, reused: 3 });
+    expect(spy).not.toHaveBeenCalled();
+    expect(await new RecipeRetriever(db, { ...makeConfig(8), model: "another-model" }).indexRecipes(recipes))
+      .toEqual({ embedded: 3, reused: 0 });
+    expect(spy).toHaveBeenCalledTimes(3);
+    db.close();
+  });
 
   it("索引后召回返回已索引菜谱，按距离升序", async () => {
     mockFetchEmbed(8);
@@ -190,6 +202,26 @@ describe("RecipeRetriever", () => {
     expect(r2.embedded).toBe(0);
     expect(r2.reused).toBe(3);
     expect(spy.mock.calls.length).toBe(callsAfterFirst); // 没有新的 embed 调用
+    db.close();
+  });
+
+  it("索引中途失败时只提交已成功写入菜谱的 hash", async () => {
+    const db = new Database(":memory:");
+    let calls = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      calls++;
+      if (calls > 1) throw new Error("embedding temporarily unavailable");
+      return new Response(JSON.stringify({ data: [{ embedding: [1, 0, 0, 0, 0, 0, 0, 0] }] }), { status: 200 });
+    });
+    const retriever = new RecipeRetriever(db, makeConfig(8));
+    const recipes = store.getRecipeBook().slice(0, 2);
+
+    await expect(retriever.indexRecipes(recipes)).rejects.toThrow(/temporarily unavailable/);
+    const row = db.prepare("SELECT value FROM rag_meta WHERE key = 'text_hashes'").get() as
+      | { value: string }
+      | undefined;
+    const hashes = row ? JSON.parse(row.value) as Record<string, string> : {};
+    expect(Object.keys(hashes)).toEqual([recipes[0].id]);
     db.close();
   });
 

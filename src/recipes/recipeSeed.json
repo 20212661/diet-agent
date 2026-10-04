@@ -3,23 +3,59 @@
     "id": "oven_chicken_potato",
     "name": "烤鸡腿土豆",
     "mode": "oven",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["oven", "quick"],
-    "suitableGoals": ["healthier_eating", "budget", "maintain"],
-    "ingredients": ["鸡腿", "土豆"],
-    "optionalIngredients": ["洋葱", "胡萝卜"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "oven",
+      "quick"
+    ],
+    "suitableGoals": [
+      "healthier_eating",
+      "budget",
+      "maintain"
+    ],
+    "ingredients": [
+      "鸡腿",
+      "土豆"
+    ],
+    "optionalIngredients": [
+      "洋葱",
+      "胡萝卜"
+    ],
     "primaryProtein": "鸡肉",
-    "vegetables": ["洋葱", "胡萝卜"],
-    "staples": ["土豆"],
-    "cookware": ["烤盘"],
-    "appliances": ["oven"],
+    "vegetables": [
+      "洋葱",
+      "胡萝卜"
+    ],
+    "staples": [
+      "土豆"
+    ],
+    "cookware": [
+      "烤盘"
+    ],
+    "appliances": [
+      "oven"
+    ],
     "activeMinutes": 8,
     "totalMinutes": 35,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["咸鲜", "黑胡椒香"],
-    "preferenceTags": ["少油烟", "少洗碗", "烤箱优先"],
-    "seasonTags": ["spring", "autumn", "winter"],
+    "tasteTags": [
+      "咸鲜",
+      "黑胡椒香"
+    ],
+    "preferenceTags": [
+      "少油烟",
+      "少洗碗",
+      "烤箱优先"
+    ],
+    "seasonTags": [
+      "spring",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "烤箱 200°C 预热。",
       "鸡腿两面各划两刀，土豆去皮切滚刀块（约 2cm），洋葱切粗条。",
@@ -40,30 +76,75 @@
     "lowEnergySwap": "土豆不削皮洗净切块即可；蔬菜改成小番茄不切直接铺入；不翻面中途翻动一次就行。",
     "weekendPrep": "鸡腿可以提前用生抽、蚝油、黑胡椒、料酒腌好，分装冷冻。用时直接从冷冻放入烤盘，延长烤 5-8 分钟。",
     "freezerReuse": "腌好的冷冻鸡腿直接烤，土豆可换成冷冻薯角。",
-    "estimatedCalories": 480,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "carrot",
+      "chicken",
+      "chicken_thigh",
+      "onion",
+      "potato"
+    ],
+    "allergenTags": []
   },
   {
     "id": "oven_fish_vegetables",
     "name": "烤鱼配蔬菜",
     "mode": "oven",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["oven", "quick"],
-    "suitableGoals": ["fat_loss", "healthier_eating"],
-    "ingredients": ["鱼", "西兰花"],
-    "optionalIngredients": ["蘑菇", "芦笋", "土豆"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "oven",
+      "quick"
+    ],
+    "suitableGoals": [
+      "fat_loss",
+      "healthier_eating"
+    ],
+    "ingredients": [
+      "鱼",
+      "西兰花"
+    ],
+    "optionalIngredients": [
+      "蘑菇",
+      "芦笋",
+      "土豆"
+    ],
     "primaryProtein": "鱼肉",
-    "vegetables": ["西兰花", "蘑菇", "芦笋"],
-    "staples": ["土豆"],
-    "cookware": ["烤盘"],
-    "appliances": ["oven"],
+    "vegetables": [
+      "西兰花",
+      "蘑菇",
+      "芦笋"
+    ],
+    "staples": [
+      "土豆"
+    ],
+    "cookware": [
+      "烤盘"
+    ],
+    "appliances": [
+      "oven"
+    ],
     "activeMinutes": 10,
     "totalMinutes": 25,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["清淡", "鲜香"],
-    "preferenceTags": ["少油烟", "少洗碗", "烤箱优先"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "清淡",
+      "鲜香"
+    ],
+    "preferenceTags": [
+      "少油烟",
+      "少洗碗",
+      "烤箱优先"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "烤箱 200°C 预热。",
       "鱼（鲈鱼/龙利鱼/巴沙鱼均可）擦干水分，西兰花切小朵。",
@@ -83,30 +164,69 @@
     "lowEnergySwap": "蔬菜不切太细直接烤；主食用现成米饭或面包；鱼用龙利鱼免骨免刺。",
     "weekendPrep": "鱼可以提前用盐、料酒腌好冷藏，当天直接烤。",
     "freezerReuse": "巴沙鱼柳冷冻保存，用时不解冻直接烤，加 5 分钟。",
-    "estimatedCalories": 350,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "asparagus",
+      "broccoli",
+      "fish",
+      "mushroom",
+      "potato"
+    ],
+    "allergenTags": [
+      "fish",
+      "shellfish"
+    ]
   },
   {
     "id": "garlic_broccoli",
     "name": "蒜蓉西兰花",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "quick"],
-    "suitableGoals": ["fat_loss", "healthier_eating", "maintain"],
-    "ingredients": ["西兰花", "蒜"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "quick"
+    ],
+    "suitableGoals": [
+      "fat_loss",
+      "healthier_eating",
+      "maintain"
+    ],
+    "ingredients": [
+      "西兰花",
+      "蒜"
+    ],
     "optionalIngredients": [],
     "primaryProtein": "",
-    "vegetables": ["西兰花"],
+    "vegetables": [
+      "西兰花"
+    ],
     "staples": [],
-    "cookware": ["炒锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 8,
     "totalMinutes": 10,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["蒜香", "清淡"],
-    "preferenceTags": ["快手", "少洗碗"],
-    "seasonTags": ["spring", "autumn", "winter"],
+    "tasteTags": [
+      "蒜香",
+      "清淡"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗"
+    ],
+    "seasonTags": [
+      "spring",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "西兰花切小朵，蒜切末（2-3 瓣）。",
       "烧一锅水，水开后焯西兰花 1 分钟，捞出。",
@@ -123,30 +243,72 @@
     "lowEnergySwap": "不炒，焯好后直接蘸生抽、芝麻酱或油醋汁吃。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 80,
-    "proteinLevel": "low"
+    "proteinLevel": "low",
+    "ingredientIds": [
+      "broccoli",
+      "garlic"
+    ],
+    "allergenTags": []
   },
   {
     "id": "tomato_egg_noodle",
     "name": "番茄鸡蛋面",
     "mode": "one_pot",
-    "mealTypes": ["dinner", "lunch", "breakfast"],
-    "modes": ["one_pot", "quick"],
-    "suitableGoals": ["budget", "healthier_eating", "maintain"],
-    "ingredients": ["番茄", "鸡蛋", "面条"],
-    "optionalIngredients": ["青菜"],
+    "mealTypes": [
+      "dinner",
+      "lunch",
+      "breakfast"
+    ],
+    "modes": [
+      "one_pot",
+      "quick"
+    ],
+    "suitableGoals": [
+      "budget",
+      "healthier_eating",
+      "maintain"
+    ],
+    "ingredients": [
+      "番茄",
+      "鸡蛋",
+      "面条"
+    ],
+    "optionalIngredients": [
+      "青菜"
+    ],
     "primaryProtein": "鸡蛋",
-    "vegetables": ["番茄", "青菜"],
-    "staples": ["面条"],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "番茄",
+      "青菜"
+    ],
+    "staples": [
+      "面条"
+    ],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 10,
     "totalMinutes": 15,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["酸甜", "家常"],
-    "preferenceTags": ["快手", "少洗碗", "一锅出"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "酸甜",
+      "家常"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗",
+      "一锅出"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "番茄切小块（1cm 左右），鸡蛋打散，青菜洗净。",
       "锅里少油（半勺），倒入蛋液炒散后盛出。",
@@ -166,30 +328,76 @@
     "lowEnergySwap": "鸡蛋不用盛出，直接做成番茄蛋花汤面；番茄不切用勺子掰。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 420,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "egg",
+      "tomato",
+      "vegetables",
+      "wheat_noodle"
+    ],
+    "allergenTags": [
+      "egg",
+      "gluten",
+      "wheat"
+    ]
   },
   {
     "id": "tofu_greens_soup",
     "name": "豆腐青菜汤",
     "mode": "one_pot",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["one_pot", "quick", "low_energy"],
-    "suitableGoals": ["fat_loss", "healthier_eating", "budget"],
-    "ingredients": ["豆腐", "青菜"],
-    "optionalIngredients": ["鸡蛋", "蘑菇"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "one_pot",
+      "quick",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "fat_loss",
+      "healthier_eating",
+      "budget"
+    ],
+    "ingredients": [
+      "豆腐",
+      "青菜"
+    ],
+    "optionalIngredients": [
+      "鸡蛋",
+      "蘑菇"
+    ],
     "primaryProtein": "豆腐",
-    "vegetables": ["青菜", "蘑菇"],
+    "vegetables": [
+      "青菜",
+      "蘑菇"
+    ],
     "staples": [],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 8,
     "totalMinutes": 12,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["清淡", "鲜"],
-    "preferenceTags": ["快手", "少洗碗", "一锅出"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "清淡",
+      "鲜"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗",
+      "一锅出"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "锅里加水两碗烧开。",
       "豆腐切小块（不追求方正可直接用勺子挖块入锅）。",
@@ -209,30 +417,71 @@
     "lowEnergySwap": "豆腐直接用勺子挖块入锅，不切；青菜手撕不切；连锅端上桌少洗一个碗。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 180,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "egg",
+      "mushroom",
+      "tofu",
+      "vegetables"
+    ],
+    "allergenTags": [
+      "egg",
+      "soy"
+    ]
   },
   {
     "id": "beef_pepper_stir_fry",
     "name": "青椒牛肉快炒",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "quick"],
-    "suitableGoals": ["muscle_gain", "healthier_eating", "maintain"],
-    "ingredients": ["牛肉", "青椒"],
-    "optionalIngredients": ["洋葱"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "quick"
+    ],
+    "suitableGoals": [
+      "muscle_gain",
+      "healthier_eating",
+      "maintain"
+    ],
+    "ingredients": [
+      "牛肉",
+      "青椒"
+    ],
+    "optionalIngredients": [
+      "洋葱"
+    ],
     "primaryProtein": "牛肉",
-    "vegetables": ["青椒", "洋葱"],
+    "vegetables": [
+      "青椒",
+      "洋葱"
+    ],
     "staples": [],
-    "cookware": ["炒锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 12,
     "totalMinutes": 15,
     "difficulty": 2,
     "dishCount": 1,
-    "tasteTags": ["咸鲜", "微辣"],
-    "preferenceTags": ["快手"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "咸鲜",
+      "微辣"
+    ],
+    "preferenceTags": [
+      "快手"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "牛肉切薄片（逆纹切），加生抽 1 勺、淀粉半勺、油半勺抓匀，腌 5 分钟。",
       "青椒去籽切条，洋葱切条（如果用）。",
@@ -250,30 +499,71 @@
     "lowEnergySwap": "改用预切牛肉片或肥牛卷，省掉切肉步骤。",
     "weekendPrep": "牛肉可以提前切好分装冷冻，用时直接炒。",
     "freezerReuse": "用冷冻肥牛卷代替鲜牛肉，免切。",
-    "estimatedCalories": 380,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "beef",
+      "bell_pepper",
+      "onion"
+    ],
+    "allergenTags": []
   },
   {
     "id": "chicken_vegetable_bake",
     "name": "鸡胸肉蔬菜烤盘",
     "mode": "oven",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["oven", "quick"],
-    "suitableGoals": ["fat_loss", "muscle_gain", "healthier_eating"],
-    "ingredients": ["鸡胸肉", "西兰花"],
-    "optionalIngredients": ["小番茄", "蘑菇"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "oven",
+      "quick"
+    ],
+    "suitableGoals": [
+      "fat_loss",
+      "muscle_gain",
+      "healthier_eating"
+    ],
+    "ingredients": [
+      "鸡胸肉",
+      "西兰花"
+    ],
+    "optionalIngredients": [
+      "小番茄",
+      "蘑菇"
+    ],
     "primaryProtein": "鸡肉",
-    "vegetables": ["西兰花", "小番茄", "蘑菇"],
+    "vegetables": [
+      "西兰花",
+      "小番茄",
+      "蘑菇"
+    ],
     "staples": [],
-    "cookware": ["烤盘"],
-    "appliances": ["oven"],
+    "cookware": [
+      "烤盘"
+    ],
+    "appliances": [
+      "oven"
+    ],
     "activeMinutes": 8,
     "totalMinutes": 30,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["清淡", "鲜香"],
-    "preferenceTags": ["少油烟", "少洗碗", "烤箱优先"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "清淡",
+      "鲜香"
+    ],
+    "preferenceTags": [
+      "少油烟",
+      "少洗碗",
+      "烤箱优先"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "烤箱 200°C 预热。",
       "鸡胸肉切成两片（薄片烤更快），加生抽 1 勺、黑胡椒少许、油半勺抹匀。",
@@ -293,31 +583,74 @@
     "lowEnergySwap": "鸡胸肉不切直接整块烤，蔬菜可以买免洗的。",
     "weekendPrep": "鸡胸肉可提前片好，加生抽、蚝油、黑胡椒腌好分装冷冻。",
     "freezerReuse": "腌好的冷冻鸡胸直接烤，加 5-8 分钟。",
-    "estimatedCalories": 320,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "broccoli",
+      "chicken",
+      "chicken_breast",
+      "mushroom",
+      "tomato"
+    ],
+    "allergenTags": []
   },
   {
     "id": "beef_onion_rice_bowl",
     "name": "肥牛洋葱盖饭",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "quick", "low_energy"],
-    "suitableGoals": ["muscle_gain", "maintain", "healthier_eating"],
-    "ingredients": ["肥牛卷", "洋葱"],
-    "optionalIngredients": ["鸡蛋"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "quick",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "muscle_gain",
+      "maintain",
+      "healthier_eating"
+    ],
+    "ingredients": [
+      "肥牛卷",
+      "洋葱"
+    ],
+    "optionalIngredients": [
+      "鸡蛋"
+    ],
     "primaryProtein": "牛肉",
-    "vegetables": ["洋葱"],
-    "staples": ["米饭"],
-    "cookware": ["炒锅"],
-    "appliances": ["stove", "rice_cooker"],
+    "vegetables": [
+      "洋葱"
+    ],
+    "staples": [
+      "米饭"
+    ],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove",
+      "rice_cooker"
+    ],
     "activeMinutes": 8,
     "totalMinutes": 12,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["甜咸", "焦香"],
-    "preferenceTags": ["快手", "少洗碗"],
-    "seasonTags": ["spring", "autumn", "winter"],
+    "tasteTags": [
+      "甜咸",
+      "焦香"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗"
+    ],
+    "seasonTags": [
+      "spring",
+      "autumn",
+      "winter"
+    ],
     "steps": [
+      "用电饭煲提前煮好米饭。",
       "洋葱切细条。",
       "热锅少油（半勺），洋葱炒软出甜味（约 2 分钟）。",
       "下肥牛卷，不用解冻直接放。",
@@ -335,30 +668,72 @@
     "lowEnergySwap": "洋葱用手撕成条不切；不做溏心蛋。",
     "weekendPrep": "",
     "freezerReuse": "肥牛卷冷冻保存，用时不用解冻直接下锅。",
-    "estimatedCalories": 550,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "beef",
+      "egg",
+      "onion",
+      "rice"
+    ],
+    "allergenTags": [
+      "egg"
+    ]
   },
   {
     "id": "shrimp_egg_tofu",
     "name": "虾仁鸡蛋滑豆腐",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "quick", "low_energy"],
-    "suitableGoals": ["fat_loss", "healthier_eating", "maintain"],
-    "ingredients": ["虾仁", "鸡蛋", "豆腐"],
-    "optionalIngredients": ["葱"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "quick",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "fat_loss",
+      "healthier_eating",
+      "maintain"
+    ],
+    "ingredients": [
+      "虾仁",
+      "鸡蛋",
+      "豆腐"
+    ],
+    "optionalIngredients": [
+      "葱"
+    ],
     "primaryProtein": "虾仁",
-    "vegetables": ["葱"],
+    "vegetables": [
+      "葱"
+    ],
     "staples": [],
-    "cookware": ["炒锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 10,
     "totalMinutes": 12,
     "difficulty": 2,
     "dishCount": 1,
-    "tasteTags": ["鲜嫩", "清淡"],
-    "preferenceTags": ["快手", "少洗碗"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "鲜嫩",
+      "清淡"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "虾仁解冻（冷冻的提前放冷藏或冲洗），加料酒半勺、盐一小撮抓匀。",
       "鸡蛋 2 个打散，豆腐切小块。",
@@ -376,30 +751,76 @@
     "lowEnergySwap": "用冷冻虾仁不用处理鲜虾；豆腐用勺子挖不切。",
     "weekendPrep": "",
     "freezerReuse": "虾仁冷冻保鲜，用时不解冻直接炒至变色。",
-    "estimatedCalories": 320,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "egg",
+      "scallion",
+      "shrimp_meat",
+      "tofu"
+    ],
+    "allergenTags": [
+      "egg",
+      "gluten",
+      "shellfish",
+      "soy",
+      "wheat"
+    ]
   },
   {
     "id": "tuna_corn_rice_ball",
     "name": "金枪鱼玉米饭团",
     "mode": "quick",
-    "mealTypes": ["breakfast", "lunch"],
-    "modes": ["quick", "low_energy"],
-    "suitableGoals": ["fat_loss", "muscle_gain", "healthier_eating", "budget"],
-    "ingredients": ["金枪鱼罐头", "玉米粒", "米饭"],
-    "optionalIngredients": ["海苔", "蛋黄酱"],
+    "mealTypes": [
+      "breakfast",
+      "lunch"
+    ],
+    "modes": [
+      "quick",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "fat_loss",
+      "muscle_gain",
+      "healthier_eating",
+      "budget"
+    ],
+    "ingredients": [
+      "金枪鱼罐头",
+      "玉米粒",
+      "米饭"
+    ],
+    "optionalIngredients": [
+      "海苔",
+      "蛋黄酱"
+    ],
     "primaryProtein": "金枪鱼",
-    "vegetables": ["玉米"],
-    "staples": ["米饭"],
+    "vegetables": [
+      "玉米"
+    ],
+    "staples": [
+      "米饭"
+    ],
     "cookware": [],
     "appliances": [],
     "activeMinutes": 5,
     "totalMinutes": 5,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["清淡", "微甜"],
-    "preferenceTags": ["快手", "少洗碗", "免开火"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "清淡",
+      "微甜"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗",
+      "免开火"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "金枪鱼罐头沥干水分。",
       "米饭一碗（热的或常温都行）。",
@@ -415,30 +836,78 @@
     "lowEnergySwap": "全程免开火，不切菜，不洗锅。",
     "weekendPrep": "米饭提前煮好，金枪鱼馅提前拌好冷藏。",
     "freezerReuse": "",
-    "estimatedCalories": 380,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "corn",
+      "egg",
+      "fish",
+      "rice",
+      "seaweed",
+      "tuna"
+    ],
+    "allergenTags": [
+      "egg",
+      "fish"
+    ]
   },
   {
     "id": "oat_egg_breakfast_bowl",
     "name": "燕麦鸡蛋早餐碗",
     "mode": "quick",
-    "mealTypes": ["breakfast"],
-    "modes": ["quick", "low_energy"],
-    "suitableGoals": ["healthier_eating", "maintain", "budget", "fat_loss"],
-    "ingredients": ["燕麦", "鸡蛋", "牛奶"],
-    "optionalIngredients": ["香蕉", "坚果"],
+    "mealTypes": [
+      "breakfast"
+    ],
+    "modes": [
+      "quick",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "healthier_eating",
+      "maintain",
+      "budget",
+      "fat_loss"
+    ],
+    "ingredients": [
+      "燕麦",
+      "鸡蛋",
+      "牛奶"
+    ],
+    "optionalIngredients": [
+      "香蕉",
+      "坚果"
+    ],
     "primaryProtein": "鸡蛋",
     "vegetables": [],
-    "staples": ["燕麦"],
-    "cookware": ["碗", "微波炉适用碗"],
-    "appliances": ["microwave"],
+    "staples": [
+      "燕麦"
+    ],
+    "cookware": [
+      "碗",
+      "微波炉适用碗"
+    ],
+    "appliances": [
+      "microwave"
+    ],
     "activeMinutes": 3,
     "totalMinutes": 5,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["香甜", "奶香"],
-    "preferenceTags": ["快手", "少洗碗", "免开火", "早餐"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "香甜",
+      "奶香"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗",
+      "免开火",
+      "早餐"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "碗中放燕麦 40g，加入牛奶 100ml（没过燕麦即可）。",
       "微波炉高火 1 分 30 秒。",
@@ -455,30 +924,81 @@
     "lowEnergySwap": "已经是最低能量方案，免去所有开火操作。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 350,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "banana",
+      "egg",
+      "milk",
+      "mixed_nuts",
+      "oats"
+    ],
+    "allergenTags": [
+      "egg",
+      "milk",
+      "peanut",
+      "tree_nut"
+    ]
   },
   {
     "id": "frozen_dumpling_veg_soup",
     "name": "冷冻饺子青菜汤",
     "mode": "one_pot",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["one_pot", "quick", "low_energy", "freezer_reuse"],
-    "suitableGoals": ["budget", "healthier_eating", "maintain"],
-    "ingredients": ["冷冻饺子", "青菜"],
-    "optionalIngredients": ["鸡蛋", "紫菜"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "one_pot",
+      "quick",
+      "low_energy",
+      "freezer_reuse"
+    ],
+    "suitableGoals": [
+      "budget",
+      "healthier_eating",
+      "maintain"
+    ],
+    "ingredients": [
+      "冷冻饺子",
+      "青菜"
+    ],
+    "optionalIngredients": [
+      "鸡蛋",
+      "紫菜"
+    ],
     "primaryProtein": "饺子（肉馅）",
-    "vegetables": ["青菜", "紫菜"],
-    "staples": ["饺子皮"],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "青菜",
+      "紫菜"
+    ],
+    "staples": [
+      "饺子皮"
+    ],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 5,
     "totalMinutes": 10,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["家常", "清淡"],
-    "preferenceTags": ["快手", "少洗碗", "一锅出"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "家常",
+      "清淡"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗",
+      "一锅出"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "锅里加水两碗烧开。",
       "冷冻饺子不用解冻，直接放入沸腾的水中。",
@@ -496,30 +1016,79 @@
     "lowEnergySwap": "全程只开一个锅，不切菜，青菜手撕就行。",
     "weekendPrep": "",
     "freezerReuse": "冷冻饺子直接入锅，紫菜冷冻/常温均可。",
-    "estimatedCalories": 450,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "dumpling_wrapper",
+      "egg",
+      "ingredient:饺子肉馅",
+      "seaweed",
+      "vegetables",
+      "wheat_wrapper"
+    ],
+    "allergenTags": [
+      "egg",
+      "gluten",
+      "wheat"
+    ]
   },
   {
     "id": "steamed_egg",
     "name": "蒸蛋羹",
     "mode": "stovetop",
-    "mealTypes": ["breakfast", "dinner", "lunch"],
-    "modes": ["stovetop", "quick", "low_energy"],
-    "suitableGoals": ["budget", "healthier_eating", "fat_loss", "maintain"],
-    "ingredients": ["鸡蛋"],
-    "optionalIngredients": ["虾仁", "葱花", "豆腐"],
+    "mealTypes": [
+      "breakfast",
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "quick",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "budget",
+      "healthier_eating",
+      "fat_loss",
+      "maintain"
+    ],
+    "ingredients": [
+      "鸡蛋"
+    ],
+    "optionalIngredients": [
+      "虾仁",
+      "葱花",
+      "豆腐"
+    ],
     "primaryProtein": "鸡蛋",
-    "vegetables": ["葱花"],
+    "vegetables": [
+      "葱花"
+    ],
     "staples": [],
-    "cookware": ["碗"],
-    "appliances": ["stove"],
+    "cookware": [
+      "碗"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 3,
     "totalMinutes": 12,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["清淡", "嫩滑"],
-    "preferenceTags": ["快手", "少洗碗", "一锅出"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "清淡",
+      "嫩滑"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗",
+      "一锅出"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "2 个鸡蛋打散，加温水 1.5 倍（约 200ml），加盐一小撮搅匀。",
       "蛋液过筛倒入碗中（更嫩滑），盖保鲜膜扎几个小孔。",
@@ -536,31 +1105,79 @@
     "lowEnergySwap": "不用过筛，直接搅匀就蒸；盖个盘子代替保鲜膜。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 140,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "egg",
+      "scallion",
+      "shrimp_meat",
+      "tofu"
+    ],
+    "allergenTags": [
+      "egg",
+      "shellfish",
+      "soy"
+    ]
   },
   {
     "id": "braised_pork_rice",
     "name": "卤肉饭",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "one_pot"],
-    "suitableGoals": ["maintain", "budget", "muscle_gain"],
-    "ingredients": ["五花肉", "洋葱", "鸡蛋"],
-    "optionalIngredients": ["香菇", "青菜"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "one_pot"
+    ],
+    "suitableGoals": [
+      "maintain",
+      "budget",
+      "muscle_gain"
+    ],
+    "ingredients": [
+      "五花肉",
+      "洋葱",
+      "鸡蛋"
+    ],
+    "optionalIngredients": [
+      "香菇",
+      "青菜"
+    ],
     "primaryProtein": "猪肉",
-    "vegetables": ["洋葱", "香菇", "青菜"],
-    "staples": ["米饭"],
-    "cookware": ["炒锅", "汤锅"],
-    "appliances": ["stove", "rice_cooker"],
+    "vegetables": [
+      "洋葱",
+      "香菇",
+      "青菜"
+    ],
+    "staples": [
+      "米饭"
+    ],
+    "cookware": [
+      "炒锅",
+      "汤锅"
+    ],
+    "appliances": [
+      "stove",
+      "rice_cooker"
+    ],
     "activeMinutes": 15,
     "totalMinutes": 50,
     "difficulty": 2,
     "dishCount": 1,
-    "tasteTags": ["咸甜", "浓香"],
-    "preferenceTags": ["一锅出"],
-    "seasonTags": ["autumn", "winter"],
+    "tasteTags": [
+      "咸甜",
+      "浓香"
+    ],
+    "preferenceTags": [
+      "一锅出"
+    ],
+    "seasonTags": [
+      "autumn",
+      "winter"
+    ],
     "steps": [
+      "用电饭煲提前煮好米饭。",
       "五花肉切小丁（约 1cm），洋葱切碎，香菇泡发切丁（如果用）。",
       "热锅少油，下洋葱碎炒至金黄出香（约 5 分钟，这是关键）。",
       "下五花肉丁翻炒至变色出油。",
@@ -581,30 +1198,71 @@
     "lowEnergySwap": "用五花肉片代替手工切丁；洋葱切大块不切碎；不煮蛋直接用。",
     "weekendPrep": "一次做 2-3 顿的量，多余的冷藏 3 天或冷冻 2 周。汤汁会凝固更好吃。",
     "freezerReuse": "整份分装冷冻，微波加热直接浇饭。",
-    "estimatedCalories": 620,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "egg",
+      "onion",
+      "pork",
+      "rice",
+      "shiitake",
+      "vegetables"
+    ],
+    "allergenTags": [
+      "egg"
+    ]
   },
   {
     "id": "soy_sauce_chicken",
     "name": "酱油鸡",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop"],
-    "suitableGoals": ["maintain", "budget", "healthier_eating"],
-    "ingredients": ["鸡腿"],
-    "optionalIngredients": ["姜", "葱", "八角"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop"
+    ],
+    "suitableGoals": [
+      "maintain",
+      "budget",
+      "healthier_eating"
+    ],
+    "ingredients": [
+      "鸡腿"
+    ],
+    "optionalIngredients": [
+      "姜",
+      "葱",
+      "八角"
+    ],
     "primaryProtein": "鸡肉",
-    "vegetables": ["葱"],
+    "vegetables": [
+      "葱"
+    ],
     "staples": [],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 5,
     "totalMinutes": 30,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["咸鲜", "酱香"],
-    "preferenceTags": ["少洗碗", "快手"],
-    "seasonTags": ["spring", "autumn", "winter"],
+    "tasteTags": [
+      "咸鲜",
+      "酱香"
+    ],
+    "preferenceTags": [
+      "少洗碗",
+      "快手"
+    ],
+    "seasonTags": [
+      "spring",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "锅中加生抽半碗、老抽 2 勺、料酒 2 勺、白糖 1 勺、水一碗半，放入姜片和葱段。",
       "放入鸡腿（2-4 个），大火煮开。",
@@ -622,30 +1280,79 @@
     "lowEnergySwap": "不翻面，煮好直接焖；不切块直接啃。",
     "weekendPrep": "一次煮 4-6 个鸡腿，冷藏保存 3 天，随吃随取。",
     "freezerReuse": "煮好的鸡腿连汤汁一起冷冻，解冻后直接吃或加热。",
-    "estimatedCalories": 350,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "chicken",
+      "chicken_thigh",
+      "ginger",
+      "scallion",
+      "star_anise"
+    ],
+    "allergenTags": [
+      "gluten",
+      "wheat"
+    ]
   },
   {
     "id": "stir_fry_noodle",
     "name": "素炒面",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "quick"],
-    "suitableGoals": ["budget", "maintain", "healthier_eating"],
-    "ingredients": ["面条", "青菜", "胡萝卜"],
-    "optionalIngredients": ["鸡蛋", "豆芽", "肉丝"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "quick"
+    ],
+    "suitableGoals": [
+      "budget",
+      "maintain",
+      "healthier_eating"
+    ],
+    "ingredients": [
+      "面条",
+      "青菜",
+      "胡萝卜"
+    ],
+    "optionalIngredients": [
+      "鸡蛋",
+      "豆芽",
+      "肉丝"
+    ],
     "primaryProtein": "鸡蛋",
-    "vegetables": ["青菜", "胡萝卜", "豆芽"],
-    "staples": ["面条"],
-    "cookware": ["炒锅"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "青菜",
+      "胡萝卜",
+      "豆芽"
+    ],
+    "staples": [
+      "面条"
+    ],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 10,
     "totalMinutes": 15,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["咸鲜", "干香"],
-    "preferenceTags": ["快手", "少洗碗"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "咸鲜",
+      "干香"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "面条煮至八成熟（约 3 分钟），捞出过冷水沥干，拌少许油防粘。",
       "胡萝卜切丝，青菜切段，豆芽洗净（如果用）。",
@@ -665,30 +1372,80 @@
     "lowEnergySwap": "面条不用过冷水，直接炒；蔬菜用手撕不切丝。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 400,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "carrot",
+      "egg",
+      "ingredient:豆芽",
+      "pork",
+      "vegetables",
+      "wheat_noodle"
+    ],
+    "allergenTags": [
+      "egg",
+      "gluten",
+      "wheat"
+    ]
   },
   {
     "id": "egg_fried_rice",
     "name": "蛋炒饭",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch", "breakfast"],
-    "modes": ["stovetop", "quick"],
-    "suitableGoals": ["budget", "maintain"],
-    "ingredients": ["米饭", "鸡蛋"],
-    "optionalIngredients": ["葱花", "火腿", "豌豆", "玉米"],
+    "mealTypes": [
+      "dinner",
+      "lunch",
+      "breakfast"
+    ],
+    "modes": [
+      "stovetop",
+      "quick"
+    ],
+    "suitableGoals": [
+      "budget",
+      "maintain"
+    ],
+    "ingredients": [
+      "米饭",
+      "鸡蛋"
+    ],
+    "optionalIngredients": [
+      "葱花",
+      "火腿",
+      "豌豆",
+      "玉米"
+    ],
     "primaryProtein": "鸡蛋",
-    "vegetables": ["葱花", "豌豆"],
-    "staples": ["米饭"],
-    "cookware": ["炒锅"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "葱花",
+      "豌豆"
+    ],
+    "staples": [
+      "米饭"
+    ],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 8,
     "totalMinutes": 10,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["咸鲜", "焦香"],
-    "preferenceTags": ["快手", "少洗碗"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "咸鲜",
+      "焦香"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "米饭提前一晚冷藏（隔夜饭更干爽，炒出来粒粒分明）。",
       "鸡蛋 2 个打散，葱花切好，火腿切小丁（如果用）。",
@@ -708,30 +1465,77 @@
     "lowEnergySwap": "不切葱花用整根葱；火腿用现成火腿片手撕；不冷冻豌豆玉米。",
     "weekendPrep": "米饭提前煮好冷藏。",
     "freezerReuse": "",
-    "estimatedCalories": 450,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "corn",
+      "egg",
+      "ingredient:火腿",
+      "pea",
+      "rice",
+      "scallion"
+    ],
+    "allergenTags": [
+      "egg"
+    ]
   },
   {
     "id": "mushroom_egg_soup",
     "name": "蘑菇蛋花汤",
     "mode": "one_pot",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["one_pot", "quick", "low_energy"],
-    "suitableGoals": ["budget", "healthier_eating", "fat_loss"],
-    "ingredients": ["蘑菇", "鸡蛋"],
-    "optionalIngredients": ["紫菜", "豆腐", "青菜"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "one_pot",
+      "quick",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "budget",
+      "healthier_eating",
+      "fat_loss"
+    ],
+    "ingredients": [
+      "蘑菇",
+      "鸡蛋"
+    ],
+    "optionalIngredients": [
+      "紫菜",
+      "豆腐",
+      "青菜"
+    ],
     "primaryProtein": "鸡蛋",
-    "vegetables": ["蘑菇", "青菜"],
+    "vegetables": [
+      "蘑菇",
+      "青菜"
+    ],
     "staples": [],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 5,
     "totalMinutes": 8,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["清淡", "鲜"],
-    "preferenceTags": ["快手", "少洗碗", "一锅出"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "清淡",
+      "鲜"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗",
+      "一锅出"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "蘑菇切片（或手撕），鸡蛋打散。",
       "锅里加两碗水烧开。",
@@ -749,30 +1553,77 @@
     "lowEnergySwap": "蘑菇手撕不切；蛋花不用搅动；连锅端上桌。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 120,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "egg",
+      "mushroom",
+      "seaweed",
+      "tofu",
+      "vegetables"
+    ],
+    "allergenTags": [
+      "egg",
+      "soy"
+    ]
   },
   {
     "id": "pasta_aglio_olio",
     "name": "蒜香橄榄油意面",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "quick"],
-    "suitableGoals": ["maintain", "budget"],
-    "ingredients": ["意面", "蒜", "橄榄油"],
-    "optionalIngredients": ["辣椒", "培根", "西兰花"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "quick"
+    ],
+    "suitableGoals": [
+      "maintain",
+      "budget"
+    ],
+    "ingredients": [
+      "意面",
+      "蒜",
+      "橄榄油"
+    ],
+    "optionalIngredients": [
+      "辣椒",
+      "培根",
+      "西兰花"
+    ],
     "primaryProtein": "培根",
-    "vegetables": ["蒜", "西兰花"],
-    "staples": ["意面"],
-    "cookware": ["汤锅", "炒锅"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "蒜",
+      "西兰花"
+    ],
+    "staples": [
+      "意面"
+    ],
+    "cookware": [
+      "汤锅",
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 10,
     "totalMinutes": 15,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["蒜香", "微辣"],
-    "preferenceTags": ["快手"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "蒜香",
+      "微辣"
+    ],
+    "preferenceTags": [
+      "快手"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "大锅水烧开，加盐一小撮，放入意面按包装时间煮（一般 8-10 分钟）。",
       "煮面的同时：蒜切薄片，辣椒切圈（如果用），培根切小片（如果用）。",
@@ -790,30 +1641,76 @@
     "lowEnergySwap": "蒜片用蒜泥代替；不切辣椒用辣椒粉；培根直接撕入锅中。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 420,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "broccoli",
+      "chili",
+      "garlic",
+      "ingredient:培根",
+      "olive_oil",
+      "pasta"
+    ],
+    "allergenTags": [
+      "gluten",
+      "wheat"
+    ]
   },
   {
     "id": "scrambled_egg_tomato",
     "name": "番茄炒蛋",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "quick", "low_energy"],
-    "suitableGoals": ["budget", "healthier_eating", "maintain"],
-    "ingredients": ["番茄", "鸡蛋"],
-    "optionalIngredients": ["葱", "糖"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "quick",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "budget",
+      "healthier_eating",
+      "maintain"
+    ],
+    "ingredients": [
+      "番茄",
+      "鸡蛋"
+    ],
+    "optionalIngredients": [
+      "葱",
+      "糖"
+    ],
     "primaryProtein": "鸡蛋",
-    "vegetables": ["番茄", "葱"],
+    "vegetables": [
+      "番茄",
+      "葱"
+    ],
     "staples": [],
-    "cookware": ["炒锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 8,
     "totalMinutes": 10,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["酸甜", "家常"],
-    "preferenceTags": ["快手", "少洗碗"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "酸甜",
+      "家常"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "番茄切块（1cm 左右），鸡蛋 2-3 个打散，葱切葱花。",
       "热锅稍多油（1 勺），油热后倒入蛋液，炒至凝固成块盛出。",
@@ -830,30 +1727,68 @@
     "lowEnergySwap": "番茄用勺子掰不切；不盛出鸡蛋直接推到一边。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 220,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "egg",
+      "scallion",
+      "sugar",
+      "tomato"
+    ],
+    "allergenTags": [
+      "egg",
+      "gluten",
+      "milk",
+      "wheat"
+    ]
   },
   {
     "id": "brown_sugar_ginger_tea",
     "name": "红糖姜茶",
     "mode": "quick",
-    "mealTypes": ["breakfast", "snack"],
-    "modes": ["quick", "low_energy"],
-    "suitableGoals": ["healthier_eating"],
-    "ingredients": ["姜", "红糖"],
-    "optionalIngredients": ["红枣", "枸杞"],
+    "mealTypes": [
+      "breakfast",
+      "snack"
+    ],
+    "modes": [
+      "quick",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "healthier_eating"
+    ],
+    "ingredients": [
+      "姜",
+      "红糖"
+    ],
+    "optionalIngredients": [
+      "红枣",
+      "枸杞"
+    ],
     "primaryProtein": "",
-    "vegetables": ["姜"],
+    "vegetables": [
+      "姜"
+    ],
     "staples": [],
-    "cookware": ["杯子"],
+    "cookware": [
+      "杯子"
+    ],
     "appliances": [],
     "activeMinutes": 2,
     "totalMinutes": 5,
     "difficulty": 1,
     "dishCount": 0,
-    "tasteTags": ["甜", "姜香"],
-    "preferenceTags": ["快手", "免开火"],
-    "seasonTags": ["autumn", "winter"],
+    "tasteTags": [
+      "甜",
+      "姜香"
+    ],
+    "preferenceTags": [
+      "快手",
+      "免开火"
+    ],
+    "seasonTags": [
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "姜切 3-4 片。",
       "杯子中放姜片、红糖 1 勺。",
@@ -869,30 +1804,72 @@
     "lowEnergySwap": "用姜粉代替鲜姜，免去切片。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 80,
-    "proteinLevel": "low"
+    "proteinLevel": "low",
+    "ingredientIds": [
+      "ginger",
+      "goji",
+      "red_date",
+      "sugar"
+    ],
+    "allergenTags": []
   },
   {
     "id": "rice_porridge",
     "name": "快手白粥配小菜",
     "mode": "stovetop",
-    "mealTypes": ["breakfast", "dinner"],
-    "modes": ["stovetop", "quick", "low_energy"],
-    "suitableGoals": ["healthier_eating", "fat_loss", "budget"],
-    "ingredients": ["大米"],
-    "optionalIngredients": ["皮蛋", "肉松", "榨菜", "腐乳"],
+    "mealTypes": [
+      "breakfast",
+      "dinner"
+    ],
+    "modes": [
+      "stovetop",
+      "quick",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "healthier_eating",
+      "fat_loss",
+      "budget"
+    ],
+    "ingredients": [
+      "大米"
+    ],
+    "optionalIngredients": [
+      "皮蛋",
+      "肉松",
+      "榨菜",
+      "腐乳"
+    ],
     "primaryProtein": "皮蛋",
-    "vegetables": ["榨菜"],
-    "staples": ["大米"],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "榨菜"
+    ],
+    "staples": [
+      "大米"
+    ],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 3,
     "totalMinutes": 25,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["清淡", "软糯"],
-    "preferenceTags": ["快手", "少洗碗", "暖胃"],
-    "seasonTags": ["autumn", "winter"],
+    "tasteTags": [
+      "清淡",
+      "软糯"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗",
+      "暖胃"
+    ],
+    "seasonTags": [
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "大米半杯洗净，加 5 倍水（约 3 碗）入锅。",
       "大火煮开后转小火，盖半盖，煮 20 分钟。",
@@ -909,30 +1886,62 @@
     "lowEnergySwap": "大米提前泡 30 分钟可以缩短煮制时间到 15 分钟。",
     "weekendPrep": "一次多煮几顿的量，冷藏 3 天，微波加热。",
     "freezerReuse": "粥可以分装冷冻，微波解冻后和新的一样。",
-    "estimatedCalories": 200,
-    "proteinLevel": "low"
+    "proteinLevel": "low",
+    "ingredientIds": [
+      "egg",
+      "fermented_tofu",
+      "ingredient:榨菜",
+      "ingredient:肉松",
+      "rice"
+    ],
+    "allergenTags": [
+      "egg",
+      "soy"
+    ]
   },
   {
     "id": "weekend_marinated_chicken",
     "name": "周末腌鸡腿分装",
     "mode": "prep",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["prep", "freezer_reuse"],
-    "suitableGoals": ["budget", "healthier_eating", "maintain"],
-    "ingredients": ["鸡腿"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "prep",
+      "freezer_reuse"
+    ],
+    "suitableGoals": [
+      "budget",
+      "healthier_eating",
+      "maintain"
+    ],
+    "ingredients": [
+      "鸡腿"
+    ],
     "optionalIngredients": [],
     "primaryProtein": "鸡肉",
     "vegetables": [],
     "staples": [],
-    "cookware": ["保鲜袋"],
+    "cookware": [
+      "保鲜袋"
+    ],
     "appliances": [],
     "activeMinutes": 15,
     "totalMinutes": 20,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["腌料香"],
-    "preferenceTags": ["周末备菜"],
-    "seasonTags": ["spring", "autumn", "winter"],
+    "tasteTags": [
+      "腌料香"
+    ],
+    "preferenceTags": [
+      "周末备菜"
+    ],
+    "seasonTags": [
+      "spring",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "买 4-6 个鸡腿，洗净沥干。",
       "腌料：生抽 3 勺 + 蚝油 2 勺 + 料酒 1 勺 + 黑胡椒 1 小撮 + 蒜末（3 瓣）+ 油 1 勺。",
@@ -949,30 +1958,70 @@
     "lowEnergySwap": "",
     "weekendPrep": "这就是周末备菜本身，一次做一周的量。",
     "freezerReuse": "腌好冷冻的鸡腿直接烤/煎，无需解冻。生抽蚝油的钠有抑菌作用。",
-    "estimatedCalories": 0,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "chicken",
+      "chicken_thigh"
+    ],
+    "allergenTags": []
   },
   {
     "id": "tomato_tofu_stew",
     "name": "番茄豆腐一锅炖",
     "mode": "one_pot",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["one_pot", "quick", "low_energy"],
-    "suitableGoals": ["fat_loss", "healthier_eating", "budget"],
-    "ingredients": ["番茄", "豆腐"],
-    "optionalIngredients": ["鸡蛋", "青菜"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "one_pot",
+      "quick",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "fat_loss",
+      "healthier_eating",
+      "budget"
+    ],
+    "ingredients": [
+      "番茄",
+      "豆腐"
+    ],
+    "optionalIngredients": [
+      "鸡蛋",
+      "青菜"
+    ],
     "primaryProtein": "豆腐",
-    "vegetables": ["番茄", "青菜"],
+    "vegetables": [
+      "番茄",
+      "青菜"
+    ],
     "staples": [],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 8,
     "totalMinutes": 15,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["酸甜", "家常"],
-    "preferenceTags": ["快手", "少洗碗", "一锅出"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "酸甜",
+      "家常"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗",
+      "一锅出"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "番茄切块（1cm 左右），豆腐切块。",
       "热锅少油（半勺），下番茄块炒软出汁（约 2 分钟），可加半勺糖提鲜。",
@@ -992,30 +2041,76 @@
     "lowEnergySwap": "番茄用手掰不切；豆腐用勺子挖块；连锅端上桌。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 200,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "egg",
+      "tofu",
+      "tomato",
+      "vegetables"
+    ],
+    "allergenTags": [
+      "egg",
+      "soy"
+    ]
   },
   {
     "id": "potato_carrot_beef_bake",
     "name": "土豆胡萝卜牛肉烤盘",
     "mode": "oven",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["oven", "quick"],
-    "suitableGoals": ["muscle_gain", "maintain", "healthier_eating"],
-    "ingredients": ["牛肉", "土豆", "胡萝卜"],
-    "optionalIngredients": ["洋葱", "蘑菇"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "oven",
+      "quick"
+    ],
+    "suitableGoals": [
+      "muscle_gain",
+      "maintain",
+      "healthier_eating"
+    ],
+    "ingredients": [
+      "牛肉",
+      "土豆",
+      "胡萝卜"
+    ],
+    "optionalIngredients": [
+      "洋葱",
+      "蘑菇"
+    ],
     "primaryProtein": "牛肉",
-    "vegetables": ["胡萝卜", "洋葱", "蘑菇"],
-    "staples": ["土豆"],
-    "cookware": ["烤盘"],
-    "appliances": ["oven"],
+    "vegetables": [
+      "胡萝卜",
+      "洋葱",
+      "蘑菇"
+    ],
+    "staples": [
+      "土豆"
+    ],
+    "cookware": [
+      "烤盘"
+    ],
+    "appliances": [
+      "oven"
+    ],
     "activeMinutes": 10,
     "totalMinutes": 40,
     "difficulty": 2,
     "dishCount": 1,
-    "tasteTags": ["咸鲜", "焦香"],
-    "preferenceTags": ["少油烟", "少洗碗", "烤箱优先"],
-    "seasonTags": ["autumn", "winter"],
+    "tasteTags": [
+      "咸鲜",
+      "焦香"
+    ],
+    "preferenceTags": [
+      "少油烟",
+      "少洗碗",
+      "烤箱优先"
+    ],
+    "seasonTags": [
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "烤箱 200°C 预热。",
       "牛肉切块（2cm，用牛腩或牛肩肉），土豆、胡萝卜切滚刀块，洋葱切粗条。",
@@ -1036,30 +2131,73 @@
     "lowEnergySwap": "牛肉改用肥牛卷铺蔬菜上，不用切块；土豆不削皮。",
     "weekendPrep": "牛肉提前切块腌制分装冷冻。胡萝卜土豆提前切好冷藏保存 2 天。",
     "freezerReuse": "腌制好的牛肉冷冻，用时直接烤，加 5 分钟。",
-    "estimatedCalories": 500,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "beef",
+      "carrot",
+      "mushroom",
+      "onion",
+      "potato"
+    ],
+    "allergenTags": []
   },
   {
     "id": "steamed_seabass",
     "name": "清蒸鲈鱼",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "low_energy"],
-    "suitableGoals": ["healthier_eating", "fat_loss", "maintain"],
-    "ingredients": ["鲈鱼", "葱", "姜"],
-    "optionalIngredients": ["红椒"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "healthier_eating",
+      "fat_loss",
+      "maintain"
+    ],
+    "ingredients": [
+      "鲈鱼",
+      "葱",
+      "姜"
+    ],
+    "optionalIngredients": [
+      "红椒"
+    ],
     "primaryProtein": "鱼肉",
-    "vegetables": ["葱", "姜", "红椒"],
+    "vegetables": [
+      "葱",
+      "姜",
+      "红椒"
+    ],
     "staples": [],
-    "cookware": ["蒸锅", "盘子"],
-    "appliances": ["stove"],
+    "cookware": [
+      "蒸锅",
+      "盘子"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 8,
     "totalMinutes": 20,
     "difficulty": 2,
     "dishCount": 1,
-    "tasteTags": ["清淡", "鲜嫩"],
-    "preferenceTags": ["少油烟", "少洗碗"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "清淡",
+      "鲜嫩"
+    ],
+    "preferenceTags": [
+      "少油烟",
+      "少洗碗"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "鲈鱼洗净（可让摊主宰好），两面各划三刀，抹盐一小撮、料酒 1 勺，姜片塞刀缝里。",
       "盘底铺葱段和姜片，鱼放上面。",
@@ -1076,30 +2214,71 @@
     "lowEnergySwap": "不浇热油，直接淋蒸鱼豉油；葱姜少切几刀。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 280,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "bell_pepper",
+      "fish",
+      "ginger",
+      "perch",
+      "scallion"
+    ],
+    "allergenTags": [
+      "fish",
+      "gluten",
+      "wheat"
+    ]
   },
   {
     "id": "braised_hairtail",
     "name": "红烧带鱼",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop"],
-    "suitableGoals": ["maintain", "budget"],
-    "ingredients": ["带鱼"],
-    "optionalIngredients": ["姜", "葱", "蒜"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop"
+    ],
+    "suitableGoals": [
+      "maintain",
+      "budget"
+    ],
+    "ingredients": [
+      "带鱼"
+    ],
+    "optionalIngredients": [
+      "姜",
+      "葱",
+      "蒜"
+    ],
     "primaryProtein": "鱼肉",
-    "vegetables": ["葱", "姜", "蒜"],
+    "vegetables": [
+      "葱",
+      "姜",
+      "蒜"
+    ],
     "staples": [],
-    "cookware": ["炒锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 12,
     "totalMinutes": 20,
     "difficulty": 2,
     "dishCount": 1,
-    "tasteTags": ["咸鲜", "酱香"],
-    "preferenceTags": ["下饭"],
-    "seasonTags": ["autumn", "winter"],
+    "tasteTags": [
+      "咸鲜",
+      "酱香"
+    ],
+    "preferenceTags": [
+      "下饭"
+    ],
+    "seasonTags": [
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "带鱼段洗净沥干，两面各划两刀，撒盐一小撮、料酒 1 勺腌 5 分钟。",
       "带鱼段擦干水分（煎时不溅油）。",
@@ -1116,30 +2295,74 @@
     "lowEnergySwap": "买现成炸带鱼段省去煎制；不收汁直接烧入味关火。",
     "weekendPrep": "带鱼提前腌好冷藏；甚至可提前煎好，烧时直接下锅。",
     "freezerReuse": "带鱼冷冻保存，煎前擦干水分。",
-    "estimatedCalories": 380,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "fish",
+      "garlic",
+      "ginger",
+      "hairtail",
+      "scallion"
+    ],
+    "allergenTags": [
+      "fish",
+      "gluten",
+      "wheat"
+    ]
   },
   {
     "id": "ketchup_prawns",
     "name": "茄汁大虾",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "quick"],
-    "suitableGoals": ["maintain", "healthier_eating"],
-    "ingredients": ["大虾", "番茄酱"],
-    "optionalIngredients": ["蒜", "葱"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "quick"
+    ],
+    "suitableGoals": [
+      "maintain",
+      "healthier_eating"
+    ],
+    "ingredients": [
+      "大虾",
+      "番茄酱"
+    ],
+    "optionalIngredients": [
+      "蒜",
+      "葱"
+    ],
     "primaryProtein": "虾仁",
-    "vegetables": ["葱", "蒜"],
+    "vegetables": [
+      "葱",
+      "蒜"
+    ],
     "staples": [],
-    "cookware": ["炒锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 10,
     "totalMinutes": 12,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["酸甜", "鲜香"],
-    "preferenceTags": ["快手", "下饭"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "酸甜",
+      "鲜香"
+    ],
+    "preferenceTags": [
+      "快手",
+      "下饭"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "大虾剪去虾须、虾枪，挑虾线（用牙签从背部挑出），洗净沥干。",
       "调汁：番茄酱 2 勺、白糖 1 勺、生抽半勺、水 2 勺搅匀。",
@@ -1156,30 +2379,77 @@
     "lowEnergySwap": "虾不剪须不挑线直接煎；用冷冻虾仁代替整虾。",
     "weekendPrep": "",
     "freezerReuse": "大虾冷冻保存，煎前冲洗即可。",
-    "estimatedCalories": 320,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "garlic",
+      "prawn",
+      "scallion",
+      "shrimp_meat",
+      "tomato"
+    ],
+    "allergenTags": [
+      "gluten",
+      "shellfish",
+      "wheat"
+    ]
   },
   {
     "id": "boiled_shrimp",
     "name": "白灼虾",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "low_energy"],
-    "suitableGoals": ["fat_loss", "healthier_eating", "muscle_gain"],
-    "ingredients": ["基围虾"],
-    "optionalIngredients": ["姜", "葱", "生抽", "蒜"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "fat_loss",
+      "healthier_eating",
+      "muscle_gain"
+    ],
+    "ingredients": [
+      "基围虾"
+    ],
+    "optionalIngredients": [
+      "姜",
+      "葱",
+      "生抽",
+      "蒜"
+    ],
     "primaryProtein": "虾仁",
-    "vegetables": ["葱", "姜"],
+    "vegetables": [
+      "葱",
+      "姜"
+    ],
     "staples": [],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 5,
     "totalMinutes": 8,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["清淡", "鲜甜"],
-    "preferenceTags": ["快手", "少油烟", "少洗碗"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "清淡",
+      "鲜甜"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少油烟",
+      "少洗碗"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "锅里加水两碗，放姜片、葱段、料酒 1 勺，大火烧开。",
       "基围虾洗净（鲜活虾最 好，冷冻虾解冻）。",
@@ -1195,30 +2465,79 @@
     "lowEnergySwap": "全程一个锅，不切菜；蘸料用现成酱油不调。",
     "weekendPrep": "",
     "freezerReuse": "冷冻虾直接煮，多煮 1 分钟。",
-    "estimatedCalories": 200,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "garlic",
+      "ginger",
+      "prawn",
+      "scallion",
+      "shrimp_meat",
+      "soy_sauce"
+    ],
+    "allergenTags": [
+      "gluten",
+      "shellfish",
+      "soy",
+      "wheat"
+    ]
   },
   {
     "id": "garlic_vermicelli_shrimp",
     "name": "蒜蓉粉丝蒸虾",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop"],
-    "suitableGoals": ["maintain", "healthier_eating"],
-    "ingredients": ["大虾", "粉丝", "蒜"],
-    "optionalIngredients": ["红椒", "葱"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop"
+    ],
+    "suitableGoals": [
+      "maintain",
+      "healthier_eating"
+    ],
+    "ingredients": [
+      "大虾",
+      "粉丝",
+      "蒜"
+    ],
+    "optionalIngredients": [
+      "红椒",
+      "葱"
+    ],
     "primaryProtein": "虾仁",
-    "vegetables": ["蒜", "葱", "红椒"],
-    "staples": ["粉丝"],
-    "cookware": ["蒸锅", "盘子"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "蒜",
+      "葱",
+      "红椒"
+    ],
+    "staples": [
+      "粉丝"
+    ],
+    "cookware": [
+      "蒸锅",
+      "盘子"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 12,
     "totalMinutes": 20,
     "difficulty": 2,
     "dishCount": 1,
-    "tasteTags": ["蒜香", "鲜"],
-    "preferenceTags": ["少油烟"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "蒜香",
+      "鲜"
+    ],
+    "preferenceTags": [
+      "少油烟"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "粉丝温水泡软（约 5 分钟），铺盘底。",
       "大虾从背部剖开（不切断），去虾线，展开铺在粉丝上。",
@@ -1237,30 +2556,78 @@
     "lowEnergySwap": "蒜蓉不炸，全用生蒜末拌油；虾不剖开整只蒸。",
     "weekendPrep": "蒜蓉一次多炸些冷藏，可配多种菜。",
     "freezerReuse": "",
-    "estimatedCalories": 350,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "bell_pepper",
+      "garlic",
+      "ingredient:粉丝",
+      "prawn",
+      "scallion",
+      "shrimp_meat"
+    ],
+    "allergenTags": [
+      "gluten",
+      "shellfish",
+      "wheat"
+    ]
   },
   {
     "id": "clam_tofu_soup",
     "name": "花蛤豆腐汤",
     "mode": "one_pot",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["one_pot", "quick", "low_energy"],
-    "suitableGoals": ["fat_loss", "healthier_eating", "budget"],
-    "ingredients": ["花蛤", "豆腐"],
-    "optionalIngredients": ["姜", "葱", "蘑菇"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "one_pot",
+      "quick",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "fat_loss",
+      "healthier_eating",
+      "budget"
+    ],
+    "ingredients": [
+      "花蛤",
+      "豆腐"
+    ],
+    "optionalIngredients": [
+      "姜",
+      "葱",
+      "蘑菇"
+    ],
     "primaryProtein": "花蛤",
-    "vegetables": ["姜", "葱", "蘑菇"],
+    "vegetables": [
+      "姜",
+      "葱",
+      "蘑菇"
+    ],
     "staples": [],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 8,
     "totalMinutes": 15,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["清淡", "鲜"],
-    "preferenceTags": ["快手", "少洗碗", "一锅出"],
-    "seasonTags": ["spring", "summer"],
+    "tasteTags": [
+      "清淡",
+      "鲜"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗",
+      "一锅出"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer"
+    ],
     "steps": [
       "花蛤提前用盐水吐沙 1 小时（或买已吐沙的），搓洗干净。",
       "豆腐切小块，姜切片，葱切葱花。",
@@ -1278,30 +2645,74 @@
     "lowEnergySwap": "豆腐用勺子挖块不切；花蛤买已吐沙的免去吐沙。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 220,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "clam",
+      "ginger",
+      "mushroom",
+      "scallion",
+      "tofu"
+    ],
+    "allergenTags": [
+      "gluten",
+      "shellfish",
+      "soy",
+      "wheat"
+    ]
   },
   {
     "id": "squid_celery",
     "name": "鱿鱼炒芹菜",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "quick"],
-    "suitableGoals": ["muscle_gain", "healthier_eating", "maintain"],
-    "ingredients": ["鱿鱼", "芹菜"],
-    "optionalIngredients": ["蒜", "红椒"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "quick"
+    ],
+    "suitableGoals": [
+      "muscle_gain",
+      "healthier_eating",
+      "maintain"
+    ],
+    "ingredients": [
+      "鱿鱼",
+      "芹菜"
+    ],
+    "optionalIngredients": [
+      "蒜",
+      "红椒"
+    ],
     "primaryProtein": "鱿鱼",
-    "vegetables": ["芹菜", "蒜", "红椒"],
+    "vegetables": [
+      "芹菜",
+      "蒜",
+      "红椒"
+    ],
     "staples": [],
-    "cookware": ["炒锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 10,
     "totalMinutes": 15,
     "difficulty": 2,
     "dishCount": 1,
-    "tasteTags": ["咸鲜", "脆嫩"],
-    "preferenceTags": ["快手"],
-    "seasonTags": ["autumn", "winter"],
+    "tasteTags": [
+      "咸鲜",
+      "脆嫩"
+    ],
+    "preferenceTags": [
+      "快手"
+    ],
+    "seasonTags": [
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "鱿鱼处理：去眼去嘴去内脏，撕去外膜，身体切花刀再切方块（或切圈）。",
       "芹菜去叶切段，蒜切末，红椒切丝。",
@@ -1318,30 +2729,77 @@
     "lowEnergySwap": "买清理好的冷冻鱿鱼圈，省去处理；芹菜手撕不切段。",
     "weekendPrep": "鱿鱼提前清理切好冷藏；甚至焯水后冷藏，炒时直接下锅。",
     "freezerReuse": "清理好的鱿鱼冷冻，用时直接焯水。",
-    "estimatedCalories": 260,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "bell_pepper",
+      "celery",
+      "garlic",
+      "squid"
+    ],
+    "allergenTags": [
+      "fish",
+      "shellfish"
+    ]
   },
   {
     "id": "sole_tomato_stew",
     "name": "番茄龙利鱼炖",
     "mode": "one_pot",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["one_pot", "quick", "low_energy"],
-    "suitableGoals": ["fat_loss", "healthier_eating", "maintain"],
-    "ingredients": ["龙利鱼", "番茄"],
-    "optionalIngredients": ["豆腐", "金针菇", "蒜"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "one_pot",
+      "quick",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "fat_loss",
+      "healthier_eating",
+      "maintain"
+    ],
+    "ingredients": [
+      "龙利鱼",
+      "番茄"
+    ],
+    "optionalIngredients": [
+      "豆腐",
+      "金针菇",
+      "蒜"
+    ],
     "primaryProtein": "鱼肉",
-    "vegetables": ["番茄", "金针菇", "蒜"],
+    "vegetables": [
+      "番茄",
+      "金针菇",
+      "蒜"
+    ],
     "staples": [],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 10,
     "totalMinutes": 18,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["酸甜", "鲜嫩"],
-    "preferenceTags": ["快手", "少洗碗", "一锅出"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "酸甜",
+      "鲜嫩"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗",
+      "一锅出"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "龙利鱼柳（无刺）切块，加料酒 1 勺、盐一小撮、淀粉半勺抓匀腌 5 分钟。",
       "番茄切小块，金针菇去根撕开，豆腐切块（如果用）。",
@@ -1360,30 +2818,75 @@
     "lowEnergySwap": "鱼块不腌直接下；番茄用罐装番茄碎省去切。",
     "weekendPrep": "",
     "freezerReuse": "龙利鱼柳冷冻，用时不解冻直接煮（多煮 2 分钟）。",
-    "estimatedCalories": 280,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "enoki",
+      "fish",
+      "garlic",
+      "sole",
+      "tofu",
+      "tomato"
+    ],
+    "allergenTags": [
+      "fish",
+      "soy"
+    ]
   },
   {
     "id": "twice_cooked_pork",
     "name": "回锅肉",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop"],
-    "suitableGoals": ["maintain", "muscle_gain"],
-    "ingredients": ["五花肉", "蒜苗", "青椒"],
-    "optionalIngredients": ["洋葱", "豆瓣酱"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop"
+    ],
+    "suitableGoals": [
+      "maintain",
+      "muscle_gain"
+    ],
+    "ingredients": [
+      "五花肉",
+      "蒜苗",
+      "青椒"
+    ],
+    "optionalIngredients": [
+      "洋葱",
+      "豆瓣酱"
+    ],
     "primaryProtein": "猪肉",
-    "vegetables": ["蒜苗", "青椒", "洋葱"],
+    "vegetables": [
+      "蒜苗",
+      "青椒",
+      "洋葱"
+    ],
     "staples": [],
-    "cookware": ["汤锅", "炒锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "汤锅",
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 15,
     "totalMinutes": 25,
     "difficulty": 2,
     "dishCount": 1,
-    "tasteTags": ["咸鲜", "微辣", "酱香"],
-    "preferenceTags": ["下饭"],
-    "seasonTags": ["spring", "autumn", "winter"],
+    "tasteTags": [
+      "咸鲜",
+      "微辣",
+      "酱香"
+    ],
+    "preferenceTags": [
+      "下饭"
+    ],
+    "seasonTags": [
+      "spring",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "整块五花肉冷水下锅，加姜片、料酒，煮 15 分钟至筷子能插透，捞出晾凉。",
       "五花肉切薄片（约 3mm），蒜苗切斜段，青椒切块。",
@@ -1401,30 +2904,71 @@
     "lowEnergySwap": "买现成煮熟的五花肉片或培根代替，省去煮肉；蒜苗手撕。",
     "weekendPrep": "五花肉提前煮熟冷藏，当天切片炒，5 分钟出锅。",
     "freezerReuse": "",
-    "estimatedCalories": 580,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "bell_pepper",
+      "garlic_sprout",
+      "onion",
+      "pork",
+      "soy_sauce"
+    ],
+    "allergenTags": [
+      "gluten",
+      "soy",
+      "wheat"
+    ]
   },
   {
     "id": "sweet_sour_tenderloin",
     "name": "糖醋里脊",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop"],
-    "suitableGoals": ["maintain", "muscle_gain"],
-    "ingredients": ["猪里脊", "番茄酱"],
-    "optionalIngredients": ["淀粉", "白芝麻"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop"
+    ],
+    "suitableGoals": [
+      "maintain",
+      "muscle_gain"
+    ],
+    "ingredients": [
+      "猪里脊",
+      "番茄酱"
+    ],
+    "optionalIngredients": [
+      "淀粉",
+      "白芝麻"
+    ],
     "primaryProtein": "猪肉",
     "vegetables": [],
-    "staples": ["淀粉"],
-    "cookware": ["炒锅"],
-    "appliances": ["stove"],
+    "staples": [
+      "淀粉"
+    ],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 15,
     "totalMinutes": 20,
     "difficulty": 3,
     "dishCount": 1,
-    "tasteTags": ["酸甜", "酥脆"],
-    "preferenceTags": ["下饭"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "酸甜",
+      "酥脆"
+    ],
+    "preferenceTags": [
+      "下饭"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "里脊肉切条（约 1cm 粗），加盐一小撮、料酒 1 勺抓匀腌 5 分钟。",
       "调糊：淀粉 3 勺 + 面粉 1 勺 + 水适量，调成酸奶状糊，裹住肉条。",
@@ -1442,30 +2986,71 @@
     "lowEnergySwap": "不复炸；用空气炸锅 200°C 炸 12 分钟代替油炸（肉条刷油）。",
     "weekendPrep": "肉条提前腌好冷藏；糖醋汁提前调好。",
     "freezerReuse": "",
-    "estimatedCalories": 520,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "ingredient:淀粉",
+      "pork",
+      "sesame",
+      "tomato"
+    ],
+    "allergenTags": [
+      "sesame"
+    ]
   },
   {
     "id": "minced_pork_eggplant",
     "name": "肉末茄子",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "quick"],
-    "suitableGoals": ["budget", "maintain"],
-    "ingredients": ["茄子", "猪肉末"],
-    "optionalIngredients": ["蒜", "葱", "豆瓣酱"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "quick"
+    ],
+    "suitableGoals": [
+      "budget",
+      "maintain"
+    ],
+    "ingredients": [
+      "茄子",
+      "猪肉末"
+    ],
+    "optionalIngredients": [
+      "蒜",
+      "葱",
+      "豆瓣酱"
+    ],
     "primaryProtein": "猪肉",
-    "vegetables": ["茄子", "蒜", "葱"],
+    "vegetables": [
+      "茄子",
+      "蒜",
+      "葱"
+    ],
     "staples": [],
-    "cookware": ["炒锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 12,
     "totalMinutes": 15,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["咸鲜", "酱香"],
-    "preferenceTags": ["快手", "下饭"],
-    "seasonTags": ["summer", "autumn"],
+    "tasteTags": [
+      "咸鲜",
+      "酱香"
+    ],
+    "preferenceTags": [
+      "快手",
+      "下饭"
+    ],
+    "seasonTags": [
+      "summer",
+      "autumn"
+    ],
     "steps": [
       "茄子切滚刀块，撒盐一小撮腌 5 分钟杀出水分，挤干（少吸油）。",
       "蒜切末，葱切花。",
@@ -1483,30 +3068,80 @@
     "lowEnergySwap": "茄子不腌直接微波 3 分钟变软再炒，省油省时间。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 380,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "eggplant",
+      "garlic",
+      "pork",
+      "scallion",
+      "soy_sauce"
+    ],
+    "allergenTags": [
+      "gluten",
+      "soy",
+      "wheat"
+    ]
   },
   {
     "id": "yuxiang_shredded_pork",
     "name": "鱼香肉丝",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "quick"],
-    "suitableGoals": ["budget", "maintain"],
-    "ingredients": ["猪里脊", "木耳", "胡萝卜", "青椒"],
-    "optionalIngredients": ["笋", "豆瓣酱", "蒜", "姜"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "quick"
+    ],
+    "suitableGoals": [
+      "budget",
+      "maintain"
+    ],
+    "ingredients": [
+      "猪里脊",
+      "木耳",
+      "胡萝卜",
+      "青椒"
+    ],
+    "optionalIngredients": [
+      "笋",
+      "豆瓣酱",
+      "蒜",
+      "姜"
+    ],
     "primaryProtein": "猪肉",
-    "vegetables": ["木耳", "胡萝卜", "青椒", "笋"],
+    "vegetables": [
+      "木耳",
+      "胡萝卜",
+      "青椒",
+      "笋"
+    ],
     "staples": [],
-    "cookware": ["炒锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 15,
     "totalMinutes": 20,
     "difficulty": 2,
     "dishCount": 1,
-    "tasteTags": ["酸甜", "微辣", "下饭"],
-    "preferenceTags": ["下饭"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "酸甜",
+      "微辣",
+      "下饭"
+    ],
+    "preferenceTags": [
+      "下饭"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "里脊切丝，加生抽 1 勺、淀粉半勺、料酒半勺抓匀腌 5 分钟。",
       "木耳泡发切丝，胡萝卜、青椒、笋切丝，蒜姜切末。",
@@ -1524,30 +3159,78 @@
     "lowEnergySwap": "买现成的鱼香肉丝调料包；蔬菜少切几种。",
     "weekendPrep": "木耳提前泡发；肉丝提前切好冷藏。",
     "freezerReuse": "",
-    "estimatedCalories": 420,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "bamboo_shoot",
+      "bell_pepper",
+      "carrot",
+      "garlic",
+      "ginger",
+      "pork",
+      "soy_sauce",
+      "wood_ear"
+    ],
+    "allergenTags": [
+      "gluten",
+      "soy",
+      "wheat"
+    ]
   },
   {
     "id": "pork_rib_potato",
     "name": "排骨炖土豆",
     "mode": "one_pot",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["one_pot"],
-    "suitableGoals": ["maintain", "muscle_gain", "budget"],
-    "ingredients": ["排骨", "土豆"],
-    "optionalIngredients": ["胡萝卜", "八角", "姜"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "one_pot"
+    ],
+    "suitableGoals": [
+      "maintain",
+      "muscle_gain",
+      "budget"
+    ],
+    "ingredients": [
+      "排骨",
+      "土豆"
+    ],
+    "optionalIngredients": [
+      "胡萝卜",
+      "八角",
+      "姜"
+    ],
     "primaryProtein": "猪肉",
-    "vegetables": ["土豆", "胡萝卜"],
-    "staples": ["土豆"],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "土豆",
+      "胡萝卜"
+    ],
+    "staples": [
+      "土豆"
+    ],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 12,
     "totalMinutes": 45,
     "difficulty": 2,
     "dishCount": 1,
-    "tasteTags": ["咸鲜", "软糯"],
-    "preferenceTags": ["一锅出", "下饭"],
-    "seasonTags": ["autumn", "winter"],
+    "tasteTags": [
+      "咸鲜",
+      "软糯"
+    ],
+    "preferenceTags": [
+      "一锅出",
+      "下饭"
+    ],
+    "seasonTags": [
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "排骨冷水下锅，加姜片、料酒，大火煮开撇浮沫，焯水 3 分钟捞出洗净。",
       "土豆、胡萝卜切滚刀块。",
@@ -1566,30 +3249,70 @@
     "lowEnergySwap": "排骨让摊主代剁；用高压锅压 15 分钟代替炖 40 分钟。",
     "weekendPrep": "一次炖两顿的量，冷藏第二顿加热更快。",
     "freezerReuse": "炖好的排骨分装冷冻，微波加热即可。",
-    "estimatedCalories": 560,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "carrot",
+      "ginger",
+      "pork",
+      "potato",
+      "star_anise"
+    ],
+    "allergenTags": []
   },
   {
     "id": "garlic_pork_belly",
     "name": "蒜泥白肉",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "low_energy"],
-    "suitableGoals": ["maintain", "muscle_gain"],
-    "ingredients": ["五花肉", "蒜"],
-    "optionalIngredients": ["黄瓜", "葱", "红油"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "maintain",
+      "muscle_gain"
+    ],
+    "ingredients": [
+      "五花肉",
+      "蒜"
+    ],
+    "optionalIngredients": [
+      "黄瓜",
+      "葱",
+      "红油"
+    ],
     "primaryProtein": "猪肉",
-    "vegetables": ["黄瓜", "葱"],
+    "vegetables": [
+      "黄瓜",
+      "葱"
+    ],
     "staples": [],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 8,
     "totalMinutes": 25,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["蒜香", "咸鲜", "微辣"],
-    "preferenceTags": ["少油烟", "夏天"],
-    "seasonTags": ["spring", "summer"],
+    "tasteTags": [
+      "蒜香",
+      "咸鲜",
+      "微辣"
+    ],
+    "preferenceTags": [
+      "少油烟",
+      "夏天"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer"
+    ],
     "steps": [
       "整块五花肉冷水下锅，加姜片、葱段、料酒，大火煮开转小火煮 18 分钟至熟（筷子插透无血水）。",
       "煮好立刻捞出过冰水（肉更紧实好切），晾凉。",
@@ -1606,30 +3329,70 @@
     "lowEnergySwap": "肉不切薄片直接剁块拌；黄瓜用现成的丝。",
     "weekendPrep": "肉提前煮熟冷藏，随切随吃。",
     "freezerReuse": "",
-    "estimatedCalories": 480,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "cucumber",
+      "garlic",
+      "ingredient:红油",
+      "pork",
+      "scallion"
+    ],
+    "allergenTags": [
+      "gluten",
+      "wheat"
+    ]
   },
   {
     "id": "honey_char_siu",
     "name": "蜜汁叉烧",
     "mode": "oven",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["oven"],
-    "suitableGoals": ["maintain", "muscle_gain"],
-    "ingredients": ["梅花肉", "叉烧酱", "蜂蜜"],
-    "optionalIngredients": ["蚝油", "红腐乳"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "oven"
+    ],
+    "suitableGoals": [
+      "maintain",
+      "muscle_gain"
+    ],
+    "ingredients": [
+      "梅花肉",
+      "叉烧酱",
+      "蜂蜜"
+    ],
+    "optionalIngredients": [
+      "蚝油",
+      "红腐乳"
+    ],
     "primaryProtein": "猪肉",
     "vegetables": [],
     "staples": [],
-    "cookware": ["烤盘", "烤箱"],
-    "appliances": ["oven"],
+    "cookware": [
+      "烤盘",
+      "烤箱"
+    ],
+    "appliances": [
+      "oven"
+    ],
     "activeMinutes": 8,
     "totalMinutes": 40,
     "difficulty": 2,
     "dishCount": 1,
-    "tasteTags": ["甜香", "焦糖"],
-    "preferenceTags": ["少油烟", "烤箱优先"],
-    "seasonTags": ["spring", "autumn", "winter"],
+    "tasteTags": [
+      "甜香",
+      "焦糖"
+    ],
+    "preferenceTags": [
+      "少油烟",
+      "烤箱优先"
+    ],
+    "seasonTags": [
+      "spring",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "梅花肉切 3cm 厚长条。",
       "腌料：叉烧酱 3 勺、蚝油 1 勺、蜂蜜 1 勺、红腐乳半块（可选）搅匀，抹满肉条，腌 2 小时以上（冷藏过夜更佳）。",
@@ -1648,30 +3411,79 @@
     "lowEnergySwap": "腌料用现成叉烧酱一勺搞定；不翻面中途刷一次酱即可。",
     "weekendPrep": "肉提前腌好冷藏/冷冻，烤时直接入炉。一次多做，冷藏随切随吃。",
     "freezerReuse": "腌好的肉条冷冻，烤前冷藏解冻。",
-    "estimatedCalories": 520,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "fermented_tofu",
+      "honey",
+      "ingredient:叉烧酱",
+      "oyster_sauce",
+      "pork"
+    ],
+    "allergenTags": [
+      "gluten",
+      "shellfish",
+      "soy",
+      "wheat"
+    ]
   },
   {
     "id": "pork_cabbage_noodle",
     "name": "猪肉白菜炖粉条",
     "mode": "one_pot",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["one_pot"],
-    "suitableGoals": ["budget", "maintain"],
-    "ingredients": ["五花肉", "白菜", "粉条"],
-    "optionalIngredients": ["土豆", "豆腐", "八角"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "one_pot"
+    ],
+    "suitableGoals": [
+      "budget",
+      "maintain"
+    ],
+    "ingredients": [
+      "五花肉",
+      "白菜",
+      "粉条"
+    ],
+    "optionalIngredients": [
+      "土豆",
+      "豆腐",
+      "八角"
+    ],
     "primaryProtein": "猪肉",
-    "vegetables": ["白菜", "土豆", "豆腐"],
-    "staples": ["粉条"],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "白菜",
+      "土豆",
+      "豆腐"
+    ],
+    "staples": [
+      "粉条"
+    ],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 12,
     "totalMinutes": 30,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["咸鲜", "软糯", "暖锅"],
-    "preferenceTags": ["一锅出", "少洗碗", "暖胃"],
-    "seasonTags": ["autumn", "winter"],
+    "tasteTags": [
+      "咸鲜",
+      "软糯",
+      "暖锅"
+    ],
+    "preferenceTags": [
+      "一锅出",
+      "少洗碗",
+      "暖胃"
+    ],
+    "seasonTags": [
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "粉条温水泡软（约 10 分钟），五花肉切薄片，白菜切块，土豆切块。",
       "热锅少油，下五花肉煸出油微焦，下八角、姜片炒香。",
@@ -1690,30 +3502,76 @@
     "lowEnergySwap": "用现成火锅五花肉片免切；白菜手撕不切。",
     "weekendPrep": "一次炖一大锅，第二顿更入味。",
     "freezerReuse": "",
-    "estimatedCalories": 480,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "cabbage",
+      "ingredient:粉条",
+      "pork",
+      "potato",
+      "star_anise",
+      "tofu"
+    ],
+    "allergenTags": [
+      "soy"
+    ]
   },
   {
     "id": "kungpao_chicken",
     "name": "宫保鸡丁",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "quick"],
-    "suitableGoals": ["maintain", "muscle_gain"],
-    "ingredients": ["鸡胸肉", "花生", "干辣椒"],
-    "optionalIngredients": ["黄瓜", "葱", "花椒"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "quick"
+    ],
+    "suitableGoals": [
+      "maintain",
+      "muscle_gain"
+    ],
+    "ingredients": [
+      "鸡胸肉",
+      "花生",
+      "干辣椒"
+    ],
+    "optionalIngredients": [
+      "黄瓜",
+      "葱",
+      "花椒"
+    ],
     "primaryProtein": "鸡肉",
-    "vegetables": ["黄瓜", "葱"],
+    "vegetables": [
+      "黄瓜",
+      "葱"
+    ],
     "staples": [],
-    "cookware": ["炒锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 12,
     "totalMinutes": 15,
     "difficulty": 2,
     "dishCount": 1,
-    "tasteTags": ["酸甜", "糊辣", "下饭"],
-    "preferenceTags": ["快手", "下饭"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "酸甜",
+      "糊辣",
+      "下饭"
+    ],
+    "preferenceTags": [
+      "快手",
+      "下饭"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "鸡胸肉切丁，加生抽 1 勺、料酒半勺、淀粉半勺抓匀腌 5 分钟。",
       "花生米用小火少油炒香盛出（或用空气炸锅），葱切段，干辣椒剪段去籽。",
@@ -1731,30 +3589,77 @@
     "lowEnergySwap": "用现成酒鬼花生省去炒花生；鸡肉用鸡腿肉更嫩免上浆。",
     "weekendPrep": "鸡丁提前切好腌制冷藏。",
     "freezerReuse": "",
-    "estimatedCalories": 420,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "chicken",
+      "chicken_breast",
+      "chili",
+      "cucumber",
+      "peanut",
+      "peppercorn",
+      "scallion"
+    ],
+    "allergenTags": [
+      "gluten",
+      "peanut",
+      "wheat"
+    ]
   },
   {
     "id": "mouthwatering_chicken",
     "name": "口水鸡",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "low_energy"],
-    "suitableGoals": ["maintain", "muscle_gain"],
-    "ingredients": ["鸡腿"],
-    "optionalIngredients": ["花生", "葱", "香菜", "黄瓜"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "maintain",
+      "muscle_gain"
+    ],
+    "ingredients": [
+      "鸡腿"
+    ],
+    "optionalIngredients": [
+      "花生",
+      "葱",
+      "香菜",
+      "黄瓜"
+    ],
     "primaryProtein": "鸡肉",
-    "vegetables": ["葱", "香菜", "黄瓜"],
+    "vegetables": [
+      "葱",
+      "香菜",
+      "黄瓜"
+    ],
     "staples": [],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 8,
     "totalMinutes": 25,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["麻辣", "红油香", "鲜嫩"],
-    "preferenceTags": ["少油烟", "夏天"],
-    "seasonTags": ["spring", "summer"],
+    "tasteTags": [
+      "麻辣",
+      "红油香",
+      "鲜嫩"
+    ],
+    "preferenceTags": [
+      "少油烟",
+      "夏天"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer"
+    ],
     "steps": [
       "鸡腿冷水下锅，加姜片、葱段、料酒，大火煮开转小火煮 15 分钟。",
       "煮好立刻捞出过冰水（鸡皮更脆、肉更嫩），晾凉。",
@@ -1771,30 +3676,80 @@
     "lowEnergySwap": "用现成红油调料；鸡腿不剁整只拌。",
     "weekendPrep": "鸡腿提前煮熟冷藏，随吃随拌。",
     "freezerReuse": "",
-    "estimatedCalories": 380,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "chicken",
+      "chicken_thigh",
+      "cilantro",
+      "cucumber",
+      "peanut",
+      "scallion"
+    ],
+    "allergenTags": [
+      "gluten",
+      "peanut",
+      "wheat"
+    ]
   },
   {
     "id": "curry_chicken",
     "name": "咖喱鸡块",
     "mode": "one_pot",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["one_pot"],
-    "suitableGoals": ["maintain", "muscle_gain", "budget"],
-    "ingredients": ["鸡腿", "土豆", "胡萝卜", "咖喱块"],
-    "optionalIngredients": ["洋葱", "苹果"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "one_pot"
+    ],
+    "suitableGoals": [
+      "maintain",
+      "muscle_gain",
+      "budget"
+    ],
+    "ingredients": [
+      "鸡腿",
+      "土豆",
+      "胡萝卜",
+      "咖喱块"
+    ],
+    "optionalIngredients": [
+      "洋葱",
+      "苹果"
+    ],
     "primaryProtein": "鸡肉",
-    "vegetables": ["土豆", "胡萝卜", "洋葱"],
-    "staples": ["土豆"],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "土豆",
+      "胡萝卜",
+      "洋葱"
+    ],
+    "staples": [
+      "土豆"
+    ],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 12,
     "totalMinutes": 30,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["咖喱香", "浓稠", "下饭"],
-    "preferenceTags": ["一锅出", "少洗碗", "下饭"],
-    "seasonTags": ["autumn", "winter"],
+    "tasteTags": [
+      "咖喱香",
+      "浓稠",
+      "下饭"
+    ],
+    "preferenceTags": [
+      "一锅出",
+      "少洗碗",
+      "下饭"
+    ],
+    "seasonTags": [
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "鸡腿去骨切块，土豆、胡萝卜切滚刀块，洋葱切丝。",
       "热锅少油，鸡腿肉皮朝下煎出油微黄，下洋葱炒软。",
@@ -1812,30 +3767,74 @@
     "lowEnergySwap": "用现成咖喱酱一勺搞定；蔬菜切大块少切几刀。",
     "weekendPrep": "一次煮两顿的量，咖喱第二顿更入味，冷藏或冷冻。",
     "freezerReuse": "整份咖喱分装冷冻，微波加热浇饭。",
-    "estimatedCalories": 580,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "apple",
+      "carrot",
+      "chicken",
+      "chicken_thigh",
+      "ingredient:咖喱块",
+      "onion",
+      "potato"
+    ],
+    "allergenTags": []
   },
   {
     "id": "cola_chicken_wings",
     "name": "可乐鸡翅",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "quick"],
-    "suitableGoals": ["maintain", "budget"],
-    "ingredients": ["鸡翅", "可乐"],
-    "optionalIngredients": ["姜", "葱", "生抽"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "quick"
+    ],
+    "suitableGoals": [
+      "maintain",
+      "budget"
+    ],
+    "ingredients": [
+      "鸡翅",
+      "可乐"
+    ],
+    "optionalIngredients": [
+      "姜",
+      "葱",
+      "生抽"
+    ],
     "primaryProtein": "鸡肉",
-    "vegetables": ["葱", "姜"],
+    "vegetables": [
+      "葱",
+      "姜"
+    ],
     "staples": [],
-    "cookware": ["炒锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 8,
     "totalMinutes": 25,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["甜咸", "焦糖", "下饭"],
-    "preferenceTags": ["快手", "下饭"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "甜咸",
+      "焦糖",
+      "下饭"
+    ],
+    "preferenceTags": [
+      "快手",
+      "下饭"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "鸡翅两面各划两刀，冷水下锅加姜片、料酒焯水 3 分钟，捞出洗净。",
       "热锅少油，鸡翅皮朝下中火煎至两面金黄。",
@@ -1852,30 +3851,74 @@
     "lowEnergySwap": "鸡翅不划刀直接煎；可乐用零度可乐减糖。",
     "weekendPrep": "",
     "freezerReuse": "鸡翅冷冻保存，焯水后煎制。",
-    "estimatedCalories": 450,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "chicken",
+      "chicken_wing",
+      "cola",
+      "ginger",
+      "scallion",
+      "soy_sauce"
+    ],
+    "allergenTags": [
+      "gluten",
+      "soy",
+      "wheat"
+    ]
   },
   {
     "id": "mushroom_chicken_stew",
     "name": "香菇炖鸡",
     "mode": "one_pot",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["one_pot"],
-    "suitableGoals": ["maintain", "muscle_gain", "healthier_eating"],
-    "ingredients": ["鸡腿", "干香菇", "红枣"],
-    "optionalIngredients": ["枸杞", "姜"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "one_pot"
+    ],
+    "suitableGoals": [
+      "maintain",
+      "muscle_gain",
+      "healthier_eating"
+    ],
+    "ingredients": [
+      "鸡腿",
+      "干香菇",
+      "红枣"
+    ],
+    "optionalIngredients": [
+      "枸杞",
+      "姜"
+    ],
     "primaryProtein": "鸡肉",
-    "vegetables": ["香菇"],
+    "vegetables": [
+      "香菇"
+    ],
     "staples": [],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 10,
     "totalMinutes": 50,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["鲜香", "醇厚", "暖锅"],
-    "preferenceTags": ["一锅出", "暖胃"],
-    "seasonTags": ["autumn", "winter"],
+    "tasteTags": [
+      "鲜香",
+      "醇厚",
+      "暖锅"
+    ],
+    "preferenceTags": [
+      "一锅出",
+      "暖胃"
+    ],
+    "seasonTags": [
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "干香菇温水泡发（约 20 分钟），洗净；泡香菇的水留用。",
       "鸡腿剁块，冷水下锅加姜片、料酒焯水 3 分钟捞出。",
@@ -1892,30 +3935,71 @@
     "lowEnergySwap": "用鲜香菇免去泡发；鸡块不剁整只炖。",
     "weekendPrep": "一次炖一大锅，汤可下面条。",
     "freezerReuse": "炖好的鸡块连汤冷冻，加热即可。",
-    "estimatedCalories": 420,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "chicken",
+      "chicken_thigh",
+      "ginger",
+      "goji",
+      "red_date",
+      "shiitake"
+    ],
+    "allergenTags": []
   },
   {
     "id": "lemon_chicken",
     "name": "柠檬香煎鸡胸",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "quick"],
-    "suitableGoals": ["fat_loss", "muscle_gain", "healthier_eating"],
-    "ingredients": ["鸡胸肉", "柠檬"],
-    "optionalIngredients": ["蒜", "黑胡椒", "蜂蜜"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "quick"
+    ],
+    "suitableGoals": [
+      "fat_loss",
+      "muscle_gain",
+      "healthier_eating"
+    ],
+    "ingredients": [
+      "鸡胸肉",
+      "柠檬"
+    ],
+    "optionalIngredients": [
+      "蒜",
+      "黑胡椒",
+      "蜂蜜"
+    ],
     "primaryProtein": "鸡肉",
-    "vegetables": ["蒜"],
+    "vegetables": [
+      "蒜"
+    ],
     "staples": [],
-    "cookware": ["炒锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 10,
     "totalMinutes": 15,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["清爽", "酸甜", "柠檬香"],
-    "preferenceTags": ["快手", "减脂"],
-    "seasonTags": ["spring", "summer"],
+    "tasteTags": [
+      "清爽",
+      "酸甜",
+      "柠檬香"
+    ],
+    "preferenceTags": [
+      "快手",
+      "减脂"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer"
+    ],
     "steps": [
       "鸡胸肉横切成两片薄片，加生抽 1 勺、柠檬汁 1 勺、黑胡椒、蒜末、蜂蜜半勺，腌 5 分钟。",
       "柠檬半个切薄片，半个挤汁备用。",
@@ -1932,30 +4016,71 @@
     "lowEnergySwap": "鸡胸不切片整块煎；柠檬汁用瓶装的。",
     "weekendPrep": "鸡胸提前腌好冷藏。",
     "freezerReuse": "",
-    "estimatedCalories": 280,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "black_pepper",
+      "chicken",
+      "chicken_breast",
+      "garlic",
+      "honey",
+      "lemon"
+    ],
+    "allergenTags": []
   },
   {
     "id": "white_cut_chicken",
     "name": "白切鸡",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "low_energy"],
-    "suitableGoals": ["maintain", "healthier_eating"],
-    "ingredients": ["三黄鸡", "姜", "葱"],
-    "optionalIngredients": ["黄栀子"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "maintain",
+      "healthier_eating"
+    ],
+    "ingredients": [
+      "三黄鸡",
+      "姜",
+      "葱"
+    ],
+    "optionalIngredients": [
+      "黄栀子"
+    ],
     "primaryProtein": "鸡肉",
-    "vegetables": ["姜", "葱"],
+    "vegetables": [
+      "姜",
+      "葱"
+    ],
     "staples": [],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 8,
     "totalMinutes": 40,
     "difficulty": 2,
     "dishCount": 1,
-    "tasteTags": ["原味", "鲜嫩", "皮爽"],
-    "preferenceTags": ["少油烟"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "原味",
+      "鲜嫩",
+      "皮爽"
+    ],
+    "preferenceTags": [
+      "少油烟"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "整鸡（或大鸡腿）洗净。",
       "锅里加水大半锅，加姜片、葱段、料酒，大火烧开。",
@@ -1973,30 +4098,76 @@
     "lowEnergySwap": "用整鸡腿代替整鸡，缩短煮制时间；蘸料用现成姜葱酱。",
     "weekendPrep": "整鸡一次煮好，冷藏随剁随吃。",
     "freezerReuse": "",
-    "estimatedCalories": 320,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "chicken",
+      "gardenia",
+      "ginger",
+      "scallion",
+      "whole_chicken"
+    ],
+    "allergenTags": [
+      "gluten",
+      "wheat"
+    ]
   },
   {
     "id": "beer_duck",
     "name": "啤酒鸭",
     "mode": "one_pot",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["one_pot"],
-    "suitableGoals": ["maintain", "muscle_gain"],
-    "ingredients": ["鸭肉", "啤酒", "土豆"],
-    "optionalIngredients": ["青椒", "八角", "姜", "蒜"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "one_pot"
+    ],
+    "suitableGoals": [
+      "maintain",
+      "muscle_gain"
+    ],
+    "ingredients": [
+      "鸭肉",
+      "啤酒",
+      "土豆"
+    ],
+    "optionalIngredients": [
+      "青椒",
+      "八角",
+      "姜",
+      "蒜"
+    ],
     "primaryProtein": "鸭肉",
-    "vegetables": ["土豆", "青椒"],
-    "staples": ["土豆"],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "土豆",
+      "青椒"
+    ],
+    "staples": [
+      "土豆"
+    ],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 12,
     "totalMinutes": 50,
     "difficulty": 2,
     "dishCount": 1,
-    "tasteTags": ["酱香", "麦芽香", "暖锅"],
-    "preferenceTags": ["一锅出", "下饭"],
-    "seasonTags": ["autumn", "winter"],
+    "tasteTags": [
+      "酱香",
+      "麦芽香",
+      "暖锅"
+    ],
+    "preferenceTags": [
+      "一锅出",
+      "下饭"
+    ],
+    "seasonTags": [
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "鸭肉剁块（让摊主宰好），冷水下锅加姜片、料酒焯水 3 分钟，捞出洗净。",
       "土豆切滚刀块，青椒切块，姜蒜切片。",
@@ -2014,20 +4185,51 @@
     "lowEnergySwap": "鸭块让摊主代剁；用压力锅压 20 分钟代替炖 40 分钟。",
     "weekendPrep": "一次炖两顿，第二顿更入味。",
     "freezerReuse": "炖好的啤酒鸭分装冷冻。",
-    "estimatedCalories": 540,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "bell_pepper",
+      "duck",
+      "garlic",
+      "ginger",
+      "ingredient:啤酒",
+      "potato",
+      "star_anise"
+    ],
+    "allergenTags": []
   },
   {
     "id": "smashed_cucumber",
     "name": "凉拌拍黄瓜",
     "mode": "quick",
-    "mealTypes": ["dinner", "lunch", "snack"],
-    "modes": ["quick", "low_energy"],
-    "suitableGoals": ["fat_loss", "healthier_eating", "budget"],
-    "ingredients": ["黄瓜", "蒜"],
-    "optionalIngredients": ["辣椒", "香菜", "花生"],
+    "mealTypes": [
+      "dinner",
+      "lunch",
+      "snack"
+    ],
+    "modes": [
+      "quick",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "fat_loss",
+      "healthier_eating",
+      "budget"
+    ],
+    "ingredients": [
+      "黄瓜",
+      "蒜"
+    ],
+    "optionalIngredients": [
+      "辣椒",
+      "香菜",
+      "花生"
+    ],
     "primaryProtein": "",
-    "vegetables": ["黄瓜", "蒜", "辣椒"],
+    "vegetables": [
+      "黄瓜",
+      "蒜",
+      "辣椒"
+    ],
     "staples": [],
     "cookware": [],
     "appliances": [],
@@ -2035,9 +4237,21 @@
     "totalMinutes": 8,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["清爽", "蒜香", "微辣"],
-    "preferenceTags": ["快手", "免开火", "少洗碗", "夏天"],
-    "seasonTags": ["spring", "summer"],
+    "tasteTags": [
+      "清爽",
+      "蒜香",
+      "微辣"
+    ],
+    "preferenceTags": [
+      "快手",
+      "免开火",
+      "少洗碗",
+      "夏天"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer"
+    ],
     "steps": [
       "黄瓜用刀拍裂，切斜段，撒盐一小撮腌 3 分钟杀水，倒掉多余水分。",
       "蒜捣泥，加生抽 2 勺、醋 1 勺、白糖半勺、香油 1 勺、辣椒油 1 勺（可选）调匀。",
@@ -2051,30 +4265,77 @@
     "lowEnergySwap": "已经是免开火最低能量方案。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 80,
-    "proteinLevel": "low"
+    "proteinLevel": "low",
+    "ingredientIds": [
+      "chili",
+      "cilantro",
+      "cucumber",
+      "garlic",
+      "peanut"
+    ],
+    "allergenTags": [
+      "peanut"
+    ]
   },
   {
     "id": "wood_ear_salad",
     "name": "凉拌木耳",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch", "snack"],
-    "modes": ["stovetop", "quick", "low_energy"],
-    "suitableGoals": ["fat_loss", "healthier_eating"],
-    "ingredients": ["黑木耳", "蒜", "红椒"],
-    "optionalIngredients": ["香菜", "花生", "洋葱"],
+    "mealTypes": [
+      "dinner",
+      "lunch",
+      "snack"
+    ],
+    "modes": [
+      "stovetop",
+      "quick",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "fat_loss",
+      "healthier_eating"
+    ],
+    "ingredients": [
+      "黑木耳",
+      "蒜",
+      "红椒"
+    ],
+    "optionalIngredients": [
+      "香菜",
+      "花生",
+      "洋葱"
+    ],
     "primaryProtein": "木耳",
-    "vegetables": ["黑木耳", "蒜", "红椒", "洋葱"],
+    "vegetables": [
+      "黑木耳",
+      "蒜",
+      "红椒",
+      "洋葱"
+    ],
     "staples": [],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 6,
     "totalMinutes": 20,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["爽脆", "酸辣"],
-    "preferenceTags": ["快手", "少洗碗", "夏天"],
-    "seasonTags": ["spring", "summer"],
+    "tasteTags": [
+      "爽脆",
+      "酸辣"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗",
+      "夏天"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer"
+    ],
     "steps": [
       "干木耳提前冷水泡发（约 30 分钟，或用鲜木耳），撕小朵。",
       "烧一锅开水，木耳焯水 2 分钟，捞出过冷水沥干。",
@@ -2090,30 +4351,78 @@
     "lowEnergySwap": "用鲜木耳免泡发；调料用现成凉拌汁。",
     "weekendPrep": "木耳提前泡发焯水冷藏，随拌随吃。",
     "freezerReuse": "",
-    "estimatedCalories": 110,
-    "proteinLevel": "low"
+    "proteinLevel": "low",
+    "ingredientIds": [
+      "bell_pepper",
+      "cilantro",
+      "garlic",
+      "onion",
+      "peanut",
+      "wood_ear"
+    ],
+    "allergenTags": [
+      "peanut"
+    ]
   },
   {
     "id": "century_egg_tofu",
     "name": "皮蛋豆腐",
     "mode": "quick",
-    "mealTypes": ["dinner", "lunch", "snack"],
-    "modes": ["quick", "low_energy"],
-    "suitableGoals": ["fat_loss", "budget", "healthier_eating"],
-    "ingredients": ["内酯豆腐", "皮蛋"],
-    "optionalIngredients": ["葱", "蒜", "香菜", "香油", "生抽"],
+    "mealTypes": [
+      "dinner",
+      "lunch",
+      "snack"
+    ],
+    "modes": [
+      "quick",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "fat_loss",
+      "budget",
+      "healthier_eating"
+    ],
+    "ingredients": [
+      "内酯豆腐",
+      "皮蛋"
+    ],
+    "optionalIngredients": [
+      "葱",
+      "蒜",
+      "香菜",
+      "香油",
+      "生抽"
+    ],
     "primaryProtein": "皮蛋",
-    "vegetables": ["葱", "蒜", "香菜"],
+    "vegetables": [
+      "葱",
+      "蒜",
+      "香菜"
+    ],
     "staples": [],
-    "cookware": ["盘子"],
+    "cookware": [
+      "盘子"
+    ],
     "appliances": [],
     "activeMinutes": 5,
     "totalMinutes": 5,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["清爽", "鲜香", "嫩滑"],
-    "preferenceTags": ["快手", "免开火", "少洗碗", "夏天"],
-    "seasonTags": ["spring", "summer"],
+    "tasteTags": [
+      "清爽",
+      "鲜香",
+      "嫩滑"
+    ],
+    "preferenceTags": [
+      "快手",
+      "免开火",
+      "少洗碗",
+      "夏天"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer"
+    ],
     "steps": [
       "内酯豆腐一盒倒扣在盘上，切片。",
       "皮蛋 1-2 个剥壳切瓣，摆在豆腐周围。",
@@ -2128,30 +4437,80 @@
     "lowEnergySwap": "全程免开火，已经是最省力方案。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 160,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "cilantro",
+      "egg",
+      "garlic",
+      "scallion",
+      "sesame",
+      "soy_sauce",
+      "tofu"
+    ],
+    "allergenTags": [
+      "egg",
+      "gluten",
+      "sesame",
+      "soy",
+      "wheat"
+    ]
   },
   {
     "id": "di_san_xian",
     "name": "地三鲜",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop"],
-    "suitableGoals": ["budget", "maintain", "healthier_eating"],
-    "ingredients": ["茄子", "土豆", "青椒"],
-    "optionalIngredients": ["蒜", "葱"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop"
+    ],
+    "suitableGoals": [
+      "budget",
+      "maintain",
+      "healthier_eating"
+    ],
+    "ingredients": [
+      "茄子",
+      "土豆",
+      "青椒"
+    ],
+    "optionalIngredients": [
+      "蒜",
+      "葱"
+    ],
     "primaryProtein": "",
-    "vegetables": ["茄子", "土豆", "青椒"],
-    "staples": ["土豆"],
-    "cookware": ["炒锅"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "茄子",
+      "土豆",
+      "青椒"
+    ],
+    "staples": [
+      "土豆"
+    ],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 15,
     "totalMinutes": 20,
     "difficulty": 2,
     "dishCount": 1,
-    "tasteTags": ["咸鲜", "软糯", "下饭"],
-    "preferenceTags": ["下饭"],
-    "seasonTags": ["summer", "autumn"],
+    "tasteTags": [
+      "咸鲜",
+      "软糯",
+      "下饭"
+    ],
+    "preferenceTags": [
+      "下饭"
+    ],
+    "seasonTags": [
+      "summer",
+      "autumn"
+    ],
     "steps": [
       "茄子、土豆切滚刀块，青椒掰块，蒜切末。",
       "调汁：生抽 2 勺、白糖 1 勺、醋半勺、淀粉半勺、水 2 勺搅匀。",
@@ -2167,30 +4526,71 @@
     "lowEnergySwap": "茄子微波变软代替油炸；土豆煎代替炸。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 340,
-    "proteinLevel": "low"
+    "proteinLevel": "low",
+    "ingredientIds": [
+      "bell_pepper",
+      "eggplant",
+      "garlic",
+      "potato",
+      "scallion"
+    ],
+    "allergenTags": [
+      "gluten",
+      "wheat"
+    ]
   },
   {
     "id": "dry_fried_green_beans",
     "name": "干煸四季豆",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop"],
-    "suitableGoals": ["budget", "maintain"],
-    "ingredients": ["四季豆", "肉末"],
-    "optionalIngredients": ["蒜", "干辣椒", "榨菜"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop"
+    ],
+    "suitableGoals": [
+      "budget",
+      "maintain"
+    ],
+    "ingredients": [
+      "四季豆",
+      "肉末"
+    ],
+    "optionalIngredients": [
+      "蒜",
+      "干辣椒",
+      "榨菜"
+    ],
     "primaryProtein": "猪肉",
-    "vegetables": ["四季豆", "蒜"],
+    "vegetables": [
+      "四季豆",
+      "蒜"
+    ],
     "staples": [],
-    "cookware": ["炒锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 15,
     "totalMinutes": 18,
     "difficulty": 2,
     "dishCount": 1,
-    "tasteTags": ["咸香", "干香", "微辣"],
-    "preferenceTags": ["下饭"],
-    "seasonTags": ["summer", "autumn"],
+    "tasteTags": [
+      "咸香",
+      "干香",
+      "微辣"
+    ],
+    "preferenceTags": [
+      "下饭"
+    ],
+    "seasonTags": [
+      "summer",
+      "autumn"
+    ],
     "steps": [
       "四季豆掰段，撕去老筋，洗净沥干（必须干，不然煸时溅油）。",
       "热锅稍多油（1.5 勺），四季豆中火煸炒 8 分钟至表皮起皱变软，盛出。",
@@ -2206,30 +4606,71 @@
     "lowEnergySwap": "四季豆先用空气炸锅 200°C 烤 8 分钟起皱，代替煸炒。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 320,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "chili",
+      "garlic",
+      "green_beans",
+      "ingredient:榨菜",
+      "pork"
+    ],
+    "allergenTags": []
   },
   {
     "id": "garlic_lettuce",
     "name": "蒜蓉油麦菜",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "quick"],
-    "suitableGoals": ["fat_loss", "healthier_eating", "budget"],
-    "ingredients": ["油麦菜", "蒜"],
-    "optionalIngredients": ["干辣椒"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "quick"
+    ],
+    "suitableGoals": [
+      "fat_loss",
+      "healthier_eating",
+      "budget"
+    ],
+    "ingredients": [
+      "油麦菜",
+      "蒜"
+    ],
+    "optionalIngredients": [
+      "干辣椒"
+    ],
     "primaryProtein": "",
-    "vegetables": ["油麦菜", "蒜"],
+    "vegetables": [
+      "油麦菜",
+      "蒜"
+    ],
     "staples": [],
-    "cookware": ["炒锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 5,
     "totalMinutes": 6,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["蒜香", "清淡", "脆嫩"],
-    "preferenceTags": ["快手", "少洗碗"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "蒜香",
+      "清淡",
+      "脆嫩"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "油麦菜洗净掰段（或切段），蒜切末（4-5 瓣）。",
       "热锅稍多油（1 勺，蔬菜吃油），下蒜末、干辣椒段小火爆香。",
@@ -2245,30 +4686,71 @@
     "lowEnergySwap": "蒜用现成蒜蓉酱；油麦菜不切整根炒。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 90,
-    "proteinLevel": "low"
+    "proteinLevel": "low",
+    "ingredientIds": [
+      "chili",
+      "garlic",
+      "lettuce"
+    ],
+    "allergenTags": []
   },
   {
     "id": "vinegar_cabbage",
     "name": "醋溜白菜",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "quick"],
-    "suitableGoals": ["budget", "healthier_eating", "fat_loss"],
-    "ingredients": ["白菜", "干辣椒", "醋"],
-    "optionalIngredients": ["蒜", "葱", "花椒"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "quick"
+    ],
+    "suitableGoals": [
+      "budget",
+      "healthier_eating",
+      "fat_loss"
+    ],
+    "ingredients": [
+      "白菜",
+      "干辣椒",
+      "醋"
+    ],
+    "optionalIngredients": [
+      "蒜",
+      "葱",
+      "花椒"
+    ],
     "primaryProtein": "",
-    "vegetables": ["白菜", "蒜", "葱"],
+    "vegetables": [
+      "白菜",
+      "蒜",
+      "葱"
+    ],
     "staples": [],
-    "cookware": ["炒锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 8,
     "totalMinutes": 10,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["酸辣", "爽脆", "下饭"],
-    "preferenceTags": ["快手", "下饭"],
-    "seasonTags": ["autumn", "winter"],
+    "tasteTags": [
+      "酸辣",
+      "爽脆",
+      "下饭"
+    ],
+    "preferenceTags": [
+      "快手",
+      "下饭"
+    ],
+    "seasonTags": [
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "白菜帮片成大片，叶子撕大块（帮叶分开放），干辣椒切段，蒜切片。",
       "调汁：醋 2 勺、生抽 1 勺、白糖 1 勺、盐一小撮搅匀。",
@@ -2285,30 +4767,76 @@
     "lowEnergySwap": "白菜手撕不刀切；调汁用现成醋溜汁。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 110,
-    "proteinLevel": "low"
+    "proteinLevel": "low",
+    "ingredientIds": [
+      "cabbage",
+      "chili",
+      "garlic",
+      "ingredient:醋",
+      "peppercorn",
+      "scallion"
+    ],
+    "allergenTags": [
+      "gluten",
+      "wheat"
+    ]
   },
   {
     "id": "scallion_braised_tofu",
     "name": "葱烧豆腐",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "quick"],
-    "suitableGoals": ["budget", "healthier_eating", "fat_loss"],
-    "ingredients": ["豆腐", "大葱"],
-    "optionalIngredients": ["蒜", "木耳"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "quick"
+    ],
+    "suitableGoals": [
+      "budget",
+      "healthier_eating",
+      "fat_loss"
+    ],
+    "ingredients": [
+      "豆腐",
+      "大葱"
+    ],
+    "optionalIngredients": [
+      "蒜",
+      "木耳"
+    ],
     "primaryProtein": "豆腐",
-    "vegetables": ["大葱", "蒜", "木耳"],
+    "vegetables": [
+      "大葱",
+      "蒜",
+      "木耳"
+    ],
     "staples": [],
-    "cookware": ["炒锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 10,
     "totalMinutes": 12,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["葱香", "咸鲜", "下饭"],
-    "preferenceTags": ["快手", "下饭"],
-    "seasonTags": ["spring", "autumn", "winter"],
+    "tasteTags": [
+      "葱香",
+      "咸鲜",
+      "下饭"
+    ],
+    "preferenceTags": [
+      "快手",
+      "下饭"
+    ],
+    "seasonTags": [
+      "spring",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "豆腐切厚片，大葱切斜段（葱白葱绿分开）。",
       "热锅稍多油（1 勺），豆腐片中火煎至两面金黄，盛出。",
@@ -2325,30 +4853,78 @@
     "lowEnergySwap": "豆腐不煎直接烧；大葱切段不切斜片。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 240,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "garlic",
+      "scallion",
+      "tofu",
+      "wood_ear"
+    ],
+    "allergenTags": [
+      "soy"
+    ]
   },
   {
     "id": "scallion_oil_noodle",
     "name": "葱油拌面",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch", "breakfast"],
-    "modes": ["stovetop", "quick", "low_energy"],
-    "suitableGoals": ["budget", "maintain"],
-    "ingredients": ["面条", "小葱", "生抽"],
-    "optionalIngredients": ["白糖", "老抽", "猪油"],
+    "mealTypes": [
+      "dinner",
+      "lunch",
+      "breakfast"
+    ],
+    "modes": [
+      "stovetop",
+      "quick",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "budget",
+      "maintain"
+    ],
+    "ingredients": [
+      "面条",
+      "小葱",
+      "生抽"
+    ],
+    "optionalIngredients": [
+      "白糖",
+      "老抽",
+      "猪油"
+    ],
     "primaryProtein": "",
-    "vegetables": ["小葱"],
-    "staples": ["面条"],
-    "cookware": ["汤锅", "炒锅"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "小葱"
+    ],
+    "staples": [
+      "面条"
+    ],
+    "cookware": [
+      "汤锅",
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 10,
     "totalMinutes": 15,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["葱香", "咸甜", "干香"],
-    "preferenceTags": ["快手", "少洗碗"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "葱香",
+      "咸甜",
+      "干香"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "小葱洗净擦干，切长段（葱白葱绿分开）。",
       "调汁：生抽 3 勺、老抽半勺、白糖 1 勺搅匀。",
@@ -2365,30 +4941,82 @@
     "lowEnergySwap": "用现成瓶装葱油酱，免去炸葱，直接拌面。",
     "weekendPrep": "葱油一次多炸些冷藏，可拌面/拌饭/炒菜。",
     "freezerReuse": "",
-    "estimatedCalories": 420,
-    "proteinLevel": "low"
+    "proteinLevel": "low",
+    "ingredientIds": [
+      "pork_lard",
+      "scallion",
+      "soy_sauce",
+      "sugar",
+      "wheat_noodle"
+    ],
+    "allergenTags": [
+      "gluten",
+      "soy",
+      "wheat"
+    ]
   },
   {
     "id": "yangchun_noodle",
     "name": "阳春面",
     "mode": "one_pot",
-    "mealTypes": ["breakfast", "dinner", "lunch"],
-    "modes": ["one_pot", "quick", "low_energy"],
-    "suitableGoals": ["budget", "healthier_eating", "fat_loss"],
-    "ingredients": ["面条", "葱"],
-    "optionalIngredients": ["猪油", "青菜"],
+    "mealTypes": [
+      "breakfast",
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "one_pot",
+      "quick",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "budget",
+      "healthier_eating",
+      "fat_loss"
+    ],
+    "ingredients": [
+      "面条",
+      "葱"
+    ],
+    "optionalIngredients": [
+      "猪油",
+      "青菜"
+    ],
     "primaryProtein": "",
-    "vegetables": ["葱", "青菜"],
-    "staples": ["面条"],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "葱",
+      "青菜"
+    ],
+    "staples": [
+      "面条"
+    ],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 5,
     "totalMinutes": 8,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["清汤", "葱香", "鲜"],
-    "preferenceTags": ["快手", "少洗碗", "一锅出", "暖胃"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "清汤",
+      "葱香",
+      "鲜"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗",
+      "一锅出",
+      "暖胃"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "碗底放：生抽 2 勺、猪油 1 小勺（或香油）、葱花、盐一小撮、白糖少许。",
       "锅里水烧开，下面条煮 3 分钟。",
@@ -2403,30 +5031,75 @@
     "lowEnergySwap": "全程一个锅一个碗；葱花少切。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 350,
-    "proteinLevel": "low"
+    "proteinLevel": "low",
+    "ingredientIds": [
+      "pork_lard",
+      "scallion",
+      "vegetables",
+      "wheat_noodle"
+    ],
+    "allergenTags": [
+      "gluten",
+      "wheat"
+    ]
   },
   {
     "id": "potstickers",
     "name": "生煎冷冻饺子",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch", "breakfast"],
-    "modes": ["stovetop", "quick", "freezer_reuse"],
-    "suitableGoals": ["budget", "maintain"],
-    "ingredients": ["冷冻饺子"],
-    "optionalIngredients": ["葱", "芝麻", "醋"],
+    "mealTypes": [
+      "dinner",
+      "lunch",
+      "breakfast"
+    ],
+    "modes": [
+      "stovetop",
+      "quick",
+      "freezer_reuse"
+    ],
+    "suitableGoals": [
+      "budget",
+      "maintain"
+    ],
+    "ingredients": [
+      "冷冻饺子"
+    ],
+    "optionalIngredients": [
+      "葱",
+      "芝麻",
+      "醋"
+    ],
     "primaryProtein": "饺子（肉馅）",
-    "vegetables": ["葱"],
-    "staples": ["饺子皮"],
-    "cookware": ["炒锅（带盖）"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "葱"
+    ],
+    "staples": [
+      "饺子皮"
+    ],
+    "cookware": [
+      "炒锅（带盖）"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 8,
     "totalMinutes": 15,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["焦脆", "肉香"],
-    "preferenceTags": ["快手", "freezer 复用"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "焦脆",
+      "肉香"
+    ],
+    "preferenceTags": [
+      "快手",
+      "freezer 复用"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "炒锅（平底）加少许油，冷冻饺子不用解冻直接排入锅中。",
       "中火煎 2 分钟至饺子底微黄。",
@@ -2444,30 +5117,86 @@
     "lowEnergySwap": "直接水煮代替生煎，更省事。",
     "weekendPrep": "周末包一大盘饺子冷冻，随吃随煎。",
     "freezerReuse": "冷冻饺子直接入锅，是本菜核心。",
-    "estimatedCalories": 480,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "dumpling_wrapper",
+      "ingredient:醋",
+      "ingredient:饺子肉馅",
+      "scallion",
+      "sesame",
+      "wheat_wrapper"
+    ],
+    "allergenTags": [
+      "gluten",
+      "sesame",
+      "wheat"
+    ]
   },
   {
     "id": "wonton_soup",
     "name": "速冻馄饨汤",
     "mode": "one_pot",
-    "mealTypes": ["breakfast", "dinner", "lunch"],
-    "modes": ["one_pot", "quick", "low_energy", "freezer_reuse"],
-    "suitableGoals": ["budget", "maintain", "healthier_eating"],
-    "ingredients": ["冷冻馄饨", "紫菜", "虾皮"],
-    "optionalIngredients": ["葱", "香菜", "蛋丝"],
+    "mealTypes": [
+      "breakfast",
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "one_pot",
+      "quick",
+      "low_energy",
+      "freezer_reuse"
+    ],
+    "suitableGoals": [
+      "budget",
+      "maintain",
+      "healthier_eating"
+    ],
+    "ingredients": [
+      "冷冻馄饨",
+      "紫菜",
+      "虾皮"
+    ],
+    "optionalIngredients": [
+      "葱",
+      "香菜",
+      "蛋丝"
+    ],
     "primaryProtein": "馄饨（肉馅）",
-    "vegetables": ["紫菜", "葱", "香菜"],
-    "staples": ["馄饨皮"],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "紫菜",
+      "葱",
+      "香菜"
+    ],
+    "staples": [
+      "馄饨皮"
+    ],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 5,
     "totalMinutes": 10,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["清淡", "鲜", "暖胃"],
-    "preferenceTags": ["快手", "一锅出", "少洗碗", "暖胃"],
-    "seasonTags": ["spring", "autumn", "winter"],
+    "tasteTags": [
+      "清淡",
+      "鲜",
+      "暖胃"
+    ],
+    "preferenceTags": [
+      "快手",
+      "一锅出",
+      "少洗碗",
+      "暖胃"
+    ],
+    "seasonTags": [
+      "spring",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "碗底放：紫菜一小撮、虾皮一勺、生抽 1 勺、香油几滴、盐一小撮、葱花。",
       "锅里水烧开，下冷冻馄饨（不用解冻），煮 5-6 分钟至浮起。",
@@ -2482,30 +5211,82 @@
     "lowEnergySwap": "全程一碗一锅；紫菜虾皮免洗免切。",
     "weekendPrep": "周末包馄饨冷冻，随煮随吃。",
     "freezerReuse": "冷冻馄饨直接煮。",
-    "estimatedCalories": 380,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "cilantro",
+      "dried_shrimp",
+      "dumpling_wrapper",
+      "egg",
+      "ingredient:馄饨肉馅",
+      "scallion",
+      "seaweed",
+      "wheat_wrapper"
+    ],
+    "allergenTags": [
+      "egg",
+      "gluten",
+      "shellfish",
+      "wheat"
+    ]
   },
   {
     "id": "omurice",
     "name": "番茄酱蛋包饭",
     "mode": "stovetop",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["stovetop", "quick"],
-    "suitableGoals": ["maintain", "budget"],
-    "ingredients": ["米饭", "鸡蛋", "番茄酱"],
-    "optionalIngredients": ["火腿", "玉米", "青豆"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "quick"
+    ],
+    "suitableGoals": [
+      "maintain",
+      "budget"
+    ],
+    "ingredients": [
+      "米饭",
+      "鸡蛋",
+      "番茄酱"
+    ],
+    "optionalIngredients": [
+      "火腿",
+      "玉米",
+      "青豆"
+    ],
     "primaryProtein": "鸡蛋",
-    "vegetables": ["青豆", "玉米"],
-    "staples": ["米饭"],
-    "cookware": ["炒锅"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "青豆",
+      "玉米"
+    ],
+    "staples": [
+      "米饭"
+    ],
+    "cookware": [
+      "炒锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 10,
     "totalMinutes": 12,
     "difficulty": 2,
     "dishCount": 1,
-    "tasteTags": ["酸甜", "蛋香"],
-    "preferenceTags": ["快手", "少洗碗"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "酸甜",
+      "蛋香"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "热锅少油，下火腿丁、玉米、青豆炒 1 分钟（如果用）。",
       "倒入米饭大火翻炒，加生抽 1 勺、番茄酱 1 勺炒匀，盛入盘中成椭圆形。",
@@ -2521,30 +5302,76 @@
     "lowEnergySwap": "蛋皮不摊直接把炒饭和蛋液一起炒（番茄蛋炒饭），省事。",
     "weekendPrep": "米饭提前煮好冷藏。",
     "freezerReuse": "",
-    "estimatedCalories": 520,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "corn",
+      "egg",
+      "ingredient:火腿",
+      "ingredient:青豆",
+      "rice",
+      "tomato"
+    ],
+    "allergenTags": [
+      "egg"
+    ]
   },
   {
     "id": "tomato_beef_noodle",
     "name": "番茄牛腩面",
     "mode": "one_pot",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["one_pot"],
-    "suitableGoals": ["muscle_gain", "maintain"],
-    "ingredients": ["牛腩", "番茄", "面条"],
-    "optionalIngredients": ["洋葱", "土豆", "姜"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "one_pot"
+    ],
+    "suitableGoals": [
+      "muscle_gain",
+      "maintain"
+    ],
+    "ingredients": [
+      "牛腩",
+      "番茄",
+      "面条"
+    ],
+    "optionalIngredients": [
+      "洋葱",
+      "土豆",
+      "姜"
+    ],
     "primaryProtein": "牛肉",
-    "vegetables": ["番茄", "洋葱", "土豆"],
-    "staples": ["面条"],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "番茄",
+      "洋葱",
+      "土豆"
+    ],
+    "staples": [
+      "面条"
+    ],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 15,
     "totalMinutes": 70,
     "difficulty": 2,
     "dishCount": 1,
-    "tasteTags": ["酸甜", "软烂", "浓香"],
-    "preferenceTags": ["一锅出", "暖胃"],
-    "seasonTags": ["autumn", "winter"],
+    "tasteTags": [
+      "酸甜",
+      "软烂",
+      "浓香"
+    ],
+    "preferenceTags": [
+      "一锅出",
+      "暖胃"
+    ],
+    "seasonTags": [
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "牛腩切大块，冷水下锅加姜片、料酒焯水 3 分钟捞出。",
       "番茄切块，洋葱切丝，土豆切块。",
@@ -2562,30 +5389,78 @@
     "lowEnergySwap": "用高压锅压 25 分钟代替炖 1 小时；牛腩让摊主代切。",
     "weekendPrep": "炖一大锅牛腩分装冷冻，下面条加热浇上即可。",
     "freezerReuse": "番茄牛腩浇头分装冷冻，是快手面的底气。",
-    "estimatedCalories": 620,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "beef",
+      "ginger",
+      "onion",
+      "potato",
+      "tomato",
+      "wheat_noodle"
+    ],
+    "allergenTags": [
+      "gluten",
+      "wheat"
+    ]
   },
   {
     "id": "seaweed_egg_soup",
     "name": "紫菜蛋花汤",
     "mode": "one_pot",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["one_pot", "quick", "low_energy"],
-    "suitableGoals": ["budget", "healthier_eating", "fat_loss"],
-    "ingredients": ["紫菜", "鸡蛋"],
-    "optionalIngredients": ["虾皮", "葱", "豆腐"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "one_pot",
+      "quick",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "budget",
+      "healthier_eating",
+      "fat_loss"
+    ],
+    "ingredients": [
+      "紫菜",
+      "鸡蛋"
+    ],
+    "optionalIngredients": [
+      "虾皮",
+      "葱",
+      "豆腐"
+    ],
     "primaryProtein": "鸡蛋",
-    "vegetables": ["紫菜", "葱"],
+    "vegetables": [
+      "紫菜",
+      "葱"
+    ],
     "staples": [],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 5,
     "totalMinutes": 7,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["清淡", "鲜"],
-    "preferenceTags": ["快手", "少洗碗", "一锅出"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "清淡",
+      "鲜"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗",
+      "一锅出"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "紫菜撕小朵（免洗免泡，无沙紫菜），鸡蛋打散。",
       "锅里加水两碗烧开，下虾皮（如果用）煮 1 分钟。",
@@ -2601,30 +5476,79 @@
     "lowEnergySwap": "紫菜免泡；蛋花不搅动；连锅端上桌。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 90,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "dried_shrimp",
+      "egg",
+      "scallion",
+      "seaweed",
+      "tofu"
+    ],
+    "allergenTags": [
+      "egg",
+      "gluten",
+      "shellfish",
+      "soy",
+      "wheat"
+    ]
   },
   {
     "id": "pumpkin_millet_porridge",
     "name": "南瓜小米粥",
     "mode": "one_pot",
-    "mealTypes": ["breakfast", "dinner"],
-    "modes": ["one_pot", "low_energy"],
-    "suitableGoals": ["healthier_eating", "fat_loss", "budget"],
-    "ingredients": ["小米", "南瓜"],
-    "optionalIngredients": ["枸杞", "红枣"],
+    "mealTypes": [
+      "breakfast",
+      "dinner"
+    ],
+    "modes": [
+      "one_pot",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "healthier_eating",
+      "fat_loss",
+      "budget"
+    ],
+    "ingredients": [
+      "小米",
+      "南瓜"
+    ],
+    "optionalIngredients": [
+      "枸杞",
+      "红枣"
+    ],
     "primaryProtein": "",
-    "vegetables": ["南瓜"],
-    "staples": ["小米"],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "南瓜"
+    ],
+    "staples": [
+      "小米"
+    ],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 5,
     "totalMinutes": 25,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["香甜", "软糯", "暖胃"],
-    "preferenceTags": ["快手", "少洗碗", "一锅出", "暖胃"],
-    "seasonTags": ["autumn", "winter"],
+    "tasteTags": [
+      "香甜",
+      "软糯",
+      "暖胃"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗",
+      "一锅出",
+      "暖胃"
+    ],
+    "seasonTags": [
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "小米半杯洗净，南瓜去皮去籽切块（约 200g）。",
       "锅中加小米、南瓜、水 5 碗，大火煮开。",
@@ -2640,30 +5564,77 @@
     "lowEnergySwap": "南瓜用微波 5 分钟打软再煮，缩短时间；用剩米饭代替小米更快。",
     "weekendPrep": "一次多煮，冷藏第二顿加热。",
     "freezerReuse": "粥分装冷冻，微波解冻。",
-    "estimatedCalories": 220,
-    "proteinLevel": "low"
+    "proteinLevel": "low",
+    "ingredientIds": [
+      "goji",
+      "millet",
+      "pumpkin",
+      "red_date"
+    ],
+    "allergenTags": []
   },
   {
     "id": "veg_egg_porridge",
     "name": "蔬菜鸡蛋粥",
     "mode": "one_pot",
-    "mealTypes": ["breakfast", "dinner"],
-    "modes": ["one_pot", "low_energy"],
-    "suitableGoals": ["healthier_eating", "fat_loss", "budget"],
-    "ingredients": ["剩米饭", "鸡蛋", "青菜"],
-    "optionalIngredients": ["胡萝卜", "香菇", "姜丝"],
+    "mealTypes": [
+      "breakfast",
+      "dinner"
+    ],
+    "modes": [
+      "one_pot",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "healthier_eating",
+      "fat_loss",
+      "budget"
+    ],
+    "ingredients": [
+      "剩米饭",
+      "鸡蛋",
+      "青菜"
+    ],
+    "optionalIngredients": [
+      "胡萝卜",
+      "香菇",
+      "姜丝"
+    ],
     "primaryProtein": "鸡蛋",
-    "vegetables": ["青菜", "胡萝卜", "香菇"],
-    "staples": ["米饭"],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "青菜",
+      "胡萝卜",
+      "香菇"
+    ],
+    "staples": [
+      "米饭"
+    ],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 8,
     "totalMinutes": 20,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["清淡", "鲜", "软糯"],
-    "preferenceTags": ["快手", "少洗碗", "一锅出", "暖胃"],
-    "seasonTags": ["spring", "autumn", "winter"],
+    "tasteTags": [
+      "清淡",
+      "鲜",
+      "软糯"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗",
+      "一锅出",
+      "暖胃"
+    ],
+    "seasonTags": [
+      "spring",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "剩米饭一碗拨散，青菜切碎，胡萝卜、香菇切小丁。",
       "锅中加米饭 + 4 碗水大火煮开，转小火煮 10 分钟至米粒开花。",
@@ -2680,30 +5651,76 @@
     "lowEnergySwap": "用剩米饭代替生米，省去久煮；蔬菜用冷冻混合丁。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 240,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "carrot",
+      "egg",
+      "ginger",
+      "rice",
+      "shiitake",
+      "vegetables"
+    ],
+    "allergenTags": [
+      "egg"
+    ]
   },
   {
     "id": "corn_rib_soup",
     "name": "玉米排骨汤",
     "mode": "one_pot",
-    "mealTypes": ["dinner", "lunch"],
-    "modes": ["one_pot"],
-    "suitableGoals": ["maintain", "muscle_gain", "healthier_eating"],
-    "ingredients": ["排骨", "甜玉米", "胡萝卜"],
-    "optionalIngredients": ["红枣", "枸杞", "姜"],
+    "mealTypes": [
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "one_pot"
+    ],
+    "suitableGoals": [
+      "maintain",
+      "muscle_gain",
+      "healthier_eating"
+    ],
+    "ingredients": [
+      "排骨",
+      "甜玉米",
+      "胡萝卜"
+    ],
+    "optionalIngredients": [
+      "红枣",
+      "枸杞",
+      "姜"
+    ],
     "primaryProtein": "猪肉",
-    "vegetables": ["甜玉米", "胡萝卜"],
-    "staples": ["玉米"],
-    "cookware": ["汤锅"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "甜玉米",
+      "胡萝卜"
+    ],
+    "staples": [
+      "玉米"
+    ],
+    "cookware": [
+      "汤锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 10,
     "totalMinutes": 60,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["清甜", "鲜", "暖锅"],
-    "preferenceTags": ["一锅出", "暖胃"],
-    "seasonTags": ["autumn", "winter"],
+    "tasteTags": [
+      "清甜",
+      "鲜",
+      "暖锅"
+    ],
+    "preferenceTags": [
+      "一锅出",
+      "暖胃"
+    ],
+    "seasonTags": [
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "排骨冷水下锅加姜片、料酒焯水 3 分钟，捞出洗净。",
       "甜玉米切大段，胡萝卜切滚刀块。",
@@ -2719,30 +5736,77 @@
     "lowEnergySwap": "用高压锅压 20 分钟；排骨让摊主代剁。",
     "weekendPrep": "一次炖大锅，汤可下面。",
     "freezerReuse": "汤分装冷冻，加热即可。",
-    "estimatedCalories": 380,
-    "proteinLevel": "high"
+    "proteinLevel": "high",
+    "ingredientIds": [
+      "carrot",
+      "corn",
+      "ginger",
+      "goji",
+      "pork",
+      "red_date"
+    ],
+    "allergenTags": []
   },
   {
     "id": "egg_sandwich",
     "name": "鸡蛋三明治",
     "mode": "quick",
-    "mealTypes": ["breakfast"],
-    "modes": ["quick", "low_energy"],
-    "suitableGoals": ["healthier_eating", "maintain", "muscle_gain"],
-    "ingredients": ["吐司", "鸡蛋", "生菜"],
-    "optionalIngredients": ["番茄", "芝士片", "蛋黄酱", "火腿"],
+    "mealTypes": [
+      "breakfast"
+    ],
+    "modes": [
+      "quick",
+      "low_energy"
+    ],
+    "suitableGoals": [
+      "healthier_eating",
+      "maintain",
+      "muscle_gain"
+    ],
+    "ingredients": [
+      "吐司",
+      "鸡蛋",
+      "生菜"
+    ],
+    "optionalIngredients": [
+      "番茄",
+      "芝士片",
+      "蛋黄酱",
+      "火腿"
+    ],
     "primaryProtein": "鸡蛋",
-    "vegetables": ["生菜", "番茄"],
-    "staples": ["吐司"],
-    "cookware": ["平底锅"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "生菜",
+      "番茄"
+    ],
+    "staples": [
+      "吐司"
+    ],
+    "cookware": [
+      "平底锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 6,
     "totalMinutes": 8,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["清淡", "蛋香"],
-    "preferenceTags": ["快手", "早餐", "少洗碗"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "清淡",
+      "蛋香"
+    ],
+    "preferenceTags": [
+      "快手",
+      "早餐",
+      "少洗碗"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "平底锅少油，煎一个荷包蛋（或炒蛋碎），火腿片煎香（如果用）。",
       "吐司两片，挤蛋黄酱，铺生菜、番茄片、芝士片。",
@@ -2757,30 +5821,79 @@
     "lowEnergySwap": "蛋用微波炉荷包蛋（1 分钟）；不压煎直接吃。",
     "weekendPrep": "",
     "freezerReuse": "",
-    "estimatedCalories": 380,
-    "proteinLevel": "medium"
+    "proteinLevel": "medium",
+    "ingredientIds": [
+      "bread",
+      "egg",
+      "ingredient:火腿",
+      "lettuce",
+      "milk",
+      "tomato"
+    ],
+    "allergenTags": [
+      "egg",
+      "gluten",
+      "milk",
+      "wheat"
+    ]
   },
   {
     "id": "frozen_scallion_pancake",
     "name": "冷冻葱油饼",
     "mode": "stovetop",
-    "mealTypes": ["breakfast", "dinner", "lunch"],
-    "modes": ["stovetop", "quick", "freezer_reuse"],
-    "suitableGoals": ["budget", "maintain"],
-    "ingredients": ["冷冻葱油饼"],
-    "optionalIngredients": ["鸡蛋"],
+    "mealTypes": [
+      "breakfast",
+      "dinner",
+      "lunch"
+    ],
+    "modes": [
+      "stovetop",
+      "quick",
+      "freezer_reuse"
+    ],
+    "suitableGoals": [
+      "budget",
+      "maintain"
+    ],
+    "ingredients": [
+      "冷冻葱油饼"
+    ],
+    "optionalIngredients": [
+      "鸡蛋"
+    ],
     "primaryProtein": "",
-    "vegetables": ["葱"],
-    "staples": ["面粉"],
-    "cookware": ["平底锅"],
-    "appliances": ["stove"],
+    "vegetables": [
+      "葱"
+    ],
+    "staples": [
+      "面粉"
+    ],
+    "cookware": [
+      "平底锅"
+    ],
+    "appliances": [
+      "stove"
+    ],
     "activeMinutes": 5,
     "totalMinutes": 8,
     "difficulty": 1,
     "dishCount": 1,
-    "tasteTags": ["焦香", "葱香", "酥脆"],
-    "preferenceTags": ["快手", "少洗碗", "freezer 复用"],
-    "seasonTags": ["spring", "summer", "autumn", "winter"],
+    "tasteTags": [
+      "焦香",
+      "葱香",
+      "酥脆"
+    ],
+    "preferenceTags": [
+      "快手",
+      "少洗碗",
+      "freezer 复用"
+    ],
+    "seasonTags": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
     "steps": [
       "平底锅小火预热，无需放油（葱油饼自带油）。",
       "冷冻葱油饼不用解冻，直接入锅。",
@@ -2795,7 +5908,17 @@
     "lowEnergySwap": "用空气炸锅 180°C 烤 8 分钟，免看火。",
     "weekendPrep": "周末烙几张葱油饼冷冻，或直接买冷冻的。",
     "freezerReuse": "冷冻葱油饼直接煎，是本菜核心。",
-    "estimatedCalories": 320,
-    "proteinLevel": "low"
+    "proteinLevel": "low",
+    "ingredientIds": [
+      "egg",
+      "flour",
+      "scallion",
+      "wheat_wrapper"
+    ],
+    "allergenTags": [
+      "egg",
+      "gluten",
+      "wheat"
+    ]
   }
 ]

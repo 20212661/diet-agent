@@ -9,6 +9,7 @@
  */
 import Database from "better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
+import { randomUUID } from "node:crypto";
 
 export interface KnnHit {
   id: string;
@@ -95,6 +96,10 @@ export class SqliteVecStore implements VectorStore {
     this.db.exec(`DELETE FROM ${VEC_TABLE}`);
   }
 
+  delete(id: string): void {
+    this.db.prepare(`DELETE FROM ${VEC_TABLE} WHERE id = ?`).run(id);
+  }
+
   size(): number {
     const row = this.db.prepare(`SELECT COUNT(*) AS n FROM ${VEC_TABLE}`).get() as { n: number };
     return row.n;
@@ -121,11 +126,15 @@ export function createVectorStore(db: Database.Database, dim: number): VectorSto
   try {
     const store = new SqliteVecStore(db, dim);
     const probe = unitVector(dim);
-    store.upsert(SELFTEST_ID, probe);
-    const hit = store.knn(probe, 1);
-    store.clear(); // 清掉自检数据，留给 retriever 从干净状态索引
-    if (!hit.some((h) => h.id === SELFTEST_ID)) {
-      throw new Error("self-test KNN did not return the probe vector");
+    const probeId = `${SELFTEST_ID}:${randomUUID()}`;
+    try {
+      store.upsert(probeId, probe);
+      // Existing recipes can tie with the probe; check that KNN executes and
+      // returns its nearest distance, without relying on arbitrary tie order.
+      const hit = store.knn(probe, 1);
+      if (!hit.length || hit[0].distance > 1e-6) throw new Error("self-test KNN failed");
+    } finally {
+      store.delete(probeId);
     }
     console.log(`[RAG] vector store: sqlite-vec (dim=${dim})`);
     return store;

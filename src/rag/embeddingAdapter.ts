@@ -46,8 +46,8 @@ const PROVIDER_DEFAULTS: Record<EmbeddingProvider, { model: string; baseUrl: str
 
 /**
  * 解析当前可用的 embedding 配置。
- * 优先级：EMBEDDING_PROVIDER 显式指定 > ZAI_API_KEY（国内优先）> OPENAI_API_KEY。
- * 都没有则返回 undefined（RAG 关闭，退回纯 matcher）。
+ * 默认关闭向量通道，仅使用 FTS5。只有显式设置 EMBEDDING_PROVIDER 时才启用，
+ * 避免默认安装/下载本地模型或意外调用付费 embedding API。
  */
 export function resolveEmbeddingConfig(): EmbeddingConfig | undefined {
   const explicit = process.env.EMBEDDING_PROVIDER;
@@ -55,10 +55,7 @@ export function resolveEmbeddingConfig(): EmbeddingConfig | undefined {
   if (explicit === "local") return makeConfig("local");
   if (explicit === "openai" && process.env.OPENAI_API_KEY) return makeConfig("openai");
   if (explicit === "zai" && process.env.ZAI_API_KEY) return makeConfig("zai");
-  // 未显式指定：按已配置 key 自动选；都没有则 fallback 到本地模型（零配置向量召回）
-  if (process.env.ZAI_API_KEY) return makeConfig("zai");
-  if (process.env.OPENAI_API_KEY) return makeConfig("openai");
-  return makeConfig("local");
+  return undefined;
 }
 
 function makeConfig(provider: EmbeddingProvider): EmbeddingConfig {
@@ -134,21 +131,21 @@ async function safeText(resp: Response): Promise<string> {
  * 向 SQLite 读写当前 embedding 维度与 provider，用于检测维度切换。
  * 维度不匹配（如从 GLM 1024 换到 OpenAI 1536）需要重建向量索引。
  */
-export function loadEmbeddingMeta(db: Database.Database): { dim: number; provider: string } | undefined {
+export function loadEmbeddingMeta(db: Database.Database): { dim: number; provider: string; model?: string } | undefined {
   db.exec(`CREATE TABLE IF NOT EXISTS rag_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)`);
   const row = db.prepare("SELECT value FROM rag_meta WHERE key = ?").get("embedding_meta") as
     | { value: string }
     | undefined;
   if (!row) return undefined;
   try {
-    return JSON.parse(row.value) as { dim: number; provider: string };
+    return JSON.parse(row.value) as { dim: number; provider: string; model?: string };
   } catch {
     return undefined;
   }
 }
 
 export function saveEmbeddingMeta(db: Database.Database, config: EmbeddingConfig): void {
-  const value = JSON.stringify({ dim: config.dim, provider: config.provider });
+  const value = JSON.stringify({ dim: config.dim, provider: config.provider, model: config.model });
   db.prepare(
     "INSERT INTO rag_meta (key, value) VALUES ('embedding_meta', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
   ).run(value);

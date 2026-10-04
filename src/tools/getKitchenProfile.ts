@@ -14,7 +14,7 @@ export const getKitchenProfileTool: ToolDefinition<typeof Params> = defineTool({
   name: "get_kitchen_profile",
   label: "查询厨房画像",
   description:
-    "查询用户的厨房条件、厨具、可接受做饭时长、口味偏好和做饭偏好。用户问厨房配置、有什么厨具、能不能用烤箱/灶台、做饭时间限制时调用。",
+    "查询用户的厨房条件、厨具、可接受做饭时长、口味偏好和做饭偏好。用户问厨房配置、有什么厨具、能不能用烤箱/灶台/微波炉/电饭煲、做饭时间限制时调用。",
   parameters: Params,
   async execute(
     _toolCallId: string,
@@ -28,6 +28,8 @@ export const getKitchenProfileTool: ToolDefinition<typeof Params> = defineTool({
       "厨房画像：",
       `- 灶台：${profile.burners} 个`,
       `- 烤箱：${profile.hasOven ? "有" : "没有"}`,
+      `- 微波炉：${profile.hasMicrowave ? "有" : "没有"}`,
+      `- 电饭煲：${profile.hasRiceCooker ? "有" : "没有"}`,
       `- 厨具：${profile.cookware.join("、") || "未记录"}`,
       `- 主动操作目标：${profile.maxActiveMinutes} 分钟`,
       `- 总耗时上限：${profile.maxTotalMinutes} 分钟`,

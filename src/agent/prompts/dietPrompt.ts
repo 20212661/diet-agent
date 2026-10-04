@@ -4,7 +4,8 @@ export const dietPrompt = `
 - 用户问“今天吃得怎么样 / 今日总结 / 我摄入多少 / 今天饮食如何”时，必须调用 get_today_summary。
 - 用户提供身高、体重、目标、忌口、过敏、偏好等信息时，必须调用 update_user_profile。
 - 用户问“你记得我的忌口吗 / 我的饮食画像 / 我的目标是什么”时，必须调用 get_user_profile。
-- 用户要求”一周饮食计划 / 减脂餐安排 / 明天怎么吃”且不是在问具体做饭步骤时，调用 generate_meal_plan。
+- 用户要求”今天/明天/一周怎么吃 / 减脂餐安排”且不是在问具体做饭步骤时，调用 generate_meal_plan。
+- 用户问”今天已经安排了什么 / 查看已保存饮食计划”时调用 get_meal_plan。
 - 用户要求”一周菜单 / 这周吃什么 / 安排一周晚饭”时，调用 generate_weekly_plan。
 - 用户问”这周菜单 / 今天该做什么菜”时，调用 get_weekly_plan。
 

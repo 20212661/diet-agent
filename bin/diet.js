@@ -3,8 +3,9 @@
  * diet-agent CLI 入口
  *
  * 用法：
- *   npx diet-agent              — 启动终端聊天
- *   diet-agent [userId]         — npm link / npm install -g 后直接用，可指定 userId
+ *   npx diet-agent              — 启动本地 Web 工作台
+ *   diet-agent [userId]         — 启动指定用户的本地工作台
+ *   diet-agent --tui [userId]   — 启动终端聊天
  *   diet-agent --help           — 显示帮助
  */
 import { resolve, dirname } from "node:path";
@@ -20,14 +21,16 @@ const projectRoot = resolve(__dirname, "..");
 const args = process.argv.slice(2);
 const hasFlag = (f) => args.includes(f);
 const userIdArg = args.find((a) => !a.startsWith("--"));
+const useTui = hasFlag("--tui");
 
 if (hasFlag("--help") || hasFlag("-h")) {
   console.log(`
-🍳 晚饭工作流 — 个人饮食管理智能体（终端模式）
+🍳 晚饭工作流 — 个人饮食管理工作台
 
 用法:
-  diet-agent              启动终端聊天
+  diet-agent              启动本地 Web 工作台
   diet-agent <userId>     指定用户 ID（默认 tui_user）
+  diet-agent --tui        启动终端聊天
   diet-agent --help       显示帮助
 
 环境变量（.env 文件）:
@@ -61,21 +64,15 @@ if (!hasKey) {
   console.log("   推荐 DeepSeek（性价比高）: https://platform.deepseek.com/\n");
 }
 
-// 确定 tsx 路径
-import { createRequire } from "node:module";
-const require = createRequire(import.meta.url);
-let tsxCli;
-try {
-  tsxCli = resolve(require.resolve("tsx/package.json"), "../dist/cli.mjs");
-} catch {
-  console.error("❌ 找不到 tsx，请先 npm install");
+// 发布包只包含 dist；工作台静态资源位于包根目录 public/。
+const builtEntryFile = resolve(projectRoot, useTui ? "dist/tui/index.js" : "dist/web/index.js");
+if (!existsSync(builtEntryFile)) {
+  console.error("❌ 找不到构建产物，请先运行 npm run build");
   process.exit(1);
 }
 
-const entryFile = resolve(projectRoot, "src/tui/index.ts");
-
-// 用 tsx 启动（传入 userId 作为首个位置参数）
-const childArgs = [tsxCli, entryFile];
+// 用 Node 启动编译产物（传入 userId 作为首个位置参数）
+const childArgs = [builtEntryFile];
 if (userIdArg) childArgs.push(userIdArg);
 
 const child = spawn(process.execPath, childArgs, {

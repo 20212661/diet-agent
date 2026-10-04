@@ -1,10 +1,19 @@
-import { getModel, type Model } from "@earendil-works/pi-ai";
+import { getModel, type Model } from "@earendil-works/pi-ai/compat";
 import { defineTool, type ToolDefinition } from "@earendil-works/pi-coding-agent";
+import {
+  PROVIDER_CONFIGS,
+  configuredModelForProvider,
+  normalizeConfiguredModelId,
+  normalizeProviderId,
+  type ModelAdapterKind,
+} from "./modelProviders.js";
+import { getActiveOperationId } from "../utils/userTurnContext.js";
 
-export type ModelAdapterKind = "deepseek" | "glm" | "openai" | "anthropic" | "openrouter" | "sdk-default";
+export type { ModelAdapterKind } from "./modelProviders.js";
 
 export interface ModelCandidate {
   key: string;
+  provider: string;
   kind: ModelAdapterKind;
   label: string;
   model?: Model<any>;
@@ -14,64 +23,34 @@ export interface ModelCandidate {
 
 const TOOL_RETRY_COUNT = Number(process.env.TOOL_RETRY_COUNT ?? "1");
 
-export function createDeepSeekChatModel(): Model<"openai-completions"> | undefined {
-  if (!process.env.DEEPSEEK_API_KEY) return undefined;
+export function normalizeModelId(provider: string, modelId: string): string {
+  return normalizeConfiguredModelId(provider, modelId);
+}
 
-  return {
-    id: "deepseek-chat",
-    name: "DeepSeek Chat (V3)",
-    api: "openai-completions",
-    provider: "deepseek",
-    baseUrl: "https://api.deepseek.com",
-    reasoning: false,
-    input: ["text"],
-    cost: { input: 0.27, output: 1.1, cacheRead: 0, cacheWrite: 0 },
-    contextWindow: 65536,
-    maxTokens: 8192,
-    compat: {
-      supportsDeveloperRole: true,
-      supportsUsageInStreaming: true,
-      maxTokensField: "max_tokens",
-    },
-  };
+export interface ModelRequest {
+  provider: string;
+  kind: Exclude<ModelAdapterKind, "sdk-default">;
+  modelId: string;
+}
+
+export function createDeepSeekFlashModel(): Model<any> | undefined {
+  if (!process.env.DEEPSEEK_API_KEY) return undefined;
+  return safeGetModel("deepseek", "deepseek-flash");
 }
 
 function safeGetModel(provider: string, modelId: string): Model<any> | undefined {
   try {
     return getModel(provider as any, modelId as any);
   } catch (err) {
-    console.warn(`[MODEL] Cannot resolve ${provider}/${modelId}: ${(err as Error).message}`);
+    console.warn(`[MODEL] Cannot resolve ${provider}/${modelId}; errorType=${err instanceof Error ? err.name : typeof err}`);
     return undefined;
   }
 }
 
-function candidateFromConfiguredModel(): ModelCandidate | undefined {
-  const provider = process.env.MODEL_PROVIDER;
-  const modelId = process.env.MODEL_ID;
-  if (!provider) return undefined;
-
-  if (provider === "deepseek-chat" || (provider === "deepseek" && modelId === "deepseek-chat")) {
-    const model = createDeepSeekChatModel();
-    return model ? makeCandidate("deepseek", "deepseek-chat", model) : undefined;
-  }
-
-  if (!modelId) return undefined;
-  const model = safeGetModel(provider, modelId);
-  if (!model) return undefined;
-
-  const kind: ModelAdapterKind =
-    provider === "zai" ? "glm" :
-    provider === "openai" ? "openai" :
-    provider === "anthropic" ? "anthropic" :
-    provider === "openrouter" ? "openrouter" :
-    "sdk-default";
-
-  return makeCandidate(kind, `${provider}/${modelId}`, model);
-}
-
-function makeCandidate(kind: ModelAdapterKind, label: string, model?: Model<any>): ModelCandidate {
+function makeCandidate(provider: string, kind: ModelAdapterKind, label: string, model?: Model<any>): ModelCandidate {
   return {
-    key: `${kind}:${label}`,
+    key: `${provider}:${label}`,
+    provider,
     kind,
     label,
     model,
@@ -80,35 +59,45 @@ function makeCandidate(kind: ModelAdapterKind, label: string, model?: Model<any>
   };
 }
 
+export function resolveModelRequests(env: NodeJS.ProcessEnv = process.env): ModelRequest[] {
+  const configuredProvider = env.MODEL_PROVIDER
+    ? normalizeProviderId(env.MODEL_PROVIDER)
+    : undefined;
+  const primaryProvider = configuredProvider ?? PROVIDER_CONFIGS.find(
+    (config) => Boolean(env[config.apiKeyEnv]?.trim())
+  )?.id;
+  const ordered = [...PROVIDER_CONFIGS].sort((left, right) => {
+    if (left.id === configuredProvider) return -1;
+    if (right.id === configuredProvider) return 1;
+    return 0;
+  });
+  return ordered.flatMap((config): ModelRequest[] => {
+    if (!env[config.apiKeyEnv]?.trim()) return [];
+    return [{
+      provider: config.id,
+      kind: config.kind,
+      modelId: configuredModelForProvider(config, env, primaryProvider),
+    }];
+  });
+}
+
 export function resolveModelCandidates(): ModelCandidate[] {
   const candidates: ModelCandidate[] = [];
-  const configured = candidateFromConfiguredModel();
-  if (configured) candidates.push(configured);
-
-  const deepseek = createDeepSeekChatModel();
-  if (deepseek) candidates.push(makeCandidate("deepseek", "deepseek-chat", deepseek));
-
-  if (process.env.ZAI_API_KEY) {
-    const glm = safeGetModel("zai", "glm-5-turbo");
-    if (glm) candidates.push(makeCandidate("glm", "zai/glm-5-turbo", glm));
+  for (const request of resolveModelRequests()) {
+    const model = safeGetModel(request.provider, request.modelId);
+    if (model) candidates.push(makeCandidate(
+      request.provider,
+      request.kind,
+      `${request.provider}/${request.modelId}`,
+      model
+    ));
   }
 
-  if (process.env.OPENAI_API_KEY) {
-    const openai = safeGetModel("openai", process.env.OPENAI_MODEL_ID ?? "gpt-4o");
-    if (openai) candidates.push(makeCandidate("openai", `openai/${openai.id}`, openai));
+  // 有显式 provider 时不要再追加 SDK default：它通常会读取同一份环境变量，
+  // 认证失败时重复请求只会掩盖真正的 provider/model 错误。
+  if (candidates.length === 0) {
+    candidates.push(makeCandidate("sdk-default", "sdk-default", "SDK default"));
   }
-
-  if (process.env.ANTHROPIC_API_KEY) {
-    const anthropic = safeGetModel("anthropic", process.env.ANTHROPIC_MODEL_ID ?? "claude-sonnet-4-5");
-    if (anthropic) candidates.push(makeCandidate("anthropic", `anthropic/${anthropic.id}`, anthropic));
-  }
-
-  if (process.env.OPENROUTER_API_KEY) {
-    const openrouter = safeGetModel("openrouter", process.env.OPENROUTER_MODEL_ID ?? "deepseek/deepseek-chat");
-    if (openrouter) candidates.push(makeCandidate("openrouter", `openrouter/${openrouter.id}`, openrouter));
-  }
-
-  candidates.push(makeCandidate("sdk-default", "SDK default"));
 
   const seen = new Set<string>();
   return candidates.filter((candidate) => {
@@ -144,23 +133,70 @@ export function buildModelPromptPatch(kind: ModelAdapterKind): string {
 }
 
 export function shouldFallbackModel(err: unknown): boolean {
-  const text = errorText(err).toLowerCase();
-  return [
-    "rate limit",
-    "429",
-    "timeout",
-    "timed out",
-    "econnreset",
-    "socket hang up",
-    "overloaded",
-    "503",
-    "502",
-    "500",
-    "tool",
-    "json",
-    "schema",
-    "invalid_request",
-  ].some((needle) => text.includes(needle));
+  return classifyModelError(err).retryable;
+}
+
+export type ModelErrorKind =
+  | "authentication"
+  | "rate_limit"
+  | "timeout"
+  | "network"
+  | "server"
+  | "model_unavailable"
+  | "invalid_request"
+  | "unknown";
+
+export interface ModelErrorClassification {
+  kind: ModelErrorKind;
+  retryable: boolean;
+  status?: number;
+}
+
+export function classifyModelError(error: unknown): ModelErrorClassification {
+  const record = error && typeof error === "object" ? error as Record<string, unknown> : undefined;
+  const nested = record?.cause && typeof record.cause === "object" ? record.cause as Record<string, unknown> : undefined;
+  const rawStatus = record?.status ?? record?.statusCode ?? nested?.status ?? nested?.statusCode;
+  const status = typeof rawStatus === "number" ? rawStatus :
+    typeof rawStatus === "string" && /^\d{3}$/.test(rawStatus) ? Number(rawStatus) : undefined;
+  const code = String(record?.code ?? nested?.code ?? "").toUpperCase();
+  const name = error instanceof Error ? error.name : "";
+  const message = errorText(error).toLowerCase();
+  const statusFromMessage = /\bhttp\s*(\d{3})\b/i.exec(message)?.[1];
+  const effectiveStatus = status ?? (statusFromMessage ? Number(statusFromMessage) : undefined);
+
+  if (effectiveStatus === 401 || effectiveStatus === 403 || /\b(authentication|unauthorized|invalid api key)\b/.test(message)) {
+    return { kind: "authentication", retryable: true, status: effectiveStatus };
+  }
+  if (effectiveStatus === 429 || code === "RATE_LIMITED" || /\brate limit(?:ed)?\b/.test(message)) {
+    return { kind: "rate_limit", retryable: true, status: effectiveStatus };
+  }
+  if (name === "AbortError" || code === "ETIMEDOUT" || code === "UND_ERR_CONNECT_TIMEOUT" || /\btimed? out\b/.test(message)) {
+    return { kind: "timeout", retryable: true, status };
+  }
+  if (["ECONNRESET", "ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN"].includes(code)) {
+    return { kind: "network", retryable: true, status };
+  }
+  if (effectiveStatus !== undefined && effectiveStatus >= 500) {
+    return { kind: "server", retryable: true, status: effectiveStatus };
+  }
+  if (effectiveStatus === 404 || code === "MODEL_NOT_FOUND") {
+    return { kind: "model_unavailable", retryable: true, status: effectiveStatus };
+  }
+  if (effectiveStatus === 400 || effectiveStatus === 422 || code === "INVALID_REQUEST") {
+    return { kind: "invalid_request", retryable: false, status: effectiveStatus };
+  }
+  return { kind: "unknown", retryable: false, status };
+}
+
+export function shouldFallbackToCandidate(
+  error: unknown,
+  failed: ModelCandidate,
+  next: ModelCandidate | undefined
+): boolean {
+  if (!next) return false;
+  const classification = classifyModelError(error);
+  if (!classification.retryable) return false;
+  return classification.kind !== "authentication" || failed.provider !== next.provider;
 }
 
 export function wrapToolsForUser(userId: string, tools: ToolDefinition<any>[]): ToolDefinition<any>[] {
@@ -180,7 +216,7 @@ export function wrapToolsForUser(userId: string, tools: ToolDefinition<any>[]): 
           return await tool.execute(toolCallId, params, signal, onUpdate, ctx);
         } catch (err) {
           lastError = err;
-          console.warn(`[TOOL retry] tool=${tool.name} attempt=${attempt + 1}/${TOOL_RETRY_COUNT + 1} error=${errorText(err)}`);
+          console.warn(`[TOOL retry] tool=${tool.name} attempt=${attempt + 1}/${TOOL_RETRY_COUNT + 1} errorType=${err instanceof Error ? "Error" : typeof err} code=${safeToolErrorCode(err)}`);
           if (!isRetryableToolError(err) || attempt >= TOOL_RETRY_COUNT) break;
         }
       }
@@ -192,8 +228,12 @@ export function wrapToolsForUser(userId: string, tools: ToolDefinition<any>[]): 
 export function repairToolArguments(toolName: string, args: unknown, userId: string): any {
   const obj = coerceObject(args);
   obj.userId = userId;
+  if (["log_meal", "edit_meal_log", "undo_meal_log"].includes(toolName) && !obj.operationId) {
+    const operationId = getActiveOperationId(userId, toolName);
+    if (operationId) obj.operationId = operationId;
+  }
 
-  for (const key of ["availableIngredients", "shoppingList", "cookware", "tastePreferences", "cookingPreferences", "preferredStyles"]) {
+  for (const key of ["availableIngredients", "shoppingList", "cookware", "tastePreferences", "cookingPreferences", "preferredStyles", "temporaryAvoidFoods"]) {
     if (typeof obj[key] === "string") obj[key] = splitList(obj[key]);
   }
 
@@ -207,7 +247,7 @@ export function repairToolArguments(toolName: string, args: unknown, userId: str
     }
   }
 
-  for (const key of ["hasOven", "replaceAvailable", "replaceShoppingList", "tooTiring", "tooManyDishes", "wouldCookAgain"]) {
+  for (const key of ["hasOven", "hasMicrowave", "hasRiceCooker", "replaceAvailable", "replaceShoppingList", "tooTiring", "tooManyDishes", "wouldCookAgain"]) {
     if (typeof obj[key] === "string") obj[key] = parseBooleanLike(obj[key]);
   }
 
@@ -270,6 +310,13 @@ function parseBooleanLike(value: string): boolean | undefined {
 function isRetryableToolError(err: unknown): boolean {
   const text = errorText(err).toLowerCase();
   return ["busy", "locked", "timeout", "temporary", "sqlite_busy", "econnreset"].some((needle) => text.includes(needle));
+}
+
+function safeToolErrorCode(error: unknown): string {
+  if (!error || typeof error !== "object") return "unknown";
+  const code = (error as { code?: unknown }).code;
+  return typeof code === "string" && ["SQLITE_BUSY", "SQLITE_LOCKED", "ETIMEDOUT", "ECONNRESET", "ECONNREFUSED"].includes(code)
+    ? code : "unknown";
 }
 
 function errorText(err: unknown): string {

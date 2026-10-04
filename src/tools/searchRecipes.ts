@@ -3,9 +3,10 @@ import type { Static } from "typebox";
 import type { ToolDefinition, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { defineTool } from "@earendil-works/pi-coding-agent";
 import * as store from "../store/index.js";
+import { recipeBlockReason } from "../recipes/executionConstraints.js";
 import { matchRecipes } from "../recipes/recipeMatcher.js";
 import { getRetriever } from "../rag/index.js";
-import type { EnergyLevel, IngredientItem } from "../types/diet.js";
+import { isAvailable, type EnergyLevel, type IngredientItem } from "../types/diet.js";
 
 const Params = Type.Object({
   userId: Type.String({ description: "用户 ID" }),
@@ -64,12 +65,12 @@ export const searchRecipesTool: ToolDefinition<typeof Params> = defineTool({
             recipes = recalled.recipes;
           }
         } catch (e) {
-          console.warn(`[RAG] recall failed, fallback to keyword filter: ${(e as Error).message}`);
+          console.warn(`[RAG] recall failed, fallback to keyword filter (errorType=${e instanceof Error ? e.name : typeof e})`);
         }
       }
     }
     const availableIngredients = [
-      ...inventory.availableIngredients.filter((item) => !item.status || item.status === "available"),
+      ...inventory.availableIngredients.filter(isAvailable),
       ...toItems(params.ingredients),
     ];
 
@@ -83,7 +84,8 @@ export const searchRecipesTool: ToolDefinition<typeof Params> = defineTool({
       timeLimitMinutes: params.timeLimitMinutes,
       energyLevel: params.energyLevel as EnergyLevel | undefined,
       desiredStyle: params.query,
-    }).slice(0, Math.min(Math.max(params.limit ?? 5, 1), 10));
+    }).filter((match) => !recipeBlockReason(match.recipe, kitchen, userProfile, params.timeLimitMinutes))
+      .slice(0, Math.min(Math.max(params.limit ?? 5, 1), 10));
 
     const lines: string[] = [];
     if (matches.length === 0) {

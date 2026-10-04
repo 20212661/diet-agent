@@ -8,6 +8,8 @@ const Params = Type.Object({
   userId: Type.String({ description: "用户 ID" }),
   burners: Type.Optional(Type.Number({ description: "可用灶台数量" } as const)),
   hasOven: Type.Optional(Type.Boolean({ description: "是否有烤箱" } as const)),
+  hasMicrowave: Type.Optional(Type.Boolean({ description: "是否有微波炉" } as const)),
+  hasRiceCooker: Type.Optional(Type.Boolean({ description: "是否有电饭煲" } as const)),
   cookware: Type.Optional(Type.Array(Type.String(), { description: "锅具/厨具列表" } as const)),
   maxActiveMinutes: Type.Optional(Type.Number({ description: "希望控制的主动操作分钟数" } as const)),
   maxTotalMinutes: Type.Optional(Type.Number({ description: "可接受总耗时分钟数" } as const)),
@@ -21,7 +23,7 @@ export const updateKitchenProfileTool: ToolDefinition<typeof Params> = defineToo
   name: "update_kitchen_profile",
   label: "更新厨房画像",
   description:
-    "记录用户的厨房条件、厨具、可接受做饭时长和口味偏好。用户提到两个锅、烤箱、灶台、做饭时间、少洗碗、少油烟等信息时调用。",
+    "记录用户的厨房条件、厨具、可接受做饭时长和口味偏好。用户提到两个锅、烤箱、灶台、微波炉、电饭煲、做饭时间、少洗碗、少油烟等信息时调用。",
   parameters: Params,
   async execute(
     _toolCallId: string,
@@ -44,6 +46,8 @@ export const updateKitchenProfileTool: ToolDefinition<typeof Params> = defineToo
             "已更新厨房画像：",
             `- 灶台：${profile.burners} 个`,
             `- 烤箱：${profile.hasOven ? "有" : "没有"}`,
+            `- 微波炉：${profile.hasMicrowave ? "有" : "没有"}`,
+            `- 电饭煲：${profile.hasRiceCooker ? "有" : "没有"}`,
             `- 厨具：${profile.cookware.join("、") || "未记录"}`,
             `- 主动操作目标：${profile.maxActiveMinutes} 分钟`,
             `- 总耗时上限：${profile.maxTotalMinutes} 分钟`,

@@ -2,12 +2,18 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const PROJECT_ROOT = path.join(__dirname, "..", "..");
 const LOG_ROOT = path.join(PROJECT_ROOT, "logs", "api-requests");
 const MAX_RESPONSE_PREVIEW_CHARS = 12_000;
+const pendingLogWrites = new Set<Promise<void>>();
+
+export async function flushPendingRequestLogs(): Promise<void> {
+  if (pendingLogWrites.size) await Promise.allSettled([...pendingLogWrites]);
+}
 
 interface SavedResponse {
   status: number;
@@ -144,7 +150,12 @@ function saveRequestLog(url: string, body: any, response: SavedResponse) {
   try {
     const timestamp = timestampForFilename();
     const userId = extractUserId(body);
-    const userDir = path.join(LOG_ROOT, userId);
+    // userId 来自提示词，不能直接拼进路径；使用不可逆目录名同时避免
+    // 路径穿越和不同非法字符被替换成同一目录的问题。
+    const userDir = path.join(
+      LOG_ROOT,
+      createHash("sha256").update(userId, "utf8").digest("hex").slice(0, 32)
+    );
     ensureDir(userDir);
 
     const logEntry = {
@@ -180,7 +191,7 @@ function saveRequestLog(url: string, body: any, response: SavedResponse) {
     fs.writeFileSync(jsonPath, JSON.stringify(logEntry, null, 2), "utf-8");
     fs.writeFileSync(textPath, formatReadable(logEntry), "utf-8");
 
-    console.log(`[request-log] saved logs/api-requests/${userId}/${filenameBase}.json`);
+    console.log(`[request-log] saved logs/api-requests/${createHash("sha256").update(userId, "utf8").digest("hex").slice(0, 12)}/${filenameBase}.json`);
   } catch (err) {
     console.warn("[request-log] failed to save:", (err as Error).message);
   }
@@ -277,6 +288,8 @@ function headersToRecord(headers: Headers): Record<string, string> {
 }
 
 export function installRequestLogger() {
+  // 请求日志包含完整提示词和模型响应，默认关闭，避免意外持久化健康/饮食隐私。
+  if (process.env.ENABLE_REQUEST_LOGGING !== "1") return;
   ensureDir(LOG_ROOT);
   console.log(`[request-log] LLM API requests will be saved to: ${LOG_ROOT}`);
 
@@ -307,13 +320,15 @@ export function installRequestLogger() {
       }
 
       const clonedResponse = response.clone();
-      void readResponsePreview(clonedResponse).then((bodyPreview) => {
+      let write: Promise<void>;
+      write = readResponsePreview(clonedResponse).then((bodyPreview) => {
         saveRequestLog(url, reqBody, {
           status: response.status,
           headers: headersToRecord(response.headers),
           bodyPreview,
         });
-      });
+      }).finally(() => pendingLogWrites.delete(write));
+      pendingLogWrites.add(write);
     } catch {
       // Logging must never affect normal request flow.
     }

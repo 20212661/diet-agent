@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f7f8f4" />
+    <title>晚饭工作流 · 饮食工作台</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand"><div class="brand-mark">食</div><div><strong>晚饭工作流</strong><small>PERSONAL FOOD DESK</small></div></div>
+        <div class="workspace-label">工作区</div>
+        <nav id="navigation" aria-label="主要导航">
+          <button class="nav-item active" data-page="overview"><span class="nav-icon">◫</span>今日总览 <kbd>Ctrl 1</kbd></button>
+          <button class="nav-item" data-page="profile"><span class="nav-icon">◉</span>我的资料 <kbd>Ctrl 2</kbd></button>
+          <button class="nav-item" data-page="kitchen"><span class="nav-icon">♨</span>厨房设置 <kbd>Ctrl 3</kbd></button>
+          <button class="nav-item" data-page="inventory"><span class="nav-icon">▤</span>食材库存 <kbd>Ctrl 4</kbd></button>
+          <button class="nav-item" data-page="diary"><span class="nav-icon">◷</span>饮食记录 <kbd>Ctrl 5</kbd></button>
+          <button class="nav-item" data-page="plan"><span class="nav-icon">▦</span>每周计划 <kbd>Ctrl 6</kbd></button>
+          <button class="nav-item" data-page="agent"><span class="nav-icon">✳</span>智能体信息 <kbd>Ctrl 7</kbd></button>
+        </nav>
+        <div class="sidebar-bottom">
+          <div class="privacy-note"><span class="privacy-dot"></span><div><strong>数据保存在本机</strong><small>SQLite · 私人工作区</small></div></div>
+          <button id="user-button" class="user-chip"><span class="avatar">我</span><span class="user-chip-text"><strong id="sidebar-user">正在读取…</strong><small>个人空间</small></span><span class="more">···</span></button>
+        </div>
+      </aside>
+
+      <main class="main-area">
+        <header class="topbar">
+          <div class="breadcrumb"><span>工作区</span><span class="crumb-sep">/</span><strong id="page-title">今日总览</strong></div>
+          <div class="topbar-actions"><span class="date-chip" id="today-date">—</span><button class="icon-button" id="refresh-button" title="刷新数据">↻</button><button class="shortcut-button" id="command-button"><span>快捷操作</span><kbd>Ctrl K</kbd></button></div>
+        </header>
+
+        <div class="workspace">
+          <section class="content-column">
+            <div id="page-content" aria-live="polite"></div>
+          </section>
+          <aside class="assistant-column" aria-label="饮食助手">
+            <div class="assistant-head"><div class="assistant-avatar">✳</div><div><strong>饮食助手</strong><small><span class="online-dot"></span><span id="agent-status">正在连接</span></small></div><button class="icon-button small" id="agent-info-button" title="查看智能体信息">⋯</button></div>
+            <div class="chat-context"><span class="context-icon">⌁</span><div><strong>本次对话已连接个人资料</strong><small>目标、忌口、库存与近期记录</small></div><button id="context-button" class="text-button">查看</button></div>
+            <div id="chat-messages" class="chat-messages">
+              <div class="welcome-message"><div class="welcome-mark">✳</div><h2>今天想吃点什么？</h2><p>告诉我你的时间、胃口或手边食材，我来帮你安排。</p><div class="suggestions"><button data-prompt="根据我现在的库存，给我推荐一道今天能做的晚饭。">用库存安排晚饭 <span>↗</span></button><button data-prompt="帮我看看我今天的饮食记录。">看看今天吃了什么 <span>↗</span></button><button data-prompt="按我的口味和厨房条件推荐一道快手菜。">找一道快手菜 <span>↗</span></button></div></div>
+            </div>
+            <div id="tool-activity" class="tool-activity" hidden></div>
+            <form id="chat-form" class="composer">
+              <div id="slash-menu" class="slash-menu" hidden></div>
+              <textarea id="chat-input" rows="1" placeholder="问问饮食助手… 输入 / 查看快捷命令" aria-label="发送消息"></textarea>
+              <div class="composer-bottom"><div class="composer-hints"><span>↵ 发送</span><span>Shift ↵ 换行</span><button type="button" id="slash-button">/ 命令</button></div><button class="send-button" type="submit" aria-label="发送">↑</button></div>
+            </form>
+            <div class="assistant-foot"><span>由 Pi 智能体驱动</span><span id="model-label">本地会话</span></div>
+          </aside>
+        </div>
+      </main>
+    </div>
+
+    <div id="command-palette" class="palette-backdrop" hidden>
+      <div class="command-palette" role="dialog" aria-modal="true" aria-label="快捷操作">
+        <div class="palette-search"><span>⌕</span><input id="palette-input" placeholder="搜索页面或操作…" autocomplete="off" /><kbd>ESC</kbd></div>
+        <div class="palette-label">跳转到</div>
+        <div id="palette-options" class="palette-options"></div>
+        <div class="palette-foot"><span>↑↓ 选择</span><span>↵ 打开</span><span>Esc 关闭</span></div>
+      </div>
+    </div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

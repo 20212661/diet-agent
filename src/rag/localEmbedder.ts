@@ -1,47 +1,143 @@
-/**
- * 本地 embedding（transformers.js + bge-small-zh-v1.5）。
- *
- * 零 key、离线（首次下载后）、CPU 可跑。作为第三种 embedding provider，
- * 让无 API key 的用户（如只配 DeepSeek chat）也有向量语义召回。
- *
- * 模型首次从 HuggingFace Hub 下载（q8 量化 ~40MB），缓存到 data/model-cache（已 gitignore）。
- * 懒加载：首次 embed 时载入模型（~1-2s），之后常驻复用。BGE 推荐 mean pooling + L2 normalize，
- * 输出单位向量，与 sqlite-vec 的 L2 距离等价约定一致。
- */
-import { pipeline, env } from "@huggingface/transformers";
+import { constants } from "node:fs";
+import { access, mkdir, open, stat, unlink, type FileHandle } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { mkdirSync } from "node:fs";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const CACHE_DIR = join(__dirname, "..", "..", "data", "model-cache");
-mkdirSync(CACHE_DIR, { recursive: true });
-
-// 模型缓存到 data/model-cache；只用 HF Hub 远程模型，不读本地 ./models/
-env.cacheDir = CACHE_DIR;
-env.allowLocalModels = false;
-
+const moduleDir = dirname(fileURLToPath(import.meta.url));
+export const LOCAL_MODEL_CACHE_DIR = join(moduleDir, "..", "..", "data", "model-cache");
+const MODEL_RELATIVE_DIR = join("Xenova", "bge-small-zh-v1.5");
 const MODEL_ID = "Xenova/bge-small-zh-v1.5";
+const DOWNLOAD_LOCK = join(LOCAL_MODEL_CACHE_DIR, ".bge-small-zh-v1.5.download.lock");
+const LOCK_STALE_MS = 10 * 60_000;
+const LOCK_WAIT_MS = 2 * 60_000;
 export const LOCAL_EMBEDDING_DIM = 512;
+
+const requiredCacheFiles = [
+  ["config.json", 100],
+  ["tokenizer_config.json", 100],
+  ["tokenizer.json", 10_000],
+  [join("onnx", "model_quantized.onnx"), 1_000_000],
+] as const;
 
 interface FeatureExtractor {
   (text: string, options: { pooling: "mean"; normalize: true }): Promise<{ data: Float32Array }>;
 }
 
-let _extractorPromise: Promise<FeatureExtractor> | null = null;
+let extractorPromise: Promise<FeatureExtractor> | undefined;
+
+export async function validateLocalModelCache(cacheDir = LOCAL_MODEL_CACHE_DIR): Promise<boolean> {
+  const modelDir = join(cacheDir, MODEL_RELATIVE_DIR);
+  try {
+    for (const [relativePath, minimumBytes] of requiredCacheFiles) {
+      const info = await stat(join(modelDir, relativePath));
+      if (!info.isFile() || info.size < minimumBytes) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function offlineRequested(): boolean {
+  return [process.env.DIET_AGENT_OFFLINE, process.env.HF_HUB_OFFLINE, process.env.TRANSFORMERS_OFFLINE]
+    .some((value) => value === "1" || value?.toLowerCase() === "true");
+}
+
+async function delay(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function acquireDownloadLock(): Promise<{ owner: boolean; handle?: FileHandle }> {
+  await mkdir(LOCAL_MODEL_CACHE_DIR, { recursive: true });
+  const deadline = Date.now() + LOCK_WAIT_MS;
+  while (Date.now() < deadline) {
+    try {
+      const handle = await open(DOWNLOAD_LOCK, "wx");
+      await handle.writeFile(JSON.stringify({ pid: process.pid, createdAt: new Date().toISOString() }));
+      return { owner: true, handle };
+    } catch (error) {
+      const code = error && typeof error === "object" ? (error as NodeJS.ErrnoException).code : undefined;
+      if (code !== "EEXIST") throw error;
+      if (await validateLocalModelCache()) return { owner: false };
+      try {
+        const lockInfo = await stat(DOWNLOAD_LOCK);
+        if (Date.now() - lockInfo.mtimeMs > LOCK_STALE_MS) {
+          await unlink(DOWNLOAD_LOCK);
+          continue;
+        }
+      } catch {
+        continue;
+      }
+      await delay(500);
+    }
+  }
+  throw new Error("等待本地 embedding 模型下载超时；请确认没有其他 diet-agent 进程正在下载模型。");
+}
+
+async function releaseDownloadLock(lock: { owner: boolean; handle?: FileHandle }): Promise<void> {
+  if (!lock.owner) return;
+  await lock.handle?.close();
+  try {
+    await access(DOWNLOAD_LOCK, constants.F_OK);
+    await unlink(DOWNLOAD_LOCK);
+  } catch {
+    // Lock already removed.
+  }
+}
+
+async function loadExtractor(): Promise<FeatureExtractor> {
+  const cacheValid = await validateLocalModelCache();
+  if (!cacheValid && offlineRequested()) {
+    throw new Error(
+      "本地 embedding 缓存不完整且当前为离线模式。请联网运行一次，或设置 EMBEDDING_PROVIDER=off 使用默认 FTS5。"
+    );
+  }
+
+  let transformers: typeof import("@huggingface/transformers");
+  try {
+    transformers = await import("@huggingface/transformers");
+  } catch (error) {
+    const code = error && typeof error === "object" ? (error as NodeJS.ErrnoException).code : undefined;
+    if (code === "ERR_MODULE_NOT_FOUND" || String(error).includes("@huggingface/transformers")) {
+      throw new Error(
+        "本地向量能力未安装。运行 npm install @huggingface/transformers，或设置 EMBEDDING_PROVIDER=off 使用 FTS5。"
+      );
+    }
+    throw error;
+  }
+
+  await mkdir(LOCAL_MODEL_CACHE_DIR, { recursive: true });
+  transformers.env.cacheDir = LOCAL_MODEL_CACHE_DIR;
+  transformers.env.allowLocalModels = false;
+  transformers.env.allowRemoteModels = !offlineRequested();
+
+  const lock = cacheValid ? { owner: false } : await acquireDownloadLock();
+  try {
+    if (!cacheValid && lock.owner) {
+      console.log(`[RAG-local] 正在下载 ${MODEL_ID}；其他进程会等待同一下载锁...`);
+    }
+    const extractor = await transformers.pipeline("feature-extraction", MODEL_ID, { dtype: "q8" }) as unknown as FeatureExtractor;
+    if (!(await validateLocalModelCache())) {
+      throw new Error("本地 embedding 模型缓存校验失败；请检查磁盘空间或清理损坏缓存后重试。");
+    }
+    return extractor;
+  } finally {
+    await releaseDownloadLock(lock);
+  }
+}
 
 function getExtractor(): Promise<FeatureExtractor> {
-  if (!_extractorPromise) {
-    console.log(
-      `[RAG-local] 首次加载 embedding 模型 ${MODEL_ID}（联网下载约 40MB，之后离线缓存）...`
-    );
-    _extractorPromise = pipeline("feature-extraction", MODEL_ID, { dtype: "q8" }) as unknown as Promise<FeatureExtractor>;
+  if (!extractorPromise) {
+    extractorPromise = loadExtractor().catch((error) => {
+      extractorPromise = undefined;
+      throw error;
+    });
   }
-  return _extractorPromise;
+  return extractorPromise;
 }
 
 export interface LocalEmbeddingResult {
-  vector: number[]; // 已归一化（mean pooling + L2）
+  vector: number[];
   dim: number;
 }
 
@@ -49,8 +145,8 @@ export async function embedLocal(text: string): Promise<LocalEmbeddingResult> {
   const extractor = await getExtractor();
   const output = await extractor(text, { pooling: "mean", normalize: true });
   const vector = Array.from(output.data);
-  if (vector.length === 0) {
-    throw new Error("local embedding 返回空向量");
+  if (vector.length === 0 || vector.some((value) => !Number.isFinite(value))) {
+    throw new Error("local embedding 返回了无效向量");
   }
   return { vector, dim: vector.length };
 }

@@ -9,7 +9,7 @@ import type { Static } from "typebox";
 import type { ToolDefinition, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { defineTool } from "@earendil-works/pi-coding-agent";
 import * as store from "../store/index.js";
-import type { IngredientItem } from "../types/diet.js";
+import { isAvailable, type IngredientItem } from "../types/diet.js";
 
 const Params = Type.Object({
   userId: Type.String({ description: "用户 ID" }),
@@ -40,7 +40,7 @@ function formatItem(item: IngredientItem): string {
   if (item.amount) parts.push(item.amount);
   if (item.storage) parts.push(storageLabel[item.storage] ?? item.storage);
   if (item.expiresAt) {
-    const prefix = item.expiresSoon ? "⚠️" : "";
+    const prefix = item.isExpired ? "已过期：" : item.expiresSoon ? "⚠️" : "";
     parts.push(`${prefix}${item.expiresAt}`);
   }
   if (item.note) parts.push(item.note);
@@ -65,13 +65,11 @@ export const getIngredientInventoryTool: ToolDefinition<typeof Params> = defineT
 
     let available: IngredientItem[];
     if (filter === "expiring_soon") {
-      available = inventory.availableIngredients.filter((item) => item.expiresSoon);
+      available = inventory.availableIngredients.filter((item) => isAvailable(item) && item.expiresSoon);
     } else if (filter === "available") {
-      available = inventory.availableIngredients.filter(
-        (item) => !item.status || item.status === "available"
-      );
+      available = inventory.availableIngredients.filter(isAvailable);
     } else {
-      available = inventory.availableIngredients;
+      available = [...inventory.availableIngredients, ...inventory.shoppingList];
     }
 
     const lines: string[] = [];
@@ -98,7 +96,7 @@ export const getIngredientInventoryTool: ToolDefinition<typeof Params> = defineT
     }
 
     // 快过期提醒
-    const expiringSoon = inventory.availableIngredients.filter((item) => item.expiresSoon);
+    const expiringSoon = inventory.availableIngredients.filter((item) => isAvailable(item) && item.expiresSoon);
     if (expiringSoon.length > 0 && filter !== "expiring_soon") {
       lines.push("");
       lines.push(`⚠️ 快过期食材（3天内）：${expiringSoon.map((i) => `${i.name}(${i.expiresAt})`).join("、")}`);

@@ -12,7 +12,12 @@ import type {
   UserProfile,
   CookingFeedback,
   EnergyLevel,
+  IngredientReadiness,
 } from "../types/diet.js";
+import { isAvailable, isAvailableOn } from "../types/diet.js";
+import { getVerifiedCalories } from "../nutrition/nutritionEstimate.js";
+import { normalizeIngredientId } from "./ingredientTaxonomy.js";
+import { assessFoodSafety } from "./foodSafety.js";
 
 // ---- 输入输出类型 ----
 
@@ -26,6 +31,7 @@ export interface MatchRecipeInput {
   timeLimitMinutes?: number;
   energyLevel?: EnergyLevel;
   desiredStyle?: string;
+  date?: string;
 }
 
 export interface MatchRecipeResult {
@@ -33,6 +39,14 @@ export interface MatchRecipeResult {
   score: number;
   reasons: string[];
   missingIngredients: string[];
+  ingredientReadiness: IngredientReadiness[];
+}
+
+export interface MatchRecipeOutcome {
+  status: "matched" | "no_match";
+  matches: MatchRecipeResult[];
+  blockingReasons: string[];
+  adjustableConditions: string[];
 }
 
 // ---- 工具函数 ----
@@ -45,18 +59,10 @@ function norm(name: string): string {
 /** 判断 available 中是否有能匹配 ingredient 的项 */
 function ingredientMatched(ingredient: string, available: string[]): boolean {
   const ing = norm(ingredient);
+  const ingredientId = normalizeIngredientId(ingredient);
   return available.some((a) => {
     const na = norm(a);
-    return na.includes(ing) || ing.includes(na);
-  });
-}
-
-/** 判断 ingredient 是否在 avoid 列表中 */
-function ingredientBlocked(ingredient: string, avoid: string[]): boolean {
-  const ing = norm(ingredient);
-  return avoid.some((a) => {
-    const na = norm(a);
-    return na.includes(ing) || ing.includes(na);
+    return normalizeIngredientId(a) === ingredientId || na.includes(ing) || ing.includes(na);
   });
 }
 
@@ -66,13 +72,28 @@ function getExpiringNames(items: IngredientItem[]): string[] {
 }
 
 /** 计算缺少的必需食材 */
-function computeMissing(recipe: RecipeRecord, available: string[]): string[] {
-  return recipe.ingredients.filter((ing) => !ingredientMatched(ing, available));
+export function computeIngredientReadiness(
+  requiredIngredients: string[],
+  ownedItems: IngredientItem[],
+  shoppingItems: IngredientItem[],
+  date?: string,
+): IngredientReadiness[] {
+  const ownedNames = ownedItems.filter((item) => date ? isAvailableOn(item, date) : isAvailable(item)).map((item) => item.name);
+  const shoppingNames = shoppingItems.map((item) => item.name);
+  return [...new Set(requiredIngredients)].map((ingredient) => {
+    if (ingredientMatched(ingredient, ownedNames)) {
+      return { ingredient, status: "owned", quantityVerified: false };
+    }
+    if (ingredientMatched(ingredient, shoppingNames)) {
+      return { ingredient, status: "already_on_list" };
+    }
+    return { ingredient, status: "to_add_to_list" };
+  });
 }
 
 // ---- 主评分函数 ----
 
-export function matchRecipes(input: MatchRecipeInput): MatchRecipeResult[] {
+export function matchRecipesDetailed(input: MatchRecipeInput): MatchRecipeOutcome {
   const {
     recipes,
     availableIngredients,
@@ -86,41 +107,49 @@ export function matchRecipes(input: MatchRecipeInput): MatchRecipeResult[] {
   } = input;
 
   // 库存中实际拥有的食材名称
-  const ownedNames = availableIngredients.map((i) => i.name);
+  const activeIngredients = availableIngredients.filter((item) => input.date ? isAvailableOn(item, input.date) : isAvailable(item));
+  const ownedNames = activeIngredients.map((i) => i.name);
   // 购物清单中的食材名称
   const shoppingNames = shoppingList.map((i) => i.name);
   // 所有的可用食材名称（库存 + 购物清单都可用于匹配）
   const allAvailableNames = [
-    ...availableIngredients.map((i) => i.name),
+    ...activeIngredients.map((i) => i.name),
     ...shoppingList.map((i) => i.name),
   ];
-  const avoidFoods = [
-    ...(userProfile?.avoidFoods ?? []),
-    ...(userProfile?.allergies ?? []),
-  ];
-  const expiringNames = getExpiringNames(availableIngredients);
+  const avoidFoods = userProfile?.avoidFoods ?? [];
+  const expiringNames = getExpiringNames(activeIngredients);
   const targetActive = timeLimitMinutes ?? kitchenProfile.maxActiveMinutes;
   const targetTotal = kitchenProfile.maxTotalMinutes;
   const currentGoal = userProfile?.goal;
 
   const results: MatchRecipeResult[] = [];
+  const blockers = new Set<string>();
 
   for (const recipe of recipes) {
     let score = 0;
     const reasons: string[] = [];
-    const missing = computeMissing(recipe, allAvailableNames);
+    const ingredientReadiness = computeIngredientReadiness(recipe.ingredients, activeIngredients, shoppingList, input.date);
+    // Compatibility contract: missing means absent from owned inventory, including items already on the shopping list.
+    const missing = ingredientReadiness.filter((item) => item.status !== "owned").map((item) => item.ingredient);
 
     // ========== 1. 忌口/过敏检查 ==========
     const allRecipeFoods = [
       ...recipe.ingredients,
       ...(recipe.optionalIngredients ?? []),
       ...(recipe.vegetables ?? []),
+      ...(recipe.staples ?? []),
+      ...(recipe.primaryProtein ? [recipe.primaryProtein] : []),
     ];
-    const hasBlocked = allRecipeFoods.some((ing) => ingredientBlocked(ing, avoidFoods));
-    if (hasBlocked) {
-      score -= 999;
-      const blockedItems = allRecipeFoods.filter((ing) => ingredientBlocked(ing, avoidFoods));
-      reasons.push(`包含忌口/过敏食材：${blockedItems.join("、")}，已被排除`);
+    const safety = assessFoodSafety(allRecipeFoods, userProfile, recipe.allergenTags ?? []);
+    if (safety.status !== "clear") {
+      // 过敏和忌口是硬约束，不能靠低分保证安全：当候选较少时，-999
+      // 仍可能被排到第一名。直接排除，调用方才能安全地使用结果首项。
+      if (safety.status === "conflict") {
+        blockers.add(`过敏或忌口冲突：${safety.conflicts.join("、")}`);
+      } else {
+        blockers.add(`部分食材无法确认是否符合过敏/忌口要求：${safety.unknownIngredients.join("、")}`);
+      }
+      continue;
     }
 
     // ========== 2. 食材匹配 ==========
@@ -192,16 +221,38 @@ export function matchRecipes(input: MatchRecipeInput): MatchRecipeResult[] {
     // ========== 3. 厨房约束 ==========
     const needsOven = (recipe.appliances ?? []).includes("oven");
     if (needsOven && !kitchenProfile.hasOven) {
-      score -= 999;
-      reasons.push("需要烤箱但用户没有烤箱");
+      blockers.add("缺少烤箱");
+      continue;
     }
     if (needsOven && kitchenProfile.hasOven) {
       score += 6;
     }
 
     const needsStove = (recipe.appliances ?? []).includes("stove");
+    if (needsStove && kitchenProfile.burners < 1) {
+      blockers.add("没有可用灶台");
+      continue;
+    }
     if (needsStove && kitchenProfile.burners >= 1) {
       score += 4;
+    }
+
+    const needsMicrowave = (recipe.appliances ?? []).includes("microwave");
+    if (needsMicrowave && !kitchenProfile.hasMicrowave) {
+      blockers.add("缺少微波炉");
+      continue;
+    }
+    if (needsMicrowave && kitchenProfile.hasMicrowave) {
+      score += 3;
+    }
+
+    const needsRiceCooker = (recipe.appliances ?? []).includes("rice_cooker");
+    if (needsRiceCooker && !kitchenProfile.hasRiceCooker) {
+      blockers.add("缺少电饭煲");
+      continue;
+    }
+    if (needsRiceCooker && kitchenProfile.hasRiceCooker) {
+      score += 3;
     }
 
     // cookware 全部满足
@@ -210,16 +261,12 @@ export function matchRecipes(input: MatchRecipeInput): MatchRecipeResult[] {
         norm(kcw).includes(norm(cw)) || norm(cw).includes(norm(kcw))
       )
     );
+    if (!hasAllCookware && recipe.cookware.length > 0) {
+      blockers.add(`缺少必需厨具：${recipe.cookware.filter((cw) => !kitchenProfile.cookware.some((kcw) => norm(kcw).includes(norm(cw)) || norm(cw).includes(norm(kcw)))).join("、")}`);
+      continue;
+    }
     if (hasAllCookware && recipe.cookware.length > 0) {
       score += 4;
-    } else if (!hasAllCookware && recipe.cookware.length > 0) {
-      score -= 8;
-      const missingCw = recipe.cookware.filter((cw) =>
-        !kitchenProfile.cookware.some((kcw) =>
-          norm(kcw).includes(norm(cw)) || norm(cw).includes(norm(kcw))
-        )
-      );
-      reasons.push(`缺少厨具：${missingCw.join("、")}`);
     }
 
     // ========== 4. 时间约束 ==========
@@ -287,9 +334,10 @@ export function matchRecipes(input: MatchRecipeInput): MatchRecipeResult[] {
       score += 3;
       reasons.push("高蛋白，适合增肌");
     }
-    if (currentGoal === "fat_loss" && (recipe.estimatedCalories ?? 0) > 0 && recipe.estimatedCalories! <= 550) {
+    const verifiedCalories = getVerifiedCalories(recipe.nutrition);
+    if (currentGoal === "fat_loss" && verifiedCalories !== undefined && verifiedCalories > 0 && verifiedCalories <= 550) {
       score += 3;
-      reasons.push(`热量约 ${recipe.estimatedCalories} kcal，适合减脂`);
+      reasons.push(`热量 ${Math.round(verifiedCalories)} kcal（可追溯数据），适合减脂参考`);
     }
 
     // ========== 7. 用户反馈 ==========
@@ -345,11 +393,23 @@ export function matchRecipes(input: MatchRecipeInput): MatchRecipeResult[] {
       }
     }
 
-    results.push({ recipe, score, reasons, missingIngredients: missing });
+    results.push({ recipe, score, reasons, missingIngredients: missing, ingredientReadiness });
   }
 
   // 按 score 降序排序
   results.sort((a, b) => b.score - a.score);
 
-  return results;
+  return {
+    status: results.length > 0 ? "matched" : "no_match",
+    matches: results,
+    blockingReasons: [...blockers],
+    adjustableConditions: results.length === 0
+      ? ["增加可用设备或厨具", "购买符合过敏与忌口要求的食材", "放宽主动操作时间上限"]
+      : [],
+  };
+}
+
+/** Compatibility helper for callers that only need ranked matches. */
+export function matchRecipes(input: MatchRecipeInput): MatchRecipeResult[] {
+  return matchRecipesDetailed(input).matches;
 }

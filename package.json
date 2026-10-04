@@ -1,16 +1,36 @@
 {
   "name": "diet-agent",
   "version": "1.0.0",
-  "description": "🍳 晚饭工作流 — 智能饮食管理助手（终端模式），一个命令启动",
-  "main": "dist/tui/index.js",
+  "description": "🍳 晚饭工作流 — 智能饮食管理工作台",
+  "main": "dist/web/index.js",
   "bin": {
     "diet-agent": "./bin/diet.js"
   },
-  "preferGlobal": true,
+  "files": [
+    "bin",
+    "dist/**/*.js",
+    "dist/**/*.json",
+    "docs/nutrition-data.md",
+    "docs/privacy.md",
+    "README.md",
+    "public",
+    ".env.example",
+    "package.json"
+  ],
   "scripts": {
-    "start": "tsx src/tui/index.ts",
+    "start": "tsx src/web/index.ts",
+    "web": "tsx src/web/index.ts",
     "tui": "tsx src/tui/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "npm run validate:recipes && node scripts/clean-build.mjs && tsc -p tsconfig.build.json && node scripts/copy-build-assets.mjs",
+    "validate:recipes": "tsx scripts/validate-recipes.ts",
+    "recipes:enrich": "tsx scripts/enrich-recipe-seed.ts",
+    "test:build": "node scripts/build-smoke.mjs",
+    "test:web": "node scripts/web-smoke.mjs",
+    "test:package": "node scripts/package-smoke.mjs",
+    "doctor": "node dist/doctor.js",
+    "doctor:dev": "tsx src/doctor.ts",
+    "eval": "tsx scripts/run-eval.ts",
+    "eval:agent": "tsx scripts/run-agent-eval.ts --live",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -27,24 +47,32 @@
   "license": "ISC",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.19.0"
   },
   "dependencies": {
-    "@earendil-works/pi-ai": "^0.75.5",
-    "@earendil-works/pi-coding-agent": "^0.75.5",
-    "@earendil-works/pi-tui": "^0.75.5",
-    "@huggingface/transformers": "^4.2.0",
-    "@types/node": "^25.9.1",
+    "@earendil-works/pi-ai": "^0.87.0",
+    "@earendil-works/pi-coding-agent": "^0.87.0",
+    "@earendil-works/pi-tui": "^0.87.0",
     "better-sqlite3": "^12.10.0",
     "dotenv": "^17.4.2",
     "sqlite-vec": "^0.1.9",
-    "tsx": "^4.22.3",
-    "typebox": "^1.1.38",
-    "typescript": "^6.0.3"
+    "typebox": "^1.1.38"
   },
   "devDependencies": {
+    "@huggingface/transformers": "^4.3.0",
     "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.9.1",
     "@vitest/coverage-v8": "^4.1.10",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.10"
+  },
+  "peerDependencies": {
+    "@huggingface/transformers": ">=4.3.0"
+  },
+  "peerDependenciesMeta": {
+    "@huggingface/transformers": {
+      "optional": true
+    }
   }
 }

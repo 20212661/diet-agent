@@ -1,10 +1,15 @@
 import { Type } from "typebox";
 import type { Static } from "typebox";
-import type { ToolDefinition, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type { AgentToolResult, ToolDefinition, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { defineTool } from "@earendil-works/pi-coding-agent";
 import * as store from "../store/index.js";
-import { matchRecipes, type MatchRecipeResult } from "../recipes/recipeMatcher.js";
-import type { IngredientItem, EnergyLevel, WeeklyDayPlan } from "../types/diet.js";
+import { computeIngredientReadiness, matchRecipes, type MatchRecipeResult } from "../recipes/recipeMatcher.js";
+import { assessFoodSafety } from "../recipes/foodSafety.js";
+import { isAvailableOn, type IngredientItem, type EnergyLevel, type WeeklyDayPlan } from "../types/diet.js";
+import { formatNutritionCalories } from "../nutrition/nutritionEstimate.js";
+import { recipeBlockReason } from "../recipes/executionConstraints.js";
+import { mealFitsTimeLimits } from "../recipes/mealTiming.js";
+import { isValidIsoDate } from "../utils/date.js";
 
 const Params = Type.Object({
   userId: Type.String({ description: "用户 ID" }),
@@ -72,16 +77,22 @@ export const generateWeeklyPlanTool: ToolDefinition<typeof Params> = defineTool(
     _signal?: AbortSignal,
     _onUpdate?: unknown,
     _ctx?: ExtensionContext
-  ) {
+  ): Promise<AgentToolResult<{ userId: string; weekStartDate: string; days: WeeklyDayPlan[]; recipeCount: number; status: "matched" | "no_match" }>> {
+    if (params.weekStartDate !== undefined && !isValidIsoDate(params.weekStartDate)) {
+      throw new Error("weekStartDate 必须是有效的 YYYY-MM-DD 日期。");
+    }
+    if (params.avoidDays?.some((day) => !Number.isInteger(day) || day < 1 || day > 7)) {
+      throw new Error("avoidDays 只能包含 1 到 7 的整数。");
+    }
+    if (params.energyOverrides?.some((override) =>
+      !Number.isInteger(override.dayOfWeek) || override.dayOfWeek < 1 || override.dayOfWeek > 7)) {
+      throw new Error("energyOverrides 的星期只能是 1 到 7 的整数。");
+    }
     const kitchen = store.getKitchenProfile(params.userId);
     const inventory = store.getIngredientInventory(params.userId);
     const dietProfile = store.getUserProfile(params.userId);
     const feedback = store.getCookingFeedback(params.userId);
     const recipes = store.getRecipeBook();
-
-    const availableItems: IngredientItem[] = inventory.availableIngredients.filter(
-      (item) => !item.status || item.status === "available"
-    );
 
     // 计算本周 7 天日期
     const monday = getMondayOfWeek(params.weekStartDate);
@@ -105,6 +116,7 @@ export const generateWeeklyPlanTool: ToolDefinition<typeof Params> = defineTool(
     const days: WeeklyDayPlan[] = [];
 
     for (const { dayOfWeek, date } of weekDays) {
+      const availableItems: IngredientItem[] = inventory.availableIngredients.filter((item) => isAvailableOn(item, date));
       // 确定当天精力水平
       const energyOverride = params.energyOverrides?.find((eo) => eo.dayOfWeek === dayOfWeek);
       const energyLevel: EnergyLevel = energyOverride?.energyLevel ?? "normal";
@@ -113,6 +125,7 @@ export const generateWeeklyPlanTool: ToolDefinition<typeof Params> = defineTool(
 
       const matches = matchRecipes({
         recipes,
+        date,
         availableIngredients: availableItems,
         shoppingList: inventory.shoppingList,
         kitchenProfile: kitchen,
@@ -121,7 +134,7 @@ export const generateWeeklyPlanTool: ToolDefinition<typeof Params> = defineTool(
         timeLimitMinutes: kitchen.maxActiveMinutes,
         energyLevel,
         desiredStyle,
-      });
+      }).filter((match) => !recipeBlockReason(match.recipe, kitchen, dietProfile));
 
       // 选主菜：优先未使用过的最高分
       let mainResult: MatchRecipeResult | undefined;
@@ -149,6 +162,7 @@ export const generateWeeklyPlanTool: ToolDefinition<typeof Params> = defineTool(
         .filter((m) => {
           if (m.recipe.id === mainResult!.recipe.id) return false;
           if (m.missingIngredients.length > 0) return false;
+          if (!mealFitsTimeLimits(mainResult!.recipe, m.recipe, kitchen)) return false;
           return true;
         })
         .sort((a, b) =>
@@ -171,16 +185,27 @@ export const generateWeeklyPlanTool: ToolDefinition<typeof Params> = defineTool(
       const main = mainResult.recipe;
       const side = sideResult?.recipe;
 
-      const missing = [
-        ...new Set([...mainResult.missingIngredients, ...(sideResult?.missingIngredients ?? [])]),
-      ];
+      const ingredientReadiness = computeIngredientReadiness(
+        [...main.ingredients, ...(side?.ingredients ?? [])],
+        availableItems,
+        inventory.shoppingList,
+        date,
+      );
+      const missing = ingredientReadiness.filter((item) => item.status !== "owned").map((item) => item.ingredient);
 
-      const staplesSuggestion =
-        (main.staples ?? []).length > 0
-          ? main.staples.join("或")
-          : (side?.staples ?? []).length > 0
-            ? side!.staples.join("或")
-            : "米饭/面条/馒头";
+      const recipeStaples = (main.staples ?? []).length > 0
+        ? main.staples
+        : (side?.staples ?? []).length > 0 ? side!.staples : [];
+      const safeStaples = recipeStaples.filter((staple) =>
+        assessFoodSafety([staple], dietProfile).status === "clear"
+      );
+      const staplesSuggestion = safeStaples.length > 0
+        ? safeStaples.join("或")
+        : recipeStaples.length > 0
+          ? "主食待核实（请核对食材与产品标签）"
+          : ["米饭", "面条", "馒头"].filter((staple) =>
+            assessFoodSafety([staple], dietProfile).status === "clear"
+          ).join("或") || "主食待核实（请核对食材与产品标签）";
 
       days.push({
         dayOfWeek,
@@ -190,7 +215,7 @@ export const generateWeeklyPlanTool: ToolDefinition<typeof Params> = defineTool(
           name: main.name,
           activeMinutes: main.activeMinutes,
           totalMinutes: main.totalMinutes,
-          estimatedCalories: main.estimatedCalories,
+          nutrition: main.nutrition,
         },
         sideRecipe: side
           ? { id: side.id, name: side.name, activeMinutes: side.activeMinutes, totalMinutes: side.totalMinutes }
@@ -198,8 +223,18 @@ export const generateWeeklyPlanTool: ToolDefinition<typeof Params> = defineTool(
         staplesSuggestion,
         reasons: mainResult.reasons.slice(0, 3),
         missingIngredients: missing,
+        ingredientReadiness,
         completed: false,
       });
+    }
+
+    if (days.length === 0) {
+      return {
+        content: [{ type: "text" as const, text: weekDays.length === 0
+          ? "这一周的七天都被跳过，没有生成或覆盖周计划。"
+          : "当前厨房设备、过敏忌口和时间上限下没有可执行菜谱；没有覆盖已有周计划。请调整可变条件后重试。" }],
+        details: { userId: params.userId, weekStartDate: monday, days: [], recipeCount: 0, status: "no_match" },
+      };
     }
 
     // 持久化
@@ -214,7 +249,8 @@ export const generateWeeklyPlanTool: ToolDefinition<typeof Params> = defineTool(
     for (const day of days) {
       const label = DAY_LABELS[day.dayOfWeek] ?? `周${day.dayOfWeek}`;
       const sideText = day.sideRecipe ? ` + ${day.sideRecipe.name}` : "";
-      const calText = day.mainRecipe.estimatedCalories ? `，约 ${day.mainRecipe.estimatedCalories} kcal` : "";
+      const calories = formatNutritionCalories(day.mainRecipe.nutrition);
+      const calText = calories ? `，${calories}（${day.mainRecipe.nutrition!.foodName} ${day.mainRecipe.nutrition!.amount}${day.mainRecipe.nutrition!.unit}，${day.mainRecipe.nutrition!.cookingMethod}；来源 ${day.mainRecipe.nutrition!.source} ${day.mainRecipe.nutrition!.sourceRecordId}，版本 ${day.mainRecipe.nutrition!.sourceVersion}）` : "";
       lines.push(`### ${label} (${day.date})`);
       lines.push(`- 主菜：${day.mainRecipe.name}（主动 ${day.mainRecipe.activeMinutes} 分钟，总计 ${day.mainRecipe.totalMinutes} 分钟${calText}）`);
       if (day.sideRecipe) {
@@ -224,6 +260,10 @@ export const generateWeeklyPlanTool: ToolDefinition<typeof Params> = defineTool(
       if (day.missingIngredients.length > 0) {
         lines.push(`- 缺少食材：${day.missingIngredients.join("、")}`);
       }
+      const alreadyOnList = day.ingredientReadiness?.filter((item) => item.status === "already_on_list").map((item) => item.ingredient) ?? [];
+      const toAdd = day.ingredientReadiness?.filter((item) => item.status === "to_add_to_list").map((item) => item.ingredient) ?? [];
+      if (alreadyOnList.length > 0) lines.push(`- 已列待购：${alreadyOnList.join("、")}`);
+      if (toAdd.length > 0) lines.push(`- 待加入采购清单：${toAdd.join("、")}`);
       for (const reason of day.reasons) {
         lines.push(`  - ${reason}`);
       }
@@ -240,6 +280,7 @@ export const generateWeeklyPlanTool: ToolDefinition<typeof Params> = defineTool(
 
     if (avoidFoods.length > 0) {
       lines.push(`已避开：${avoidFoods.join("、")}`);
+      lines.push("⚠️ 仅按已知食材和菜谱标签筛选，不代表已确认安全；请核对包装标签与交叉接触风险。");
     }
 
     if (dietProfile?.medicalNotes && dietProfile.medicalNotes.length > 0) {
@@ -253,6 +294,7 @@ export const generateWeeklyPlanTool: ToolDefinition<typeof Params> = defineTool(
         weekStartDate: monday,
         days: plan.days,
         recipeCount: usedRecipeIds.size,
+        status: "matched",
       },
     };
   },

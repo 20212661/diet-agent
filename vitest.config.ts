@@ -21,8 +21,19 @@ export default defineConfig({
         "src/types/**",
         "src/agent/prompts/**",
         "src/tui/**",
+        // Process bootstraps and generated eval fixtures are validated with
+        // runtime/build checks, not statement-level unit coverage.
+        "src/web/index.ts",
+        "src/doctor.ts",
+        "src/eval/scenarios.ts",
         "src/utils/requestLogger.ts",
       ],
+      thresholds: {
+        statements: 75,
+        branches: 60,
+        functions: 75,
+        lines: 78,
+      },
     },
   },
 });
