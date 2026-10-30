@@ -160,6 +160,7 @@ try {
       let reply = "";
       try {
         const result = await sendDietAgentMessage(turnUserId, spec.message, {
+          entry: "eval",
           onTextDelta: (text) => { reply = text; },
           onToolStatus: (status) => {
             if (status.phase === "pending") tools.push(status.toolName);

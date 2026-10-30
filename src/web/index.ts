@@ -2,6 +2,7 @@ import "dotenv/config";
 import { basename } from "node:path";
 import { disposeAllAgentSessions } from "../agent/createDietAgent.js";
 import * as store from "../store/index.js";
+import { maintainAgentTraces } from "../store/repositories/traceRepository.js";
 import { isLoopbackHost, normalizeHostName } from "./middleware/security.js";
 import { createWebServer } from "./server.js";
 
@@ -20,6 +21,13 @@ if (!isLoopbackHost(host)) {
 }
 
 const server = createWebServer({ userId, port, host });
+
+// 上次进程退出前未完成的 trace 记为 interrupted（崩溃率本身是稳定性指标），
+// 同时按保留策略清理过期 trace。
+const traceMaintenance = maintainAgentTraces(store.getDatabase());
+if (traceMaintenance.interrupted > 0) {
+  console.log(`📦 ${traceMaintenance.interrupted} 条上次运行遗留的 trace 已标记为 interrupted`);
+}
 
 server.listen(port, host, () => {
   console.log(`🍳 饮食工作台已启动: http://${urlHost}:${port}`);

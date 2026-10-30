@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, unlinkSync, w
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as store from "../store/index.js";
+import { SHOPPING_TABLES } from "../shopping/types.js";
 
 const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DATA_ROOT = join(APP_ROOT, "data");
@@ -74,8 +75,16 @@ function tableExists(db: Database.Database, table: string): boolean {
 function clearDatabaseRows(db: Database.Database, userId: string): void {
   const tables = ["user_profiles", "kitchen_profiles", "ingredient_inventory", "meal_logs", "meal_operations", "web_write_operations", "chat_operations", "weekly_plan_day_status", "cooking_feedback", "weekly_plans", "meal_plans"];
   const clear = db.transaction(() => {
-    for (const table of tables) {
+    for (const table of [...SHOPPING_TABLES, ...tables]) {
       if (tableExists(db, table)) db.prepare(`DELETE FROM ${table} WHERE user_id = ?`).run(userId);
+    }
+    // agent trace 只有元数据，但同属用户数据，删除时一并清掉；
+    // 迁移备份可能来自 v17 之前的旧库，先探测表是否存在。
+    if (tableExists(db, "agent_traces")) {
+      if (tableExists(db, "agent_trace_spans")) {
+        db.prepare("DELETE FROM agent_trace_spans WHERE trace_id IN (SELECT trace_id FROM agent_traces WHERE user_id = ?)").run(userId);
+      }
+      db.prepare("DELETE FROM agent_traces WHERE user_id = ?").run(userId);
     }
   });
   clear();
@@ -97,7 +106,9 @@ export function getUserDataOverview(userId: string): UserDataOverview {
   return {
     database: {
       profile: count("user_profiles"), kitchen: count("kitchen_profiles"), inventory: count("ingredient_inventory"),
+      shoppingTasks: count("shopping_tasks"), shoppingReceipts: count("shopping_receipts"), shoppingEvents: count("shopping_events"), shoppingProviderSettings: count("shopping_provider_settings"), shoppingCandidates: count("shopping_candidates"), shoppingProviderChecks: count("shopping_provider_checks"), cartExperiments:count("shopping_cart_experiments"),
       meals: count("meal_logs"), mealOperations: count("meal_operations"), webWriteOperations: count("web_write_operations"), chatOperations: count("chat_operations"), feedback: count("cooking_feedback"), weeklyPlans: count("weekly_plans"), mealPlans: count("meal_plans"),
+      agentTraces: tableExists(db, "agent_traces") ? count("agent_traces") : 0,
     },
     sessionFiles: countFiles(sessionDir),
     exportFiles: userExportFiles(userId).length,
@@ -113,6 +124,15 @@ export function exportUserData(userId: string, transcript: readonly Conversation
   const mealOperations = db.prepare("SELECT operation_id, action, meal_log_id, result_json, created_at FROM meal_operations WHERE user_id = ? ORDER BY created_at").all(userId);
   const webWriteOperations = db.prepare("SELECT route, operation_id, request_hash, result_json, created_at FROM web_write_operations WHERE user_id = ? ORDER BY created_at").all(userId);
   const chatOperations = db.prepare("SELECT operation_id, message_hash, state, terminal_event_json, created_at, updated_at FROM chat_operations WHERE user_id = ? ORDER BY created_at").all(userId);
+  // agent trace 只含元数据（耗时/token/状态），导出用于核对使用量与成本。
+  const agentTraces = tableExists(db, "agent_traces")
+    ? db.prepare("SELECT entry, status, error_kind, started_at, duration_ms, first_token_ms, attempts, final_model, llm_calls, tool_calls, tool_errors, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd FROM agent_traces WHERE user_id = ? ORDER BY started_at").all(userId)
+    : [];
+  const agentTraceSpans = agentTraces.length > 0 && tableExists(db, "agent_trace_spans")
+    ? db.prepare(`SELECT s.attempt, s.kind, s.name, s.started_at, s.duration_ms, s.status, s.input_tokens, s.output_tokens, s.cache_read_tokens
+        FROM agent_trace_spans s JOIN agent_traces t ON t.trace_id = s.trace_id
+        WHERE t.user_id = ? ORDER BY s.started_at`).all(userId)
+    : [];
   const payload = {
     schemaVersion: 1,
     exportedAt: new Date().toISOString(),
@@ -125,9 +145,12 @@ export function exportUserData(userId: string, transcript: readonly Conversation
       mealOperations,
       webWriteOperations,
       chatOperations,
+      agentTraces,
+      agentTraceSpans,
       cookingFeedback: store.getCookingFeedback(userId),
       weeklyPlans,
       mealPlans,
+      shopping: Object.fromEntries(SHOPPING_TABLES.map(table => [table, db.prepare(`SELECT * FROM ${table} WHERE user_id = ?`).all(userId)])),
     },
     currentConversation: [...transcript],
     sessionFiles: collectTextFiles(join(SESSION_ROOT, digest(userId))),

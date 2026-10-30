@@ -8,6 +8,7 @@ import {
   type ModelAdapterKind,
 } from "./modelProviders.js";
 import { getActiveOperationId } from "../utils/userTurnContext.js";
+import { TurnLimitError } from "./turnGuard.js";
 
 export type { ModelAdapterKind } from "./modelProviders.js";
 
@@ -22,6 +23,14 @@ export interface ModelCandidate {
 }
 
 const TOOL_RETRY_COUNT = Number(process.env.TOOL_RETRY_COUNT ?? "1");
+
+/** 单个工具执行超时；运行期读取以便测试覆盖。工具执行期间 TurnGuard 的空闲计时是暂停的，靠它兜底。
+ *  超时错误信息刻意用 "timed out"（不含 "timeout"），因此不会命中 isRetryableToolError
+ *  的自动重试：超时的工具调用可能仍在后台执行完，立即重跑写工具有叠加风险。 */
+function toolTimeoutMs(): number {
+  const value = Number(process.env.AGENT_TOOL_TIMEOUT_MS);
+  return Number.isFinite(value) && value > 0 ? value : 20_000;
+}
 
 export function normalizeModelId(provider: string, modelId: string): string {
   return normalizeConfiguredModelId(provider, modelId);
@@ -194,6 +203,10 @@ export function shouldFallbackToCandidate(
   next: ModelCandidate | undefined
 ): boolean {
   if (!next) return false;
+  // TurnGuard 超时要区分原因：idle 多为 provider 连接卡死，换一家大概率恢复；
+  // deadline / 预算超限说明模型行为异常（循环、超长），换模型重跑只会再花
+  // 一倍的时间和 token。
+  if (error instanceof TurnLimitError) return error.reason === "idle";
   const classification = classifyModelError(error);
   if (!classification.retryable) return false;
   return classification.kind !== "authentication" || failed.provider !== next.provider;
@@ -213,7 +226,22 @@ export function wrapToolsForUser(userId: string, tools: ToolDefinition<any>[]): 
       let lastError: unknown;
       for (let attempt = 0; attempt <= TOOL_RETRY_COUNT; attempt++) {
         try {
-          return await tool.execute(toolCallId, params, signal, onUpdate, ctx);
+          const call = tool.execute(toolCallId, params, signal, onUpdate, ctx);
+          const timeoutMs = toolTimeoutMs();
+          let timer: NodeJS.Timeout | undefined;
+          try {
+            return await Promise.race([
+              call,
+              new Promise<never>((_, reject) => {
+                timer = setTimeout(
+                  () => reject(new Error(`Tool ${tool.name} timed out after ${timeoutMs}ms`)),
+                  timeoutMs,
+                );
+              }),
+            ]);
+          } finally {
+            clearTimeout(timer);
+          }
         } catch (err) {
           lastError = err;
           console.warn(`[TOOL retry] tool=${tool.name} attempt=${attempt + 1}/${TOOL_RETRY_COUNT + 1} errorType=${err instanceof Error ? "Error" : typeof err} code=${safeToolErrorCode(err)}`);

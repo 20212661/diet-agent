@@ -1,5 +1,6 @@
 import * as store from "../store/index.js";
 import { sendDietAgentMessage } from "../agent/createDietAgent.js";
+import { TurnLimitError } from "../agent/turnGuard.js";
 import { claimChatOperation, finishChatOperation, unresolvedChatEvent, type ChatOperationState, type ChatTerminalEvent } from "./chatOperationStore.js";
 
 export function createChatOperationHandler(userId: string, sendMessage = sendDietAgentMessage) {
@@ -97,10 +98,14 @@ export function createChatOperationHandler(userId: string, sendMessage = sendDie
             reply: "写入操作可能已经完成，但回复中断。我已刷新资料，请核对相关记录后再继续；系统不会自动重发。",
           });
         } else {
+          // 走到 catch 说明写入从未开始（WriteNeedsVerification 已在上层转为
+          // result_uncertain），因此超时/失败都可以安全重试。
           publishTerminal({
             type: "failed_before_write",
             status: "failed_before_write",
-            reply: "请求在发生写入前失败。你可以编辑后重试，或使用同一请求安全重试。",
+            reply: error instanceof TurnLimitError
+              ? "请求超时已中止，本轮未发生写入，可以安全重试。"
+              : "请求在发生写入前失败。你可以编辑后重试，或使用同一请求安全重试。",
           });
         }
       }
