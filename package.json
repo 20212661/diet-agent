@@ -33,6 +33,7 @@
     "doctor:dev": "tsx src/doctor.ts",
     "eval": "tsx scripts/run-eval.ts",
     "eval:agent": "tsx scripts/run-agent-eval.ts --live",
+    "eval:safety": "tsx scripts/run-safety-eval.ts --live",
     "trace:report": "tsx scripts/trace-report.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
