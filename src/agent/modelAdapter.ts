@@ -10,6 +10,13 @@ import {
 import { getActiveOperationId } from "../utils/userTurnContext.js";
 import { TurnLimitError } from "./turnGuard.js";
 import { UNCONFIRMED_TOOL_STATUS, WRITE_TOOLS } from "./toolOutcomes.js";
+import {
+  classifyArgumentRepairs,
+  isStructuralJsonArgs,
+  recordToolArgumentIssues,
+  toolRepairRecordingActive,
+  type ToolIssueCategory,
+} from "./toolRepairTelemetry.js";
 
 export type { ModelAdapterKind } from "./modelProviders.js";
 
@@ -255,10 +262,24 @@ export function shouldFallbackToCandidate(
 export function wrapToolsForUser(userId: string, tools: ToolDefinition<any>[]): ToolDefinition<any>[] {
   const fence: ToolFence = { fenced: false };
   activeToolFences.set(userId, fence);
-  return tools.map((tool) => defineTool({
+  return tools.map((tool) => {
+    const requiredFields = requiredSchemaFieldsExcludingIdentity(tool);
+    return defineTool({
     ...tool,
     prepareArguments: (args: unknown) => {
-      const repaired = repairToolArguments(tool.name, args, userId);
+      const repaired = coerceAndInjectArguments(tool.name, args, userId);
+      if (toolRepairEnabled()) {
+        const recording = toolRepairRecordingActive();
+        const before = recording ? structuredClone(repaired) : undefined;
+        applyToolTypeRepairs(tool.name, repaired);
+        if (recording && before) {
+          // 仅评测模式记录：修复前后差异 + 结构问题 + 缺失的必填字段。
+          const categories: ToolIssueCategory[] = classifyArgumentRepairs(before, repaired);
+          if (isStructuralJsonArgs(args)) categories.push("json_string_args");
+          if (requiredFields.some((field) => before[field] === undefined)) categories.push("missing_field");
+          recordToolArgumentIssues(tool.name, categories);
+        }
+      }
       if (tool.prepareArguments) {
         return tool.prepareArguments(repaired);
       }
@@ -307,17 +328,38 @@ export function wrapToolsForUser(userId: string, tools: ToolDefinition<any>[]): 
       }
       throw lastError;
     },
-  }));
+    });
+  });
 }
 
-export function repairToolArguments(toolName: string, args: unknown, userId: string): any {
+/**
+ * DIET_TOOL_REPAIR=off 用于 A/B 评测：只关类型修复。
+ * userId（安全隔离）与 operationId（幂等）注入不受影响，始终保留——
+ * 关掉它们会让对比不公平，也会带来越权风险。
+ */
+export function toolRepairEnabled(): boolean {
+  return process.env.DIET_TOOL_REPAIR !== "off";
+}
+
+/** 结构解析 + 安全注入 + 幂等注入；不属于“类型修复”，不受开关影响。 */
+export function coerceAndInjectArguments(toolName: string, args: unknown, userId: string): Record<string, any> {
   const obj = coerceObject(args);
   obj.userId = userId;
   if (["log_meal", "edit_meal_log", "undo_meal_log"].includes(toolName) && !obj.operationId) {
     const operationId = getActiveOperationId(userId, toolName);
     if (operationId) obj.operationId = operationId;
   }
+  return obj;
+}
 
+export function repairToolArguments(toolName: string, args: unknown, userId: string): any {
+  const obj = coerceAndInjectArguments(toolName, args, userId);
+  if (toolRepairEnabled()) applyToolTypeRepairs(toolName, obj);
+  return obj;
+}
+
+/** 类型修复本体：数组/布尔/数字的字符串形态转换与字段规范化。 */
+function applyToolTypeRepairs(toolName: string, obj: Record<string, any>): void {
   for (const key of ["availableIngredients", "shoppingList", "cookware", "tastePreferences", "cookingPreferences", "preferredStyles", "temporaryAvoidFoods"]) {
     if (typeof obj[key] === "string") obj[key] = splitList(obj[key]);
   }
@@ -351,8 +393,15 @@ export function repairToolArguments(toolName: string, args: unknown, userId: str
       }));
     }
   }
+}
 
-  return obj;
+/** schema 必填字段（排除中间件强制注入的身份/幂等字段），用于“缺字段”统计。 */
+function requiredSchemaFieldsExcludingIdentity(tool: ToolDefinition<any>): string[] {
+  const schema = tool.parameters as { required?: unknown } | undefined;
+  if (!Array.isArray(schema?.required)) return [];
+  return (schema.required as unknown[]).filter(
+    (field): field is string => typeof field === "string" && field !== "userId" && field !== "operationId",
+  );
 }
 
 function coerceObject(args: unknown): Record<string, any> {

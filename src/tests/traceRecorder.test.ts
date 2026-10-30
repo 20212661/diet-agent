@@ -193,6 +193,36 @@ describe("trace 生命周期维护", () => {
   });
 });
 
+describe("trace 查询按入口过滤", () => {
+  it("getTraceWindow/getToolSpanStats/getDailyTraceUsage 支持按 entry 过滤（默认排除 eval 由调用方传入）", () => {
+    const db = getDatabase();
+    db.exec("DELETE FROM agent_traces");
+    const seed = (entry: "web" | "tui" | "eval") => {
+      const recorder = createTraceRecorder({ userId: "entry-user", entry });
+      recorder.beginAttempt("zai/glm-4.7");
+      recorder.onEvent(asEvent({ type: "tool_execution_start", toolCallId: `t-${entry}`, toolName: "log_meal" }));
+      recorder.onEvent(asEvent({ type: "tool_execution_end", toolCallId: `t-${entry}`, toolName: "log_meal", isError: false, result: {} }));
+      recorder.finish("ok");
+    };
+    seed("web");
+    seed("tui");
+    seed("eval");
+
+    expect(repo.getTraceWindow(db, 0, ["web", "tui"])).toHaveLength(2);
+    expect(repo.getTraceWindow(db, 0, ["eval"])).toHaveLength(1);
+    expect(repo.getTraceWindow(db, 0)).toHaveLength(3);
+
+    // 工具统计通过 JOIN agent_traces 联表过滤：排除 eval 后只剩 web+tui 的调用
+    expect(repo.getToolSpanStats(db, 0, ["web", "tui"])).toEqual([
+      { name: "log_meal", calls: 2, errorCount: 0, errorPct: 0, avgMs: expect.any(Number) },
+    ]);
+    expect(repo.getToolSpanStats(db, 0, ["eval"])[0].calls).toBe(1);
+
+    expect(repo.getDailyTraceUsage(db, 0, ["eval"])[0].requests).toBe(1);
+    expect(repo.getDailyTraceUsage(db, 0, ["web", "tui"])[0].requests).toBe(2);
+  });
+});
+
 afterAll(() => {
   closeDatabase();
 });
