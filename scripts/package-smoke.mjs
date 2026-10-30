@@ -50,6 +50,9 @@ try {
   if (installed.status !== 0) throw new Error(`temporary npm install failed:\n${installed.error ?? installed.stderr}`);
 
   const packageRoot = join(temporaryDirectory, "node_modules", "diet-agent");
+  if (!existsSync(join(packageRoot, "package.json"))) {
+    throw new Error(`temporary npm install did not create the expected package:\n${installed.stdout}\n${installed.stderr}`);
+  }
   const manifest = JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8"));
   if (manifest.files.some((entry) => entry.startsWith("src"))) {
     throw new Error("published package unexpectedly includes src in files allowlist");

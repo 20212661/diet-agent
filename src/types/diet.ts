@@ -135,6 +135,8 @@ export interface KitchenProfile {
 }
 
 export interface IngredientItem {
+  /** Stable source receipt: keeps independent purchase batches from being deduplicated. */
+  purchaseBatchId?: string;
   id?: string;
   name: string;
   amount?: string;

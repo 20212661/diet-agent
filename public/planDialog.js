@@ -1,4 +1,4 @@
-export function createPlanDialog({ getData, esc, list, toast, getPendingWrite, refreshData, renderPage }) {
+export function createPlanDialog({ getData, esc, list, toast, getPendingWrite, refreshData, renderPage, navigate }) {
   const planDialog = document.createElement("dialog");
   planDialog.className = "plan-recipe-dialog";
   document.body.append(planDialog);
@@ -80,7 +80,7 @@ export function createPlanDialog({ getData, esc, list, toast, getPendingWrite, r
       : `<p class="support-copy">没有通过当前设备、忌口和过敏筛选的替换候选。</p>`;
     planDialog.innerHTML = `<div class="plan-dialog-head"><div><div class="eyebrow">${esc(day.date)} · 周计划菜谱</div><h2>${esc(main.name)}${side ? ` + ${esc(side.name)}` : ""}</h2></div><button type="button" class="dialog-close" data-close-plan-dialog aria-label="关闭">×</button></div>
       <div class="plan-recipe-times">${recipes.map((recipe) => `<span>${esc(recipe.name)}：主动操作 ${Number(recipe.activeMinutes)} 分钟 · 总耗时 ${Number(recipe.totalMinutes)} 分钟</span>`).join("")}</div>
-      <section><h3>必需食材</h3><div class="plan-ingredient-list">${ingredientRows || `<p class="support-copy">菜谱尚未登记必需食材。</p>`}</div><div class="dialog-actions"><button type="button" class="primary-button" data-add-plan-shopping ${readiness.some((item) => item.status === "to_add_to_list") ? "" : "disabled"}>加入选中的采购项</button></div></section>
+      <section><h3>必需食材</h3><div class="plan-ingredient-list">${ingredientRows || `<p class="support-copy">菜谱尚未登记必需食材。</p>`}</div><div class="dialog-actions"><button type="button" class="primary-button" data-add-plan-shopping ${readiness.some((item) => item.status === "to_add_to_list") ? "" : "disabled"}>加入选中的采购项</button>${navigate ? '<button type="button" class="secondary-button" data-plan-go-shopping>去库存页采购</button>' : ""}</div></section>
       <section><h3>设备与厨具</h3><p class="support-copy">${esc([...new Set(recipes.flatMap((recipe) => [...list(recipe.appliances).map((item) => equipmentLabels[item] ?? item), ...list(recipe.cookware)]))].join("、") || "菜谱未标注额外设备")}</p></section>
       ${recipes.map((recipe) => `<section><h3>${esc(recipe.name)} · 做法</h3><ol class="recipe-steps">${list(recipe.steps).map((step) => `<li>${esc(step)}</li>`).join("")}</ol></section>`).join("")}
       <section><h3>备料状态</h3><p class="support-copy">${esc(readiness.map((item) => `${item.ingredient}：${item.status === "owned" ? "库存有（数量未核验）" : item.status === "already_on_list" ? "已在采购清单" : "待加入采购清单"}`).join("；") || "无必需食材记录")}</p></section>
@@ -108,6 +108,7 @@ export function createPlanDialog({ getData, esc, list, toast, getPendingWrite, r
   }
   async function onPlanDialogClick(event) {
     if (event.target.closest("[data-close-plan-dialog]") || event.target === planDialog) { invalidateDialog(); planDialog.close(); return; }
+    if (event.target.closest("[data-plan-go-shopping]") && navigate) { invalidateDialog(); planDialog.close(); navigate("inventory"); return; }
     const context = openedPlanContext;
     if (!context || !isCurrent(context)) return;
     const day = context.day;

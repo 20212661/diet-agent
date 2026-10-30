@@ -14,6 +14,10 @@ import { verifyRequestUser, verifySecurity } from "./middleware/security.js";
 import { handleChatRoutes } from "./routes/chat.js";
 import { handleDashboardRoutes } from "./routes/dashboard.js";
 import { handleInventoryRoutes } from "./routes/inventory.js";
+import { handleShoppingRoutes } from "./routes/shopping.js";
+import { listShoppingTasks } from "../shopping/shoppingService.js";
+import { getShoppingProviders } from "../shopping/providers.js";
+import { listCartExperiments } from "../shopping/cartExperiment.js";
 import { handleMealRoutes } from "./routes/meals.js";
 import { handleProfileRoutes } from "./routes/profile.js";
 import { handleWeeklyPlanRoutes } from "./routes/weeklyPlan.js";
@@ -56,6 +60,7 @@ export function createWebServer(options: CreateWebServerOptions): Server {
       profile,
       kitchen,
       inventory,
+      shopping: { tasks: listShoppingTasks(userId), providers: getShoppingProviders(userId), cartExperiments:listCartExperiments(userId) },
       today,
       weeklyPlan,
       agent: {
@@ -92,6 +97,7 @@ export function createWebServer(options: CreateWebServerOptions): Server {
     handleMealRoutes,
     handleProfileRoutes,
     handleInventoryRoutes,
+    handleShoppingRoutes,
     handleChatRoutes,
   ];
 

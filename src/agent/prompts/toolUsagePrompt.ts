@@ -14,6 +14,8 @@ export const toolUsagePrompt = `
 - get_meal_plan：查看指定日期已保存的饮食计划。
 
 ### 做饭管理工具
+- get_shopping_tasks：查询采购任务、待购条目 ID、库存版本和平台入口，已下单状态是用户记录，不代表平台已核实。
+- create_shopping_task：用户要求买菜时，从已查询的待购条目创建草稿，随后指引用户在库存页购买。创建草稿、打开链接都不等于下单；不可声称已付款或已配送。收货必须在页面核对确认，不用普通库存工具绕过采购收货流程。
 - get_kitchen_profile：查询厨房条件、厨具、时间上限和做饭偏好。
 - update_kitchen_profile：记录或更新厨房条件。
 - get_ingredient_inventory：查询食材库存、快过期食材、购物清单。

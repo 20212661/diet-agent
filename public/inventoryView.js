@@ -34,17 +34,19 @@ export function receiptImportPanel(receiptDraft = []) {
 
 export function parseIngredientLines(value, existingItems) {
   const existing = list(existingItems);
+  const matched = new Set();
   const storageValues = { "冷藏": "fridge", "冷冻": "freezer", "储藏室": "pantry", "室温": "room_temp", fridge: "fridge", freezer: "freezer", pantry: "pantry", room_temp: "room_temp" };
   return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
     const [namePart, amountPart, storagePart] = line.split("|").map((part) => part.trim());
     const normalizedName = namePart.trim().toLowerCase();
     const requestedStorage = storagePart ? storageValues[storagePart] : undefined;
-    const sameName = existing.filter((item) => item.name.trim().toLowerCase() === normalizedName);
+    const sameName = existing.filter((item) => !matched.has(item.id) && item.name.trim().toLowerCase() === normalizedName);
     const prior = requestedStorage
       ? sameName.find((item) => item.storage === requestedStorage)
-      : sameName.length === 1 ? sameName[0] : undefined;
+      : sameName.find((item) => item.amount === amountPart) ?? (sameName.length === 1 ? sameName[0] : undefined);
+    if (prior?.id) matched.add(prior.id);
     const storage = requestedStorage ?? prior?.storage;
-    const { expiresSoon: _expiresSoon, ...previous } = prior ?? {};
+    const { expiresSoon: _expiresSoon, isExpired: _isExpired, isAvailable: _isAvailable, ...previous } = prior ?? {};
     return { ...previous, name: namePart, ...(amountPart ? { amount: amountPart } : { amount: prior?.amount }), ...(storage ? { storage } : {}) };
   });
 }
@@ -96,7 +98,7 @@ export function renderInventoryPage(inventory, description, editingInventoryItem
   const expiredDiscarded = allInventoryItems.filter((item) => item.status === "expired" || item.status === "discarded" || (item.status === "available" && item.isExpired));
   const active = allInventoryItems.filter((item) => item.isAvailable === true);
 
-  const intro = pageIntro("YOUR PANTRY", "食材库存", description, `<button class="primary-button" data-focus-inventory-add>＋ 添加食材</button>`);
+  const intro = pageIntro("YOUR PANTRY", "食材库存", description, `<button class="secondary-button" data-shop-focus>去采购</button><button class="primary-button" data-focus-inventory-add>＋ 添加食材</button>`);
   const body = `<div class="grid section-grid"><div>${panel("可用", inventoryItemRows(active, inventory?.updatedAt, editingInventoryItemId), `${available.length} 项 · 快过期的食材会标记出来`)}${panel("待采购", inventoryItemRows(shopping, inventory?.updatedAt, editingInventoryItemId), `${shopping.length} 项待买`)}<details class="inventory-history"><summary>历史状态（${used.length + expiredDiscarded.length} 项）</summary>${panel("已用", inventoryItemRows(used, inventory?.updatedAt, editingInventoryItemId))}${panel("过期或丢弃", inventoryItemRows(expiredDiscarded, inventory?.updatedAt, editingInventoryItemId))}</details></div><div>${panel("添加食材", inventoryItemForm({ name: "", amount: "", status: "available" }, inventory?.updatedAt, true))}${panel("库存概况", detailRows([["可用食材", `${available.length} 项`], ["即将过期", `${available.filter((item) => item.expiresSoon).length} 项`], ["待采购", `${shopping.length} 项`], ["最后更新", esc(inventory?.updatedAt?.slice(0, 10) ?? "—")]]))}${panel("快捷告诉助手", `<p class="support-copy">例如：“我买了两颗番茄和一盒鸡蛋，放冰箱。”助手会整理食材名称、数量和储存位置。</p>`, "自然语言也能更新库存")}</div></div>`;
   const receiptPanel = receiptImportPanel(receiptDraft);
   const bulkEditor = panel("批量库存入口", inventoryEditor(inventory), "日常修改请使用上方逐项编辑；批量入口会替换清单");

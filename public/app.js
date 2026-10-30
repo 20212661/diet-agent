@@ -1,5 +1,6 @@
 import { createPlanDialog } from "./planDialog.js";
 import { createChatController } from "./chatController.js";
+import { createShoppingController } from "./shoppingView.js";
 import { esc, list, clientOperationId, readableDate, splitField } from "./viewFormatters.js";
 import { renderProfilePage, renderKitchenPage } from "./profileKitchenViews.js";
 import { renderInventoryPage, parseIngredientLines, parseReceiptText, receiptPreviewHtml } from "./inventoryView.js";
@@ -48,7 +49,8 @@ const { sendChat, bindRecoveryUser, getPendingWrite, statusLabel: chatStatusLabe
   modelStatusLabel, clientOperationId, useSlash, slashCommands,
 });
 
-const { openPlanDay } = createPlanDialog({ getData: () => data, esc, list, toast, getPendingWrite, refreshData, renderPage });
+const { openPlanDay } = createPlanDialog({ getData: () => data, esc, list, toast, getPendingWrite, refreshData, renderPage, navigate });
+const shoppingController = createShoppingController({root: pageContent, getData: () => data, refreshData, getPendingWrite, toast});
 
 function toast(message) {
   toastNode.textContent = message;
@@ -75,7 +77,7 @@ function renderPage() {
     pageContent.innerHTML = renderKitchenPage(data.kitchen, selected.description);
     pageContent.querySelector("[data-save-form]").dataset.updatedAt = data.kitchen?.updatedAt ?? "";
   } else if (currentPage === "inventory") {
-    pageContent.innerHTML = renderInventoryPage(data.inventory, selected.description, editingInventoryItemId, receiptDraft);
+    pageContent.innerHTML = renderInventoryPage(data.inventory, selected.description, editingInventoryItemId, receiptDraft) + shoppingController.render(data);
   } else if (currentPage === "diary") {
     pageContent.innerHTML = renderDiaryPage(data, selected.description, selectedDiaryDate, diaryState, editingMealId);
   } else if (currentPage === "plan") {
