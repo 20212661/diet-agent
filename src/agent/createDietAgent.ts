@@ -16,6 +16,7 @@ import { GLM_STRICT_COOKING_AGENT_PROMPT, buildUserMemoryPrompt } from "./system
 import * as sessionStore from "./sessionStore.js";
 import {
   classifyModelError,
+  fenceUserTools,
   resolveModelCandidates,
   shouldFallbackToCandidate,
   wrapToolsForUser,
@@ -30,7 +31,12 @@ import {
   type TurnLimits,
 } from "./turnGuard.js";
 import { createTraceRecorder, type TraceEntry, type TraceRecorder } from "./traceRecorder.js";
-import { safeToolOutcome, toolResultIndicatesSuccess } from "./toolOutcomes.js";
+import {
+  safeToolOutcome,
+  toolResultIndicatesSuccess,
+  toolResultIndicatesUnconfirmed,
+  WRITE_TOOLS,
+} from "./toolOutcomes.js";
 import type { TraceStatus } from "../store/repositories/traceRepository.js";
 import { PROVIDER_CONFIGS } from "./modelProviders.js";
 import { setActiveUserMessage } from "../utils/userTurnContext.js";
@@ -219,13 +225,6 @@ export interface DietAgentDispatcherDeps {
   loadRequestDeadlineMs?: () => number;
 }
 
-const WRITE_TOOLS = new Set([
-  "create_shopping_task",
-  "log_meal", "edit_meal_log", "undo_meal_log", "update_user_profile", "update_kitchen_profile",
-  "update_ingredient_inventory", "mark_ingredient_used", "generate_meal_plan", "generate_weekly_plan",
-  "log_cooking_feedback", "generate_cooking_plan",
-]);
-
 export class WriteNeedsVerificationError extends Error {
   constructor(
     message: string,
@@ -385,9 +384,12 @@ export async function runAgentSessionTurn(
   });
 
   // TurnGuard 兜底 provider 挂死：触发后 abort 会话，等待宽限期即结束本轮，
-  // 不再依赖 SDK 自己发出 agent_end。
+  // 不再依赖 SDK 自己发出 agent_end。同时 fence 该会话的写工具——abort 挂死时
+  // SDK 循环可能未停，后续补发的写工具调用必须被拒绝，保证“超时未发生写入”
+  // 的承诺成立。
   const guard = createTurnGuard(limits, (error) => {
     turnLimitError = error;
+    fenceUserTools(userId);
     logger.warn(
       `[TURN limit] user=${userTag(userId)} model=${candidate.label} reason=${error.reason} elapsedMs=${error.elapsedMs}`
     );
@@ -436,6 +438,9 @@ export async function runAgentSessionTurn(
       if (WRITE_TOOLS.has(event.toolName)) {
         possibleWriteTools.delete(event.toolName);
         if (event.isError) uncertainWriteTools.add(event.toolName);
+        // 写工具超时返回的结构化“未确认”结果：底层调用可能仍在后台完成，
+        // 必须按不确定处理，要求人工核对而不是让本轮静默通过。
+        else if (toolResultIndicatesUnconfirmed(event.result)) uncertainWriteTools.add(event.toolName);
         else if (toolResultIndicatesSuccess(event.result)) successfulWriteTools.add(event.toolName);
       }
       const outcome = safeToolOutcome(event.result, event.isError);

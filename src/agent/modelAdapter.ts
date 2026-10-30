@@ -9,6 +9,7 @@ import {
 } from "./modelProviders.js";
 import { getActiveOperationId } from "../utils/userTurnContext.js";
 import { TurnLimitError } from "./turnGuard.js";
+import { UNCONFIRMED_TOOL_STATUS, WRITE_TOOLS } from "./toolOutcomes.js";
 
 export type { ModelAdapterKind } from "./modelProviders.js";
 
@@ -24,12 +25,51 @@ export interface ModelCandidate {
 
 const TOOL_RETRY_COUNT = Number(process.env.TOOL_RETRY_COUNT ?? "1");
 
-/** 单个工具执行超时；运行期读取以便测试覆盖。工具执行期间 TurnGuard 的空闲计时是暂停的，靠它兜底。
- *  超时错误信息刻意用 "timed out"（不含 "timeout"），因此不会命中 isRetryableToolError
- *  的自动重试：超时的工具调用可能仍在后台执行完，立即重跑写工具有叠加风险。 */
+/** 单个工具执行超时；运行期读取以便测试覆盖。工具执行期间 TurnGuard 的空闲计时是暂停的，靠它兜底。 */
 function toolTimeoutMs(): number {
   const value = Number(process.env.AGENT_TOOL_TIMEOUT_MS);
   return Number.isFinite(value) && value > 0 ? value : 20_000;
+}
+
+export class ToolTimeoutError extends Error {
+  constructor(
+    readonly toolName: string,
+    readonly timeoutMs: number,
+  ) {
+    super(`Tool ${toolName} timed out after ${timeoutMs}ms`);
+    this.name = "ToolTimeoutError";
+  }
+}
+
+/**
+ * 会话被 TurnGuard 中止后，其写工具继续执行会破坏“超时未发生写入”的承诺
+ * （chatStream 已按该承诺告知用户可安全重试），因此用 fence 直接拒绝。
+ */
+export class FencedToolError extends Error {
+  constructor(readonly toolName: string) {
+    super(`写入被拒绝：会话已因超时中止，${toolName} 不会执行；请勿重试写入，等待用户重新发起请求。`);
+    this.name = "FencedToolError";
+  }
+}
+
+interface ToolFence {
+  /** 所属会话被 TurnGuard 中止后置 true；仅写工具检查。 */
+  fenced: boolean;
+}
+
+/**
+ * userId → 最近一次 wrapToolsForUser 注册的 fence。
+ * guard 触发时置位“当前”fence（即正在执行的那轮会话的工具组）；
+ * 重建会话会调用新的 wrapToolsForUser 注册全新 fence，旧会话的工具闭包
+ * 仍持有已置位的旧 fence，因此僵尸会话（abort 挂死、SDK 循环未停）的
+ * 写工具会被永久拒绝，而新会话不受影响。
+ */
+const activeToolFences = new Map<string, ToolFence>();
+
+/** TurnGuard 触发时调用：fence 该用户当前会话的写工具。 */
+export function fenceUserTools(userId: string): void {
+  const fence = activeToolFences.get(userId);
+  if (fence) fence.fenced = true;
 }
 
 export function normalizeModelId(provider: string, modelId: string): string {
@@ -213,6 +253,8 @@ export function shouldFallbackToCandidate(
 }
 
 export function wrapToolsForUser(userId: string, tools: ToolDefinition<any>[]): ToolDefinition<any>[] {
+  const fence: ToolFence = { fenced: false };
+  activeToolFences.set(userId, fence);
   return tools.map((tool) => defineTool({
     ...tool,
     prepareArguments: (args: unknown) => {
@@ -223,6 +265,9 @@ export function wrapToolsForUser(userId: string, tools: ToolDefinition<any>[]): 
       return repaired;
     },
     async execute(toolCallId, params, signal, onUpdate, ctx) {
+      if (fence.fenced && WRITE_TOOLS.has(tool.name)) {
+        throw new FencedToolError(tool.name);
+      }
       let lastError: unknown;
       for (let attempt = 0; attempt <= TOOL_RETRY_COUNT; attempt++) {
         try {
@@ -233,19 +278,31 @@ export function wrapToolsForUser(userId: string, tools: ToolDefinition<any>[]): 
             return await Promise.race([
               call,
               new Promise<never>((_, reject) => {
-                timer = setTimeout(
-                  () => reject(new Error(`Tool ${tool.name} timed out after ${timeoutMs}ms`)),
-                  timeoutMs,
-                );
+                timer = setTimeout(() => reject(new ToolTimeoutError(tool.name, timeoutMs)), timeoutMs);
               }),
             ]);
+          } catch (error) {
+            if (error instanceof ToolTimeoutError && WRITE_TOOLS.has(tool.name)) {
+              // 写工具超时：底层调用可能仍在后台执行完，不能确认是否已保存。
+              // 不抛错、不自动重试，返回结构化“未确认”结果提示模型停止重试，
+              // 由 runAgentSessionTurn 归入 uncertainWriteTools 要求人工核对。
+              return {
+                content: [{
+                  type: "text" as const,
+                  text: `${tool.label ?? tool.name} 执行超时，无法确认是否已保存；请勿重试该写入，向用户说明需要核对后由用户决定。`,
+                }],
+                details: { status: UNCONFIRMED_TOOL_STATUS, retryForbidden: true },
+              };
+            }
+            throw error;
           } finally {
             clearTimeout(timer);
           }
         } catch (err) {
           lastError = err;
           console.warn(`[TOOL retry] tool=${tool.name} attempt=${attempt + 1}/${TOOL_RETRY_COUNT + 1} errorType=${err instanceof Error ? "Error" : typeof err} code=${safeToolErrorCode(err)}`);
-          if (!isRetryableToolError(err) || attempt >= TOOL_RETRY_COUNT) break;
+          // 超时一律不自动重试：超时的调用可能仍在后台执行完，立即重跑有叠加风险。
+          if (err instanceof ToolTimeoutError || !isRetryableToolError(err) || attempt >= TOOL_RETRY_COUNT) break;
         }
       }
       throw lastError;
