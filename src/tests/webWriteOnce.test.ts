@@ -6,7 +6,8 @@ import { describe, expect, it } from "vitest";
 import { runMigrations } from "../store/migrations/index.js";
 import { executeWebWriteOnce, WebWriteConflictError } from "../web/writeOnce.js";
 
-describe("Web 写入去重", () => {
+// 文件 IO 重（建库/迁移/重开数据库），慢速 Windows runner 上单独放宽超时
+describe("Web 写入去重", { timeout: 15_000 }, () => {
   it("同一操作重启后返回原结果，不再执行写入", () => {
     const directory = mkdtempSync(join(tmpdir(), "diet-web-write-"));
     const path = join(directory, "data.sqlite");

@@ -13,7 +13,8 @@ afterEach(() => {
   }
 });
 
-describe("SQLite 版本化迁移", () => {
+// 含文件库迁移与备份复制，慢速 Windows runner 上单独放宽超时
+describe("SQLite 版本化迁移", { timeout: 15_000 }, () => {
   it("新数据库逐版本迁移并写入 user_version", () => {
     const db = new Database(":memory:");
     const result = runMigrations(db, ":memory:");
