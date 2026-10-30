@@ -6,7 +6,8 @@ import { describe, expect, it } from "vitest";
 import { runMigrations } from "../store/migrations/index.js";
 import { claimChatOperation, finishChatOperation, unresolvedChatEvent } from "../web/chatOperationStore.js";
 
-describe("聊天请求持久状态", () => {
+// 文件 IO 重（建库/迁移/重开数据库），慢速 Windows runner 上单独放宽超时
+describe("聊天请求持久状态", { timeout: 15_000 }, () => {
   it("重启后返回已完成结果，未完成请求只要求核对，不重复执行", () => {
     const directory = mkdtempSync(join(tmpdir(), "diet-chat-state-"));
     const path = join(directory, "data.sqlite");
