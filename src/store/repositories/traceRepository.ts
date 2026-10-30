@@ -173,6 +173,7 @@ export function deleteAgentTracesForUser(db: Database.Database, userId: string):
 }
 
 export interface TraceWindowRow {
+  started_at: number;
   status: TraceStatus;
   error_kind: string | null;
   duration_ms: number | null;
@@ -189,14 +190,23 @@ export interface TraceWindowRow {
   cost_usd: number | null;
 }
 
-export function getTraceWindow(db: Database.Database, sinceMs: number): TraceWindowRow[] {
+/** entry 过滤条件：undefined = 全部；空数组语义同 undefined。 */
+function entryCondition(entries: readonly string[] | undefined, alias = ""): { clause: string; params: string[] } {
+  const list = entries?.filter(Boolean) ?? [];
+  if (list.length === 0) return { clause: "", params: [] };
+  const column = alias ? `${alias}.entry` : "entry";
+  return { clause: ` AND ${column} IN (${list.map(() => "?").join(",")})`, params: list };
+}
+
+export function getTraceWindow(db: Database.Database, sinceMs: number, entries?: readonly string[]): TraceWindowRow[] {
+  const filter = entryCondition(entries);
   return db.prepare(`
-    SELECT status, error_kind, duration_ms, first_token_ms, attempts, final_model,
+    SELECT started_at, status, error_kind, duration_ms, first_token_ms, attempts, final_model,
            llm_calls, tool_calls, tool_errors,
            input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd
-    FROM agent_traces WHERE started_at > ?
+    FROM agent_traces WHERE started_at > ?${filter.clause}
     ORDER BY started_at DESC LIMIT 20000
-  `).all(sinceMs) as TraceWindowRow[];
+  `).all(sinceMs, ...filter.params) as TraceWindowRow[];
 }
 
 export interface ToolSpanStat {
@@ -207,16 +217,18 @@ export interface ToolSpanStat {
   avgMs: number;
 }
 
-export function getToolSpanStats(db: Database.Database, sinceMs: number): ToolSpanStat[] {
+export function getToolSpanStats(db: Database.Database, sinceMs: number, entries?: readonly string[]): ToolSpanStat[] {
+  const filter = entryCondition(entries, "t");
   return db.prepare(`
-    SELECT name, COUNT(*) AS calls,
-           SUM(status = 'error') AS errorCount,
-           ROUND(100.0 * SUM(status = 'error') / COUNT(*), 1) AS errorPct,
-           CAST(AVG(duration_ms) AS INTEGER) AS avgMs
-    FROM agent_trace_spans
-    WHERE kind = 'tool' AND started_at > ?
-    GROUP BY name ORDER BY errorPct DESC, calls DESC
-  `).all(sinceMs) as ToolSpanStat[];
+    SELECT s.name AS name, COUNT(*) AS calls,
+           SUM(s.status = 'error') AS errorCount,
+           ROUND(100.0 * SUM(s.status = 'error') / COUNT(*), 1) AS errorPct,
+           CAST(AVG(s.duration_ms) AS INTEGER) AS avgMs
+    FROM agent_trace_spans s
+    JOIN agent_traces t ON t.trace_id = s.trace_id
+    WHERE s.kind = 'tool' AND s.started_at > ?${filter.clause}
+    GROUP BY s.name ORDER BY errorPct DESC, calls DESC
+  `).all(sinceMs, ...filter.params) as ToolSpanStat[];
 }
 
 export interface DailyTraceUsage {
@@ -228,7 +240,8 @@ export interface DailyTraceUsage {
   costUsd: number;
 }
 
-export function getDailyTraceUsage(db: Database.Database, sinceMs: number): DailyTraceUsage[] {
+export function getDailyTraceUsage(db: Database.Database, sinceMs: number, entries?: readonly string[]): DailyTraceUsage[] {
+  const filter = entryCondition(entries);
   return db.prepare(`
     SELECT date(started_at / 1000, 'unixepoch', 'localtime') AS day,
            COUNT(*) AS requests,
@@ -236,9 +249,9 @@ export function getDailyTraceUsage(db: Database.Database, sinceMs: number): Dail
            SUM(COALESCE(output_tokens, 0)) AS outputTokens,
            SUM(COALESCE(cache_read_tokens, 0)) AS cacheReadTokens,
            ROUND(SUM(COALESCE(cost_usd, 0)), 4) AS costUsd
-    FROM agent_traces WHERE started_at > ?
+    FROM agent_traces WHERE started_at > ?${filter.clause}
     GROUP BY day ORDER BY day DESC
-  `).all(sinceMs) as DailyTraceUsage[];
+  `).all(sinceMs, ...filter.params) as DailyTraceUsage[];
 }
 
 export interface TraceSpanTimelineRow {
