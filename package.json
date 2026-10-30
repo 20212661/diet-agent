@@ -12,6 +12,8 @@
     "dist/**/*.json",
     "docs/nutrition-data.md",
     "docs/privacy.md",
+    "docs/shopping-integration-plan.md",
+    "docs/shopping-cart-experiment.md",
     "README.md",
     "public",
     ".env.example",
@@ -31,6 +33,7 @@
     "doctor:dev": "tsx src/doctor.ts",
     "eval": "tsx scripts/run-eval.ts",
     "eval:agent": "tsx scripts/run-agent-eval.ts --live",
+    "trace:report": "tsx scripts/trace-report.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -55,6 +58,7 @@
     "@earendil-works/pi-tui": "^0.87.0",
     "better-sqlite3": "^12.10.0",
     "dotenv": "^17.4.2",
+    "qrcode": "^1.5.4",
     "sqlite-vec": "^0.1.9",
     "typebox": "^1.1.38"
   },
@@ -62,6 +66,7 @@
     "@huggingface/transformers": "^4.3.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.9.1",
+    "@types/qrcode": "^1.5.6",
     "@vitest/coverage-v8": "^4.1.10",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3",
@@ -74,5 +79,8 @@
     "@huggingface/transformers": {
       "optional": true
     }
+  },
+  "overrides": {
+    "undici": "8.12.3"
   }
 }

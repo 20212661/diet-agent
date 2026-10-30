@@ -51,7 +51,7 @@ function mergeItems(base: IngredientItem, patch: IngredientItem): IngredientItem
 function dedupeIngredients(items: IngredientItem[]): IngredientItem[] {
   const unique = new Map<string, IngredientItem>();
   for (const item of items) {
-    const key = `${item.name}|${item.storage || "unknown"}`;
+    const key = item.purchaseBatchId ? `batch:${item.id}` : `${item.name}|${item.storage || "unknown"}`;
     unique.set(key, unique.has(key) ? mergeItems(unique.get(key)!, item) : item);
   }
   return [...unique.values()];
@@ -119,7 +119,7 @@ export function getIngredientInventory(userId: string): IngredientInventory {
   const row = getDatabase().prepare("SELECT * FROM ingredient_inventory WHERE user_id = ?").get(userId) as
     | Record<string, unknown>
     | undefined;
-  if (!row) return { userId, availableIngredients: [], shoppingList: [], updatedAt: nowISO() };
+  if (!row) return { userId, availableIngredients: [], shoppingList: [], updatedAt: "empty" };
   const rawAvailable = parseJsonArray<IngredientItem>(row.available_ingredients_json as string);
   const rawShopping = parseJsonArray<IngredientItem>(row.shopping_list_json as string);
   const availableIngredients = rawAvailable.map(ensureItemDefaults);

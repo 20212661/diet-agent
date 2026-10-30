@@ -337,6 +337,7 @@ export async function startChatTUI(userId?: string) {
     try {
       // 直接调用 Agent，无需 HTTP 中转
       const result = await sendDietAgentMessage(user, text.trim(), {
+        entry: "tui",
         onTextDelta(currentText) {
           streamedText = currentText;
           loader.stop();

@@ -77,6 +77,8 @@ describe("浏览器聊天恢复生命周期", () => {
       "recoveryStore",
       "viewFormatters",
       "inventoryView",
+        "cartExperimentView",
+        "shoppingView",
       "diaryView",
       "profileKitchenViews",
       "planAgentViews",

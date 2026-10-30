@@ -54,6 +54,7 @@ export function hasAllowedHostHeader(request: IncomingMessage, port: number): bo
 
 export function isApiWriteRoute(method: string, path: string): boolean {
   return API_POST_PATHS.has(path)
+    || path.startsWith("/api/shopping/")
     || path.startsWith("/api/inventory/items/")
     || /^\/api\/weekly-plan\/[^/]+\/day\/[^/]+\/(?:replace|complete)$/.test(path)
     || /^\/api\/meals\/[^/]+(?:\/restore)?$/.test(path);

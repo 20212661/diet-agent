@@ -68,7 +68,7 @@ export function ingredientList(value: unknown, label: string): IngredientItem[] 
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error(`${label}格式无效。`);
     const item = raw as Record<string, unknown>;
     if (typeof item.name !== "string" || !item.name.trim() || item.name.length > 100) throw new Error(`${label}需要填写食材名称。`);
-    const allowed = ["name", "id", "amount", "unit", "category", "storage", "status", "expiresAt", "purchasedAt", "note"];
+    const allowed = ["name", "id", "amount", "unit", "category", "storage", "status", "expiresAt", "purchasedAt", "note", "purchaseBatchId"];
     if (Object.keys(item).some((key) => !allowed.includes(key))) throw new Error(`${label}包含不支持的字段。`);
     const enumValues: Record<string, string[]> = {
       category: ["protein", "vegetable", "staple", "seasoning", "dairy", "fruit", "other"],
@@ -88,6 +88,7 @@ export function ingredientList(value: unknown, label: string): IngredientItem[] 
     return {
       name: item.name.trim(),
       ...(typeof item.id === "string" ? { id: item.id } : {}),
+      ...(typeof item.purchaseBatchId === "string" ? { purchaseBatchId: item.purchaseBatchId } : {}),
       ...(typeof item.amount === "string" ? { amount: item.amount } : {}),
       ...(typeof item.unit === "string" ? { unit: item.unit } : {}),
       ...(typeof item.category === "string" ? { category: item.category as IngredientItem["category"] } : {}),

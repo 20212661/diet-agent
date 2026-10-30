@@ -2,7 +2,7 @@ import Database from "better-sqlite3";
 import { copyFileSync, existsSync, readdirSync, statSync, unlinkSync } from "node:fs";
 import { dirname, extname, basename, join } from "node:path";
 
-export const CURRENT_SCHEMA_VERSION = 13;
+export const CURRENT_SCHEMA_VERSION = 17;
 
 interface Migration {
   version: number;
@@ -241,6 +241,114 @@ const migrations: readonly Migration[] = [
     description: "bind meal operation ids to request content",
     up(db) {
       addColumnIfMissing(db, "meal_operations", "request_hash TEXT", "request_hash");
+    },
+  },
+  {
+    version: 14,
+    description: "add shopping tasks, receipts and platform settings",
+    up(db) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS shopping_tasks (
+          id TEXT NOT NULL, user_id TEXT NOT NULL, title TEXT NOT NULL,
+          provider TEXT NOT NULL CHECK(provider IN ('meituan','taobao')),
+          items_json TEXT NOT NULL, status TEXT NOT NULL, version INTEGER NOT NULL,
+          created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+          PRIMARY KEY(user_id,id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_shopping_tasks_user ON shopping_tasks(user_id,created_at);
+        CREATE TABLE IF NOT EXISTS shopping_receipts (
+          user_id TEXT NOT NULL, task_id TEXT NOT NULL, operation_id TEXT NOT NULL,
+          request_hash TEXT NOT NULL, result_json TEXT NOT NULL, created_at TEXT NOT NULL,
+          PRIMARY KEY(user_id,task_id,operation_id),
+          FOREIGN KEY(user_id,task_id) REFERENCES shopping_tasks(user_id,id) ON DELETE CASCADE
+        );
+        CREATE TABLE IF NOT EXISTS shopping_events (
+          id TEXT PRIMARY KEY, user_id TEXT NOT NULL, task_id TEXT NOT NULL,
+          type TEXT NOT NULL, details_json TEXT NOT NULL, created_at TEXT NOT NULL,
+          FOREIGN KEY(user_id,task_id) REFERENCES shopping_tasks(user_id,id) ON DELETE CASCADE
+        );
+        CREATE TABLE IF NOT EXISTS shopping_provider_settings (
+          user_id TEXT NOT NULL, provider TEXT NOT NULL CHECK(provider IN ('meituan','taobao')),
+          url TEXT NOT NULL, verified_at TEXT NOT NULL, PRIMARY KEY(user_id,provider)
+        );
+      `);
+    },
+  },
+  {
+    version: 15,
+    description: "官方购物能力核验及短时门店候选缓存",
+    up(db) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS shopping_provider_checks (
+          user_id TEXT NOT NULL, provider TEXT NOT NULL, capability TEXT NOT NULL,
+          credential_hash TEXT NOT NULL, status TEXT NOT NULL, checked_at TEXT NOT NULL,
+          PRIMARY KEY(user_id,provider,capability)
+        );
+        CREATE TABLE IF NOT EXISTS shopping_candidates (
+          user_id TEXT NOT NULL, id TEXT NOT NULL, provider TEXT NOT NULL,
+          credential_hash TEXT NOT NULL, payload_json TEXT NOT NULL, expires_at TEXT NOT NULL,
+          PRIMARY KEY(user_id,id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_shopping_candidates_expiry ON shopping_candidates(expires_at);
+      `);
+    },
+  },
+  {
+    version: 16,
+    description: "手机选购实验与购物车核对记录",
+    up(db) {
+      db.exec(`CREATE TABLE IF NOT EXISTS shopping_cart_experiments (
+        user_id TEXT NOT NULL, id TEXT NOT NULL, task_id TEXT NOT NULL,
+        status TEXT NOT NULL, version INTEGER NOT NULL, payload_json TEXT NOT NULL, updated_at TEXT NOT NULL,
+        PRIMARY KEY(user_id,id),
+        FOREIGN KEY(user_id,task_id) REFERENCES shopping_tasks(user_id,id) ON DELETE CASCADE
+      ); CREATE INDEX IF NOT EXISTS idx_cart_experiments_user ON shopping_cart_experiments(user_id,updated_at);`);
+    },
+  },
+  {
+    version: 17,
+    description: "agent 会话追踪（只记元数据，不含提示词/参数/结果内容）",
+    up(db) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS agent_traces (
+          trace_id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          operation_id TEXT,
+          session_id TEXT,
+          entry TEXT NOT NULL CHECK(entry IN ('web','tui','eval')),
+          status TEXT NOT NULL CHECK(status IN
+            ('running','ok','verification_required','failed','timeout','budget_exceeded','interrupted')),
+          error_kind TEXT,
+          started_at INTEGER NOT NULL,
+          duration_ms INTEGER,
+          first_token_ms INTEGER,
+          attempts INTEGER NOT NULL DEFAULT 1,
+          final_model TEXT,
+          llm_calls INTEGER NOT NULL DEFAULT 0,
+          tool_calls INTEGER NOT NULL DEFAULT 0,
+          tool_errors INTEGER NOT NULL DEFAULT 0,
+          input_tokens INTEGER,
+          output_tokens INTEGER,
+          cache_read_tokens INTEGER,
+          cache_write_tokens INTEGER,
+          cost_usd REAL
+        );
+        CREATE INDEX IF NOT EXISTS idx_traces_user_time ON agent_traces(user_id, started_at);
+        CREATE TABLE IF NOT EXISTS agent_trace_spans (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          trace_id TEXT NOT NULL REFERENCES agent_traces(trace_id) ON DELETE CASCADE,
+          attempt INTEGER NOT NULL,
+          kind TEXT NOT NULL CHECK(kind IN ('llm','tool','retry','fallback','abort')),
+          name TEXT,
+          started_at INTEGER NOT NULL,
+          duration_ms INTEGER,
+          status TEXT,
+          input_tokens INTEGER,
+          output_tokens INTEGER,
+          cache_read_tokens INTEGER
+        );
+        CREATE INDEX IF NOT EXISTS idx_trace_spans_trace ON agent_trace_spans(trace_id);
+      `);
     },
   },
 ];
