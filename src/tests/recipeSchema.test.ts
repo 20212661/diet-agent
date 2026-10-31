@@ -41,6 +41,41 @@ describe("菜谱 Schema 与过敏原元数据", () => {
       .toEqual(["egg", "gluten", "milk", "wheat"]);
   });
 
+  it("食材侧禁止反向子串：葱不是小麦、糖不是牛奶、鱼不是甲壳类", () => {
+    // 曾因 alias.includes(normalized) 误报："冷冻葱油饼"包含"葱"、"乳糖"包含"糖"、"鱿鱼"包含"鱼"
+    expect(resolveAllergenIds(["葱", "大葱", "葱花"], "ingredient")).toEqual([]);
+    expect(resolveAllergenIds(["糖", "白糖", "红糖"], "ingredient")).toEqual([]);
+    expect(resolveAllergenIds(["鱼"], "ingredient")).toEqual(["fish"]);
+    // 数据驱动补的精确别名：旧规则靠"鱼"子串命中的真实鱼类不回退
+    expect(resolveAllergenIds(["金枪鱼", "鱼肉"], "ingredient")).toEqual(["fish"]);
+  });
+
+  it("食材侧正向命中不受影响：黄油仍是牛奶、虾仁仍是甲壳类、花生酱仍是花生", () => {
+    expect(resolveAllergenIds(["黄油", "奶油"], "ingredient")).toEqual(["milk"]);
+    expect(resolveAllergenIds(["虾仁", "虾皮", "基围虾"], "ingredient")).toEqual(["shellfish"]);
+    expect(resolveAllergenIds(["花生酱"], "ingredient")).toEqual(["peanut"]);
+    expect(resolveAllergenIds(["蚝油", "酱油"], "ingredient")).toEqual(
+      expect.arrayContaining(["shellfish"]),
+    );
+    expect(resolveAllergenIds(["酱油"], "ingredient")).toEqual(expect.arrayContaining(["soy", "wheat"]));
+    // 单字别名只精确匹配，不参与子串（"蛋"精确命中，"蛋白粉"走自己的定义）
+    expect(resolveAllergenIds(["蛋", "蛋清", "蛋黄"], "ingredient")).toEqual(["egg"]);
+  });
+
+  it("用户侧保持宽松匹配：写'虾'能命中虾仁、写'奶'能命中牛奶", () => {
+    expect(resolveAllergenIds(["虾"])).toContain("shellfish");
+    expect(resolveAllergenIds(["奶"])).toContain("milk");
+    expect(resolveAllergenIds(["麸质"])).toEqual(expect.arrayContaining(["gluten", "wheat"]));
+  });
+
+  it("番茄炒蛋对牛奶过敏用户是安全的（评测误报回归）", () => {
+    // C 组评测曾把"糖 (milk)"判为违规，实为反向子串误报
+    const assessment = assessFoodSafety(["番茄", "鸡蛋", "糖"], { allergies: ["牛奶"] });
+    expect(assessment.status).toBe("clear");
+    expect(assessFoodSafety(["黄油", "面包"], { allergies: ["牛奶"] }).status).toBe("conflict");
+    expect(assessFoodSafety(["葱", "猪肉"], { allergies: ["小麦"] }).status).toBe("clear");
+  });
+
   it("共享安全判定识别过敏原别名与复合调味料，并将未知项设为待核实", () => {
     expect(assessFoodSafety(["虾仁"], { allergies: ["甲壳类"] }).status).toBe("conflict");
     expect(assessFoodSafety(["蚝油"], { allergies: ["shellfish"] }).status).toBe("conflict");

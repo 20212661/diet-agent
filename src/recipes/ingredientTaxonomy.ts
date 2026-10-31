@@ -17,7 +17,7 @@ export const INGREDIENT_DEFINITIONS: readonly IngredientDefinition[] = [
   { id: "allergen_egg", aliases: ["蛋类", "鸡蛋过敏"], allergens: ["egg"] },
   { id: "peanut", aliases: ["花生", "花生油", "花生酱", "花生碎"], allergens: ["peanut"] },
   { id: "tree_nut", aliases: ["核桃", "杏仁", "腰果", "榛子"], allergens: ["tree_nut"] },
-  { id: "egg", aliases: ["鸡蛋", "蛋液", "蛋黄酱", "蛋丝", "皮蛋"], allergens: ["egg"] },
+  { id: "egg", aliases: ["鸡蛋", "蛋液", "蛋黄酱", "蛋丝", "皮蛋", "蛋", "蛋清", "蛋黄"], allergens: ["egg"] },
   { id: "milk", aliases: ["牛奶", "乳制品", "奶油", "黄油", "芝士", "奶酪"], allergens: ["milk"] },
   { id: "tofu", aliases: ["内酯豆腐", "豆腐"], allergens: ["soy"] },
   { id: "fermented_tofu", aliases: ["红腐乳", "腐乳"], allergens: ["soy"] },
@@ -25,11 +25,11 @@ export const INGREDIENT_DEFINITIONS: readonly IngredientDefinition[] = [
   { id: "oyster_sauce", aliases: ["蚝油", "蚝油汁"], allergens: ["shellfish", "soy", "wheat", "gluten"] },
   { id: "wheat_noodle", aliases: ["面条"], allergens: ["wheat", "gluten"] },
   { id: "wheat_wrapper", aliases: ["冷冻饺子", "冷冻馄饨", "冷冻葱油饼"], allergens: ["wheat", "gluten"] },
-  { id: "tuna", aliases: ["金枪鱼罐头"], allergens: ["fish"] },
+  { id: "tuna", aliases: ["金枪鱼罐头", "金枪鱼"], allergens: ["fish"] },
   { id: "sole", aliases: ["龙利鱼"], allergens: ["fish"] },
   { id: "perch", aliases: ["鲈鱼"], allergens: ["fish"] },
   { id: "hairtail", aliases: ["带鱼"], allergens: ["fish"] },
-  { id: "fish", aliases: ["鱼"], allergens: ["fish"] },
+  { id: "fish", aliases: ["鱼", "鱼肉"], allergens: ["fish"] },
   { id: "prawn", aliases: ["基围虾", "大虾", "虾"], allergens: ["shellfish"] },
   { id: "shrimp_meat", aliases: ["虾仁"], allergens: ["shellfish"] },
   { id: "dried_shrimp", aliases: ["虾皮"], allergens: ["shellfish"] },
@@ -146,12 +146,33 @@ export function normalizeIngredientId(name: string): string {
   return matched?.definition.id ?? `ingredient:${normalized}`;
 }
 
-export function resolveAllergenIds(names: readonly string[]): AllergenId[] {
+export type AllergenMatchMode = "user-description" | "ingredient";
+
+/**
+ * 把名称解析为过敏原 ID 集合。两种输入的匹配严格度不同：
+ *
+ * - user-description（默认）：用户的过敏/忌口是自由描述，保持宽松匹配——
+ *   用户写"虾"要能命中"虾仁""虾皮"，反向子串（别名包含输入）也放行，
+ *   宁可多拦不漏拦。
+ * - ingredient：菜谱食材名必须精确。禁止反向子串（曾因"冷冻葱油饼"
+ *   包含"葱"把葱判成小麦、"乳糖"包含"糖"把糖判成牛奶、"鱿鱼"包含"鱼"
+ *   把鱼判成甲壳类），且子串方向只允许 ≥2 字的别名（"花生酱"包含
+ *   "花生"算，单字别名不参与子串）。
+ */
+export function resolveAllergenIds(
+  names: readonly string[],
+  mode: AllergenMatchMode = "user-description",
+): AllergenId[] {
   const allergens = new Set<AllergenId>();
   for (const name of names) {
     const normalized = normalizedText(name);
     for (const { alias, definition } of aliasEntries) {
-      if (normalized === alias || normalized.includes(alias) || alias.includes(normalized)) {
+      const hit = mode === "user-description"
+        // 用户侧保持原有宽松匹配（含单字子串与反向子串），宁可多拦。
+        ? normalized === alias || normalized.includes(alias) || alias.includes(normalized)
+        // 食材侧：精确相等 + ≥2 字别名的子串；禁反向、禁单字子串。
+        : normalized === alias || (alias.length >= 2 && normalized.includes(alias));
+      if (hit) {
         for (const allergen of definition.allergens ?? []) allergens.add(allergen);
       }
     }
@@ -165,7 +186,8 @@ export function deriveRecipeIngredientMetadata(
 ): { ingredientIds: string[]; allergenTags: AllergenId[] } {
   return {
     ingredientIds: [...new Set(ingredients.map(normalizeIngredientId))].sort(),
-    allergenTags: resolveAllergenIds(ingredients),
+    // 菜谱食材用 ingredient 严格模式，杜绝反向子串误报。
+    allergenTags: resolveAllergenIds(ingredients, "ingredient"),
   };
 }
 
