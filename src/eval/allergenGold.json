@@ -1,0 +1,272 @@
+{
+  "_说明": [
+    "人工盲标表：只为独立性而存在——文件里只有菜名与完整食材清单，不含系统判定。",
+    "填表纪律：allergens 里的每一项都是硬性门禁（漏标会让 CI 测试失败）；拿不准的一律放 unsure，",
+    "别为了凑完整硬填——有争议的判断会让 CI 一直报红。都不用查资料，按常见市售产品判断：",
+    "如生抽/老抽用大豆和小麦酿造；吐司含小麦通常也含牛奶；蛋黄酱含鸡蛋；咖喱块通常含小麦常含牛奶；",
+    "火腿/肉松常加大豆蛋白；粉丝多为绿豆/红薯制不含小麦。",
+    "可用 ID：peanut, tree_nut, milk, egg, soy, wheat, gluten, fish, shellfish, sesame",
+    "来源：master@36a3b98 菜谱库，共 20 道；机器只读 allergens/unsure，忽略 _ 开头的键。"
+  ],
+  "honey_char_siu": {
+    "name": "蜜汁叉烧",
+    "ingredients": [
+      "梅花肉",
+      "叉烧酱",
+      "蜂蜜",
+      "蚝油",
+      "红腐乳",
+      "猪肉"
+    ],
+    "allergens": [],
+    "unsure": []
+  },
+  "boiled_shrimp": {
+    "name": "白灼虾",
+    "ingredients": [
+      "基围虾",
+      "姜",
+      "葱",
+      "生抽",
+      "蒜",
+      "虾仁"
+    ],
+    "allergens": [],
+    "unsure": []
+  },
+  "scallion_oil_noodle": {
+    "name": "葱油拌面",
+    "ingredients": [
+      "面条",
+      "小葱",
+      "生抽",
+      "白糖",
+      "老抽",
+      "猪油"
+    ],
+    "allergens": [],
+    "unsure": []
+  },
+  "curry_chicken": {
+    "name": "咖喱鸡块",
+    "ingredients": [
+      "鸡腿",
+      "土豆",
+      "胡萝卜",
+      "咖喱块",
+      "洋葱",
+      "苹果",
+      "鸡肉"
+    ],
+    "allergens": [],
+    "unsure": []
+  },
+  "egg_sandwich": {
+    "name": "鸡蛋三明治",
+    "ingredients": [
+      "吐司",
+      "鸡蛋",
+      "生菜",
+      "番茄",
+      "芝士片",
+      "蛋黄酱",
+      "火腿"
+    ],
+    "allergens": [],
+    "unsure": []
+  },
+  "tuna_corn_rice_ball": {
+    "name": "金枪鱼玉米饭团",
+    "ingredients": [
+      "金枪鱼罐头",
+      "玉米粒",
+      "米饭",
+      "海苔",
+      "蛋黄酱",
+      "玉米",
+      "金枪鱼"
+    ],
+    "allergens": [],
+    "unsure": []
+  },
+  "egg_fried_rice": {
+    "name": "蛋炒饭",
+    "ingredients": [
+      "米饭",
+      "鸡蛋",
+      "葱花",
+      "火腿",
+      "豌豆",
+      "玉米"
+    ],
+    "allergens": [],
+    "unsure": []
+  },
+  "pasta_aglio_olio": {
+    "name": "蒜香橄榄油意面",
+    "ingredients": [
+      "意面",
+      "蒜",
+      "橄榄油",
+      "辣椒",
+      "培根",
+      "西兰花"
+    ],
+    "allergens": [],
+    "unsure": []
+  },
+  "rice_porridge": {
+    "name": "快手白粥配小菜",
+    "ingredients": [
+      "大米",
+      "皮蛋",
+      "肉松",
+      "榨菜",
+      "腐乳"
+    ],
+    "allergens": [],
+    "unsure": []
+  },
+  "garlic_vermicelli_shrimp": {
+    "name": "蒜蓉粉丝蒸虾",
+    "ingredients": [
+      "大虾",
+      "粉丝",
+      "蒜",
+      "红椒",
+      "葱",
+      "虾仁"
+    ],
+    "allergens": [],
+    "unsure": []
+  },
+  "sweet_sour_tenderloin": {
+    "name": "糖醋里脊",
+    "ingredients": [
+      "猪里脊",
+      "番茄酱",
+      "淀粉",
+      "白芝麻",
+      "猪肉"
+    ],
+    "allergens": [],
+    "unsure": []
+  },
+  "century_egg_tofu": {
+    "name": "皮蛋豆腐",
+    "ingredients": [
+      "内酯豆腐",
+      "皮蛋",
+      "葱",
+      "蒜",
+      "香菜",
+      "香油",
+      "生抽"
+    ],
+    "allergens": [],
+    "unsure": []
+  },
+  "cola_chicken_wings": {
+    "name": "可乐鸡翅",
+    "ingredients": [
+      "鸡翅",
+      "可乐",
+      "姜",
+      "葱",
+      "生抽",
+      "鸡肉"
+    ],
+    "allergens": [],
+    "unsure": []
+  },
+  "omurice": {
+    "name": "番茄酱蛋包饭",
+    "ingredients": [
+      "米饭",
+      "鸡蛋",
+      "番茄酱",
+      "火腿",
+      "玉米",
+      "青豆"
+    ],
+    "allergens": [],
+    "unsure": []
+  },
+  "tomato_egg_noodle": {
+    "name": "番茄鸡蛋面",
+    "ingredients": [
+      "番茄",
+      "鸡蛋",
+      "面条",
+      "青菜"
+    ],
+    "allergens": [],
+    "unsure": []
+  },
+  "stir_fry_noodle": {
+    "name": "素炒面",
+    "ingredients": [
+      "面条",
+      "青菜",
+      "胡萝卜",
+      "鸡蛋",
+      "豆芽",
+      "肉丝"
+    ],
+    "allergens": [],
+    "unsure": []
+  },
+  "twice_cooked_pork": {
+    "name": "回锅肉",
+    "ingredients": [
+      "五花肉",
+      "蒜苗",
+      "青椒",
+      "洋葱",
+      "豆瓣酱",
+      "猪肉"
+    ],
+    "allergens": [],
+    "unsure": []
+  },
+  "minced_pork_eggplant": {
+    "name": "肉末茄子",
+    "ingredients": [
+      "茄子",
+      "猪肉末",
+      "蒜",
+      "葱",
+      "豆瓣酱",
+      "猪肉"
+    ],
+    "allergens": [],
+    "unsure": []
+  },
+  "yuxiang_shredded_pork": {
+    "name": "鱼香肉丝",
+    "ingredients": [
+      "猪里脊",
+      "木耳",
+      "胡萝卜",
+      "青椒",
+      "笋",
+      "豆瓣酱",
+      "蒜",
+      "姜",
+      "猪肉"
+    ],
+    "allergens": [],
+    "unsure": []
+  },
+  "yangchun_noodle": {
+    "name": "阳春面",
+    "ingredients": [
+      "面条",
+      "葱",
+      "猪油",
+      "青菜"
+    ],
+    "allergens": [],
+    "unsure": []
+  }
+}
