@@ -80,6 +80,31 @@ describe("SQLite 版本化迁移", { timeout: 15_000 }, () => {
     db.close();
   });
 
+  it("v19 分类表新增咖喱块后重算存量过敏原标签", () => {
+    const db = new Database(":memory:");
+    db.pragma("user_version = 18");
+    // 手工建 v18 形态的 recipe_book 并插入一条含咖喱块的记录（v18 时解析不出过敏原）
+    db.exec(`CREATE TABLE recipe_book (
+      id TEXT PRIMARY KEY, name TEXT NOT NULL, mode TEXT NOT NULL,
+      ingredients_json TEXT NOT NULL, optional_ingredients_json TEXT NOT NULL DEFAULT '[]',
+      cookware_json TEXT NOT NULL, active_minutes INTEGER NOT NULL, total_minutes INTEGER NOT NULL,
+      steps_json TEXT NOT NULL, low_energy_swap TEXT, updated_at TEXT NOT NULL
+    )`);
+    db.prepare(`INSERT INTO recipe_book (id, name, mode, ingredients_json, cookware_json, active_minutes, total_minutes, steps_json, updated_at)
+      VALUES ('r1', '咖喱鸡块', 'quick', '["鸡腿","咖喱块","土豆"]', '[]', 10, 25, '[]', 'x')`).run();
+    db.exec("ALTER TABLE recipe_book ADD COLUMN vegetables_json TEXT NOT NULL DEFAULT '[]'");
+    db.exec("ALTER TABLE recipe_book ADD COLUMN staples_json TEXT NOT NULL DEFAULT '[]'");
+    db.exec("ALTER TABLE recipe_book ADD COLUMN primary_protein TEXT");
+    db.exec("ALTER TABLE recipe_book ADD COLUMN allergen_tags_json TEXT");
+
+    const result = runMigrations(db, ":memory:");
+    expect(result.to).toBe(CURRENT_SCHEMA_VERSION);
+    const row = db.prepare("SELECT allergen_tags_json FROM recipe_book WHERE id = 'r1'").get() as { allergen_tags_json: string };
+    // 咖喱块以面粉为基底：小麦/麸质补上；牛奶品牌非必含，不标
+    expect(JSON.parse(row.allergen_tags_json)).toEqual(["gluten", "wheat"]);
+    db.close();
+  });
+
   it("拒绝打开比应用更新的数据库", () => {
     const db = new Database(":memory:");
     db.pragma(`user_version = ${CURRENT_SCHEMA_VERSION + 1}`);

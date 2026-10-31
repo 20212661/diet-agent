@@ -107,6 +107,7 @@ export const INGREDIENT_DEFINITIONS: readonly IngredientDefinition[] = [
   { id: "pumpkin", aliases: ["南瓜"] },
   { id: "millet", aliases: ["小米"] },
   { id: "flour", aliases: ["面粉"], allergens: ["wheat", "gluten"] },
+  { id: "curry_roux", aliases: ["咖喱块"], allergens: ["wheat", "gluten"] },
 ] as const;
 
 /** Unresolved seed names stay blocked for allergy-sensitive recommendations. */
@@ -124,7 +125,6 @@ export const UNRESOLVED_RECIPE_INGREDIENTS: Readonly<Record<string, string>> = {
   "青豆": "豆类品种未注明",
   "红油": "油料和调味配方未注明",
   "叉烧酱": "品牌配方未注明",
-  "咖喱块": "品牌配方未注明",
   "啤酒": "谷物配方未注明",
   "醋": "谷物来源未注明",
 };

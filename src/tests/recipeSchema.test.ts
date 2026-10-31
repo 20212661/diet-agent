@@ -41,6 +41,14 @@ describe("菜谱 Schema 与过敏原元数据", () => {
       .toEqual(["egg", "gluten", "milk", "wheat"]);
   });
 
+  it("盲标比对发现的漏标：咖喱块是小麦/麸质来源，牛奶品牌非必含不标", () => {
+    // 20 道菜盲标比对中咖喱鸡块的 wheat/gluten 漏标，根因是咖喱块在 UNRESOLVED 列表
+    expect(resolveAllergenIds(["咖喱块"], "ingredient")).toEqual(["gluten", "wheat"]);
+    expect(normalizeIngredientId("咖喱块")).toBe("curry_roux");
+    // 咖喱块常含乳成分但非必含（人工标注放入 unsure）：不得顺手标 milk
+    expect(resolveAllergenIds(["咖喱块"], "ingredient")).not.toContain("milk");
+  });
+
   it("食材侧禁止反向子串：葱不是小麦、糖不是牛奶、鱼不是甲壳类", () => {
     // 曾因 alias.includes(normalized) 误报："冷冻葱油饼"包含"葱"、"乳糖"包含"糖"、"鱿鱼"包含"鱼"
     expect(resolveAllergenIds(["葱", "大葱", "葱花"], "ingredient")).toEqual([]);
