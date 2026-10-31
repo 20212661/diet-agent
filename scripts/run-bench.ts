@@ -20,7 +20,7 @@ import { execSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { BENCH_CONVERSATIONS } from "../src/eval/benchConversations.js";
+import { BENCH_CONVERSATIONS, matchPersistedFoods } from "../src/eval/benchConversations.js";
 
 // 严格参数校验：任何未知参数直接报错。
 {
@@ -87,6 +87,8 @@ interface ConversationRun {
   id: string;
   category: string;
   turns: TurnRun[];
+  /** meal_log 段：用户明确提到的食物有多少最终写进了数据库（落库率分子/分母）。 */
+  persistence?: { expected: string[]; persisted: string[]; missed: string[] };
 }
 
 const runId = randomUUID().replace(/-/g, "").slice(0, 10);
@@ -149,9 +151,19 @@ try {
       }
     }
     runs.push({ id: conversation.id, category: conversation.category, turns: turnRuns });
+    let persistence: ConversationRun["persistence"];
+    if (conversation.expectedFoods) {
+      const logs = store.getAllMealLogs(conversation.userId).filter((log) => !log.deletedAt);
+      const matched = matchPersistedFoods(conversation.expectedFoods, logs);
+      persistence = { expected: conversation.expectedFoods, ...matched };
+      runs[runs.length - 1]!.persistence = persistence;
+    }
     const toolCount = turnRuns.reduce((acc, turn) => acc + (turn.toolCalls?.filter((call) => call.phase !== "pending").length ?? 0), 0);
     const rebuilds = turnRuns.filter((turn) => turn.rebuiltSession).length;
-    console.log(`▶ ${conversation.id}（${conversation.category}）：${turnRuns.filter((turn) => turn.ok).length}/${turnRuns.length} 轮成功 · 工具 ${toolCount} 次 · session 重建 ${rebuilds}${rebuilds > 0 ? "（" + turnRuns.filter((turn) => turn.rebuiltSession).map((turn) => `轮${turn.turn}:${turn.sessionResolution}`).join("、") + "）" : ""}`);
+    const persistenceLabel = persistence
+      ? ` · 落库 ${persistence.persisted.length}/${persistence.expected.length}${persistence.missed.length > 0 ? `（缺 ${persistence.missed.join("、")}）` : ""}`
+      : "";
+    console.log(`▶ ${conversation.id}（${conversation.category}）：${turnRuns.filter((turn) => turn.ok).length}/${turnRuns.length} 轮成功 · 工具 ${toolCount} 次 · session 重建 ${rebuilds}${persistenceLabel}`);
     clearUserAgentSession(conversation.userId);
   }
 } finally {
@@ -189,6 +201,20 @@ const summary = {
   turnsWithToolCalls: runs.flatMap((run) => run.turns).filter((turn) => (turn.toolCalls?.length ?? 0) > 0).length,
   sessionRebuilds: runs.flatMap((run) => run.turns).filter((turn) => turn.rebuiltSession === true).length,
   sessionResolutions: Object.fromEntries([...getSessionResolutionCounts()].map(([kind, count]) => [kind, count])),
+  mealLogPersistence: (() => {
+    const all = runs.flatMap((run) => run.persistence ?? []);
+    const expectedCount = all.reduce((acc, item) => acc + item.expected.length, 0);
+    const persistedCount = all.reduce((acc, item) => acc + item.persisted.length, 0);
+    return {
+      expectedFoods: expectedCount,
+      persisted: persistedCount,
+      rate: expectedCount > 0 ? Math.round((1000 * persistedCount) / expectedCount) / 1000 : undefined,
+      missedByConversation: Object.fromEntries(
+        runs.filter((run) => run.persistence && run.persistence.missed.length > 0)
+          .map((run) => [run.id, run.persistence!.missed]),
+      ),
+    };
+  })(),
   traces: total,
   statusBreakdown: Object.fromEntries([...byStatus.entries()].sort()),
   successRate: total > 0 ? Math.round((okCount / total) * 1000) / 1000 : 0,
@@ -224,6 +250,9 @@ console.log(`\n📊 回放基准：${summary.conversations} 段 / ${summary.trac
 console.log(`  成功率=${(summary.successRate * 100).toFixed(1)}%  降级=${summary.fallbackTraces}  平均工具调用=${summary.avgToolCalls ?? "-"}  调工具轮数=${summary.turnsWithToolCalls}/${summary.turnsPlanned}  session 重建=${summary.sessionRebuilds}`);
 console.log(`  请求耗时 p50=${ms(summary.requestMs.p50)}  p95=${ms(summary.requestMs.p95)}  首 token p50=${ms(summary.firstTokenMs.p50)}`);
 console.log(`  平均 input=${summary.avgInputTokens ?? "-"}  平均 cacheRead=${summary.avgCacheReadTokens ?? "-"}  缓存命中率=${summary.cacheHitRate === undefined ? "-" : `${(summary.cacheHitRate * 100).toFixed(1)}%`}`);
+if (summary.mealLogPersistence.rate !== undefined) {
+  console.log(`  记餐落库率=${(summary.mealLogPersistence.rate * 100).toFixed(1)}%（${summary.mealLogPersistence.persisted}/${summary.mealLogPersistence.expectedFoods} 项食物）`);
+}
 console.log(`结果已写入 ${resultFile}`);
 
 // 基准本身硬失败的条件：请求级错误超过 10% 说明环境有问题，数字不可用。

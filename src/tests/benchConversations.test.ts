@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BENCH_CONVERSATIONS, type BenchCategory } from "../eval/benchConversations.js";
+import { BENCH_CONVERSATIONS, matchPersistedFoods, type BenchCategory } from "../eval/benchConversations.js";
 
 const EXPECTED_CATEGORY_COUNTS: Record<BenchCategory, number> = {
   meal_log: 8,
@@ -42,5 +42,36 @@ describe("BENCH_CONVERSATIONS", () => {
       expect(conversation.setup).toBeTypeOf("object");
     }
     expect(userIds.size).toBe(BENCH_CONVERSATIONS.length);
+  });
+
+  it("meal_log 段都标注了 2-4 项 expectedFoods（落库率分母）", () => {
+    const mealLogs = BENCH_CONVERSATIONS.filter((conversation) => conversation.category === "meal_log");
+    expect(mealLogs).toHaveLength(8);
+    for (const conversation of mealLogs) {
+      expect(conversation.expectedFoods, conversation.id).toBeDefined();
+      expect(conversation.expectedFoods!.length, conversation.id).toBeGreaterThanOrEqual(1);
+      expect(conversation.expectedFoods!.length, conversation.id).toBeLessThanOrEqual(4);
+    }
+  });
+});
+
+describe("matchPersistedFoods", () => {
+  it("双向子串命中：煮鸡蛋↔鸡蛋、精确相等都算落库", () => {
+    const result = matchPersistedFoods(
+      ["煮鸡蛋", "宫保鸡丁"],
+      [{ foods: [{ name: "鸡蛋" }, { name: "宫保鸡丁" }] }],
+    );
+    expect(result.persisted).toEqual(["煮鸡蛋", "宫保鸡丁"]);
+    expect(result.missed).toEqual([]);
+  });
+
+  it("叫法完全不同的记为 missed，供人工复核", () => {
+    const result = matchPersistedFoods(["泡面"], [{ foods: [{ name: "方便面" }] }]);
+    expect(result.persisted).toEqual([]);
+    expect(result.missed).toEqual(["泡面"]);
+  });
+
+  it("没有任何日志时全部 missed", () => {
+    expect(matchPersistedFoods(["豆浆"], [])).toEqual({ persisted: [], missed: ["豆浆"] });
   });
 });

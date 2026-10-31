@@ -30,6 +30,8 @@ export interface BenchConversation {
   userId: string;
   turns: string[];
   setup: BenchSetup;
+  /** meal_log 类：用户在对话中明确提到要记录的食物（落库率指标的分母）。 */
+  expectedFoods?: string[];
 }
 
 const conversation = (
@@ -37,7 +39,27 @@ const conversation = (
   category: BenchCategory,
   turns: string[],
   setup: BenchSetup = {},
-): BenchConversation => ({ id, category, userId: `bench_${id}`, turns, setup });
+  expectedFoods?: string[],
+): BenchConversation => ({ id, category, userId: `bench_${id}`, turns, setup, ...(expectedFoods ? { expectedFoods } : {}) });
+
+/**
+ * 落库率匹配：expected 里的食物是否出现在任一日志条目里。
+ * 双向子串（"煮鸡蛋"↔"鸡蛋"）；叫法完全不同的（如"泡面"↔"方便面"）
+ * 会被记为 missed，由人工在结果文件里复核。
+ */
+export function matchPersistedFoods(
+  expected: readonly string[],
+  logs: readonly { foods: readonly { name: string }[] }[],
+): { persisted: string[]; missed: string[] } {
+  const loggedNames = logs.flatMap((log) => log.foods.map((food) => food.name));
+  const persisted: string[] = [];
+  const missed: string[] = [];
+  for (const food of expected) {
+    const hit = loggedNames.some((name) => name.includes(food) || food.includes(name));
+    (hit ? persisted : missed).push(food);
+  }
+  return { persisted, missed };
+}
 
 export const BENCH_CONVERSATIONS: readonly BenchConversation[] = [
   // ---- 记餐（8）：日常占比最高，单轮快、追问汇总 ----
@@ -45,37 +67,37 @@ export const BENCH_CONVERSATIONS: readonly BenchConversation[] = [
     "我早餐吃了燕麦粥和一个煮鸡蛋",
     "再来一杯无糖酸奶",
     "今天早餐一共大概多少热量？",
-  ]),
+  ], {}, ["燕麦粥", "煮鸡蛋", "无糖酸奶"]),
   conversation("log02", "meal_log", [
     "午餐吃了番茄炒蛋和一碗米饭",
     "下午加餐吃了一个苹果，记一下",
-  ]),
+  ], {}, ["番茄炒蛋", "米饭", "苹果"]),
   conversation("log03", "meal_log", [
     "晚饭吃了外卖：一份宫保鸡丁和一碗米饭",
     "把这顿记成今天的晚餐",
     "今天总共记录了多少热量？",
-  ]),
+  ], {}, ["宫保鸡丁", "米饭"]),
   conversation("log04", "meal_log", [
     "我中午在食堂吃了清蒸鲈鱼、炒青菜和一小碗米饭",
     "鱼大概半条",
-  ]),
+  ], {}, ["清蒸鲈鱼", "炒青菜", "米饭"]),
   conversation("log05", "meal_log", [
     "早上喝了一杯拿铁，帮我记一下",
     "早餐还吃了两片全麦面包",
-  ]),
+  ], {}, ["拿铁", "全麦面包"]),
   conversation("log06", "meal_log", [
     "昨天夜宵吃了一包泡面，补记到昨天",
     "今天早上没吃东西，不用记早餐",
-  ]),
+  ], {}, ["泡面"]),
   conversation("log07", "meal_log", [
     "我晚餐吃了土豆炖牛腩，分量挺大",
     "再补记一碗米饭",
     "今天蛋白质摄入够了吗？",
-  ]),
+  ], {}, ["土豆炖牛腩", "米饭"]),
   conversation("log08", "meal_log", [
     "早餐喝了一杯豆浆，吃了一根油条",
     "中午还没吃，等会儿再说",
-  ]),
+  ], {}, ["豆浆", "油条"]),
 
   // ---- 晚饭计划（6）：多轮收敛，含过敏/忌口/低能量分支 ----
   conversation("plan01", "dinner_plan", [
