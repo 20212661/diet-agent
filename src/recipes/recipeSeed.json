@@ -3745,11 +3745,14 @@
       "carrot",
       "chicken",
       "chicken_thigh",
-      "ingredient:咖喱块",
+      "curry_roux",
       "onion",
       "potato"
     ],
-    "allergenTags": []
+    "allergenTags": [
+      "gluten",
+      "wheat"
+    ]
   },
   {
     "id": "cola_chicken_wings",

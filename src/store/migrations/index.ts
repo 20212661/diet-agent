@@ -3,7 +3,7 @@ import { copyFileSync, existsSync, readdirSync, statSync, unlinkSync } from "nod
 import { dirname, extname, basename, join } from "node:path";
 import { deriveRecipeIngredientMetadata } from "../../recipes/ingredientTaxonomy.js";
 
-export const CURRENT_SCHEMA_VERSION = 18;
+export const CURRENT_SCHEMA_VERSION = 19;
 
 interface Migration {
   version: number;
@@ -356,33 +356,45 @@ const migrations: readonly Migration[] = [
     version: 18,
     description: "重算菜谱过敏原标签，修复反向子串误报（葱≠小麦、糖≠牛奶、鱼≠甲壳类）",
     up(db) {
-      const parseArray = (value: unknown): string[] => {
-        if (typeof value !== "string" || !value.trim()) return [];
-        try {
-          const parsed: unknown = JSON.parse(value);
-          return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
-        } catch {
-          return [];
-        }
-      };
-      const rows = db.prepare(`
-        SELECT id, ingredients_json, optional_ingredients_json, vegetables_json, staples_json, primary_protein
-        FROM recipe_book
-      `).all() as Array<Record<string, unknown>>;
-      const update = db.prepare("UPDATE recipe_book SET allergen_tags_json = ? WHERE id = ?");
-      for (const row of rows) {
-        const ingredients = [
-          ...parseArray(row.ingredients_json),
-          ...parseArray(row.optional_ingredients_json),
-          ...parseArray(row.vegetables_json),
-          ...parseArray(row.staples_json),
-          ...(typeof row.primary_protein === "string" && row.primary_protein ? [row.primary_protein] : []),
-        ];
-        update.run(JSON.stringify(deriveRecipeIngredientMetadata(ingredients).allergenTags), row.id);
-      }
+      recomputeAllergenTags(db);
+    },
+  },
+  {
+    version: 19,
+    description: "分类表新增咖喱块等隐藏过敏原条目，重算存量菜谱过敏原标签",
+    up(db) {
+      recomputeAllergenTags(db);
     },
   },
 ];
+
+/** 按当前分类表重算全部菜谱的 allergen_tags_json（v18 起 v19 复用）。 */
+function recomputeAllergenTags(db: Database.Database): void {
+  const parseArray = (value: unknown): string[] => {
+    if (typeof value !== "string" || !value.trim()) return [];
+    try {
+      const parsed: unknown = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+    } catch {
+      return [];
+    }
+  };
+  const rows = db.prepare(`
+    SELECT id, ingredients_json, optional_ingredients_json, vegetables_json, staples_json, primary_protein
+    FROM recipe_book
+  `).all() as Array<Record<string, unknown>>;
+  const update = db.prepare("UPDATE recipe_book SET allergen_tags_json = ? WHERE id = ?");
+  for (const row of rows) {
+    const ingredients = [
+      ...parseArray(row.ingredients_json),
+      ...parseArray(row.optional_ingredients_json),
+      ...parseArray(row.vegetables_json),
+      ...parseArray(row.staples_json),
+      ...(typeof row.primary_protein === "string" && row.primary_protein ? [row.primary_protein] : []),
+    ];
+    update.run(JSON.stringify(deriveRecipeIngredientMetadata(ingredients).allergenTags), row.id);
+  }
+}
 
 function containsApplicationTables(db: Database.Database): boolean {
   const row = db.prepare(`
