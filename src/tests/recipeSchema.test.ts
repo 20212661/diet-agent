@@ -49,6 +49,21 @@ describe("菜谱 Schema 与过敏原元数据", () => {
     expect(resolveAllergenIds(["咖喱块"], "ingredient")).not.toContain("milk");
   });
 
+  it("隐藏过敏原别名：加工食材带出过敏原，不确定的不猜", () => {
+    // 面包糠/面包屑/面包/吐司 → 小麦+麸质；蛋、奶按品牌差异大，不标
+    expect(resolveAllergenIds(["面包糠", "面包屑", "面包", "吐司"], "ingredient")).toEqual(["gluten", "wheat"]);
+    // 芝麻酱 → 芝麻（原靠"芝麻"子串间接命中，补显式别名）
+    expect(resolveAllergenIds(["芝麻酱"], "ingredient")).toEqual(["sesame"]);
+    // 沙拉酱/蛋黄酱 → 鸡蛋；花生酱 → 花生
+    expect(resolveAllergenIds(["沙拉酱", "蛋黄酱"], "ingredient")).toEqual(["egg"]);
+    expect(resolveAllergenIds(["花生酱"], "ingredient")).toEqual(["peanut"]);
+    // 奶油/黄油/芝士 → 牛奶
+    expect(resolveAllergenIds(["奶油", "黄油", "芝士"], "ingredient")).toEqual(["milk"]);
+    // 生抽/老抽/酱油 → 大豆+小麦；蚝油 → 甲壳类（常见市售配方同时含大豆/小麦）
+    expect(resolveAllergenIds(["生抽", "老抽", "酱油"], "ingredient")).toEqual(["gluten", "soy", "wheat"]);
+    expect(resolveAllergenIds(["蚝油"], "ingredient")).toEqual(["gluten", "shellfish", "soy", "wheat"]);
+  });
+
   it("食材侧禁止反向子串：葱不是小麦、糖不是牛奶、鱼不是甲壳类", () => {
     // 曾因 alias.includes(normalized) 误报："冷冻葱油饼"包含"葱"、"乳糖"包含"糖"、"鱿鱼"包含"鱼"
     expect(resolveAllergenIds(["葱", "大葱", "葱花"], "ingredient")).toEqual([]);
