@@ -96,6 +96,28 @@ describe("菜谱 Schema 与过敏原元数据", () => {
     expect(assessFoodSafety(["牛奶"], { avoidFoods: ["糖"], allergies: ["奶"] }).status).toBe("conflict");
   });
 
+  it("忌口类别词精确相等时按词表展开（海鲜/乳制品/豆制品/坚果/面食）", () => {
+    // "海鲜"在食材名里不会出现，纯文本匹配拦不住——修复前"不吃海鲜"的用户会被推荐虾仁
+    expect(assessFoodSafety(["虾仁", "鸡蛋"], { avoidFoods: ["海鲜"] }).status).toBe("conflict");
+    expect(assessFoodSafety(["带鱼", "姜"], { avoidFoods: ["海鲜"] }).status).toBe("conflict");
+    expect(assessFoodSafety(["鸡肉", "青菜"], { avoidFoods: ["海鲜"] }).status).toBe("clear");
+    expect(assessFoodSafety(["黄油", "面包"], { avoidFoods: ["乳制品"] }).status).toBe("conflict");
+    expect(assessFoodSafety(["豆腐", "青菜"], { avoidFoods: ["豆制品"] }).status).toBe("conflict");
+    expect(assessFoodSafety(["核桃"], { avoidFoods: ["坚果"] }).status).toBe("conflict");
+    expect(assessFoodSafety(["花生酱"], { avoidFoods: ["坚果"] }).status).toBe("conflict");
+    expect(assessFoodSafety(["面条"], { avoidFoods: ["面食"] }).status).toBe("conflict");
+  });
+
+  it("非类别词忌口不回退到类别展开（PR #7 防回归）", () => {
+    expect(assessFoodSafety(["面条", "面粉"], { avoidFoods: ["葱"] }).status).toBe("clear");
+    expect(assessFoodSafety(["牛奶"], { avoidFoods: ["糖"] }).status).toBe("clear");
+    // 已知取舍（仅影响口味偏好，不涉安全，暂不处理）：
+    // 单字忌口正向子串会命中"洋葱"（葱⊂洋葱，语义上是两种菜）；
+    expect(assessFoodSafety(["洋葱", "猪肉"], { avoidFoods: ["葱"] }).status).toBe("conflict");
+    // 忌口"油"命中酱油/蚝油/香油——符合字面意思，视为可接受。
+    expect(assessFoodSafety(["酱油", "青菜"], { avoidFoods: ["油"] }).status).toBe("conflict");
+  });
+
   it("共享安全判定识别过敏原别名与复合调味料，并将未知项设为待核实", () => {
     expect(assessFoodSafety(["虾仁"], { allergies: ["甲壳类"] }).status).toBe("conflict");
     expect(assessFoodSafety(["蚝油"], { allergies: ["shellfish"] }).status).toBe("conflict");
