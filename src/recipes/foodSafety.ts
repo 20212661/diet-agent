@@ -37,7 +37,7 @@ export function assessFoodSafety(
   for (const ingredient of ingredients) {
     const ingredientId = normalizeIngredientId(ingredient);
     if (ingredientId.startsWith("ingredient:")) unknownIngredients.push(ingredient);
-    const ingredientAllergens = resolveAllergenIds([ingredient]);
+    const ingredientAllergens = resolveAllergenIds([ingredient], "ingredient");
     for (const allergen of ingredientAllergens) {
       if (blockedAllergens.has(allergen)) conflicts.add(`${ingredient} (${allergen})`);
     }

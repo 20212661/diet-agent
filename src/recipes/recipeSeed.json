@@ -173,8 +173,7 @@
       "potato"
     ],
     "allergenTags": [
-      "fish",
-      "shellfish"
+      "fish"
     ]
   },
   {
@@ -760,10 +759,8 @@
     ],
     "allergenTags": [
       "egg",
-      "gluten",
       "shellfish",
-      "soy",
-      "wheat"
+      "soy"
     ]
   },
   {
@@ -840,7 +837,6 @@
     "ingredientIds": [
       "corn",
       "egg",
-      "fish",
       "rice",
       "seaweed",
       "tuna"
@@ -1288,10 +1284,7 @@
       "scallion",
       "star_anise"
     ],
-    "allergenTags": [
-      "gluten",
-      "wheat"
-    ]
+    "allergenTags": []
   },
   {
     "id": "stir_fry_noodle",
@@ -1735,10 +1728,7 @@
       "tomato"
     ],
     "allergenTags": [
-      "egg",
-      "gluten",
-      "milk",
-      "wheat"
+      "egg"
     ]
   },
   {
@@ -2223,9 +2213,7 @@
       "scallion"
     ],
     "allergenTags": [
-      "fish",
-      "gluten",
-      "wheat"
+      "fish"
     ]
   },
   {
@@ -2304,9 +2292,7 @@
       "scallion"
     ],
     "allergenTags": [
-      "fish",
-      "gluten",
-      "wheat"
+      "fish"
     ]
   },
   {
@@ -2388,9 +2374,7 @@
       "tomato"
     ],
     "allergenTags": [
-      "gluten",
-      "shellfish",
-      "wheat"
+      "shellfish"
     ]
   },
   {
@@ -2566,9 +2550,7 @@
       "shrimp_meat"
     ],
     "allergenTags": [
-      "gluten",
-      "shellfish",
-      "wheat"
+      "shellfish"
     ]
   },
   {
@@ -2654,10 +2636,8 @@
       "tofu"
     ],
     "allergenTags": [
-      "gluten",
       "shellfish",
-      "soy",
-      "wheat"
+      "soy"
     ]
   },
   {
@@ -2737,7 +2717,6 @@
       "squid"
     ],
     "allergenTags": [
-      "fish",
       "shellfish"
     ]
   },
@@ -3337,10 +3316,7 @@
       "pork",
       "scallion"
     ],
-    "allergenTags": [
-      "gluten",
-      "wheat"
-    ]
+    "allergenTags": []
   },
   {
     "id": "honey_char_siu",
@@ -3600,9 +3576,7 @@
       "scallion"
     ],
     "allergenTags": [
-      "gluten",
-      "peanut",
-      "wheat"
+      "peanut"
     ]
   },
   {
@@ -3686,9 +3660,7 @@
       "scallion"
     ],
     "allergenTags": [
-      "gluten",
-      "peanut",
-      "wheat"
+      "peanut"
     ]
   },
   {
@@ -4106,10 +4078,7 @@
       "scallion",
       "whole_chicken"
     ],
-    "allergenTags": [
-      "gluten",
-      "wheat"
-    ]
+    "allergenTags": []
   },
   {
     "id": "beer_duck",
@@ -4534,10 +4503,7 @@
       "potato",
       "scallion"
     ],
-    "allergenTags": [
-      "gluten",
-      "wheat"
-    ]
+    "allergenTags": []
   },
   {
     "id": "dry_fried_green_beans",
@@ -4776,10 +4742,7 @@
       "peppercorn",
       "scallion"
     ],
-    "allergenTags": [
-      "gluten",
-      "wheat"
-    ]
+    "allergenTags": []
   },
   {
     "id": "scallion_braised_tofu",
@@ -5486,10 +5449,8 @@
     ],
     "allergenTags": [
       "egg",
-      "gluten",
       "shellfish",
-      "soy",
-      "wheat"
+      "soy"
     ]
   },
   {
