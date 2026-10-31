@@ -92,20 +92,55 @@ export const dietAgentTools = [
 let modelRuntimePromise: Promise<ModelRuntime> | undefined;
 const sessionMemoryByInstance = new WeakMap<AgentSession, string>();
 
+/**
+ * bench 诊断用：getOrCreateSession 每次调用的判定结果计数。
+ * 只在既有分支上加一次 Map 计数，不改任何会话行为；用于回答
+ * "写操作之后到底有没有重建 session"——sessionId 与 [MODEL] 日志
+ * 都不能可靠反映重建（restoreSessionManager 复用会话文件时
+ * sessionId 可能不变）。
+ */
+export type SessionResolution =
+  | "created_fresh" // 无既有 session，新建
+  | "reused_unchanged" // 记忆未变，直接复用
+  | "reused_streaming" // 记忆已变，但上一轮仍在输出，暂复用旧 session（下一轮再重建）
+  | "rebuilt_memory" // 用户记忆变化触发重建
+  | "rebuilt_model"; // 候选模型变化触发重建
+const sessionResolutionCounts = new Map<SessionResolution, number>();
+
+export function getSessionResolutionCounts(): ReadonlyMap<SessionResolution, number> {
+  return new Map(sessionResolutionCounts);
+}
+
+export function resetSessionResolutionCounts(): void {
+  sessionResolutionCounts.clear();
+}
+
+function recordSessionResolution(kind: SessionResolution): void {
+  sessionResolutionCounts.set(kind, (sessionResolutionCounts.get(kind) ?? 0) + 1);
+}
+
 export { getSessionDirForUser } from "./persistentSession.js";
 import { getSessionDirForUser, restoreSessionManager } from "./persistentSession.js";
 
 async function getOrCreateSession(userId: string, candidate: ModelCandidate) {
   const memoryPrompt = buildUserMemoryPrompt(userId);
   const existing = sessionStore.getSession(userId);
-  if (existing && sessionStore.getSessionModelKey(userId) === candidate.key) {
-    if (sessionMemoryByInstance.get(existing) === memoryPrompt) return existing;
+  const modelKeyMatches = sessionStore.getSessionModelKey(userId) === candidate.key;
+  if (existing && modelKeyMatches) {
+    if (sessionMemoryByInstance.get(existing) === memoryPrompt) {
+      recordSessionResolution("reused_unchanged");
+      return existing;
+    }
     // A web form or another app may update saved context while this session is answering.
     // Let the active turn finish; the next turn will rebuild from the saved transcript.
-    if (existing.isStreaming) return existing;
+    if (existing.isStreaming) {
+      recordSessionResolution("reused_streaming");
+      return existing;
+    }
   }
 
   if (existing) {
+    recordSessionResolution(modelKeyMatches ? "rebuilt_memory" : "rebuilt_model");
     sessionStore.deleteSession(userId);
   }
 
@@ -152,6 +187,7 @@ async function getOrCreateSession(userId: string, candidate: ModelCandidate) {
   };
 
   const { session } = await createAgentSession(createOpts);
+  recordSessionResolution("created_fresh");
   sessionMemoryByInstance.set(session, memoryPrompt);
   sessionStore.setSession(userId, session, candidate.key);
   console.log(`[MODEL] user=${userTag(userId)} session=${session.sessionId} model=${candidate.label}`);
