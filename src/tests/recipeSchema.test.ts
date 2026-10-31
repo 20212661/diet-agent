@@ -76,6 +76,26 @@ describe("菜谱 Schema 与过敏原元数据", () => {
     expect(assessFoodSafety(["葱", "猪肉"], { allergies: ["小麦"] }).status).toBe("clear");
   });
 
+  it("忌口不展开成过敏原类别，只按食材名文本匹配", () => {
+    // 忌口"葱"：不再经反向子串屏蔽小麦菜，但含葱的菜仍被拦
+    expect(assessFoodSafety(["面条", "面粉"], { avoidFoods: ["葱"] }).status).toBe("clear");
+    expect(assessFoodSafety(["葱", "猪肉"], { avoidFoods: ["葱"] }).status).toBe("conflict");
+    // 忌口"糖"（控糖）：不再误屏蔽牛奶；忌口"油"：不再几乎过滤整个菜谱库
+    expect(assessFoodSafety(["牛奶", "奶油"], { avoidFoods: ["糖"] }).status).toBe("clear");
+    expect(assessFoodSafety(["花生", "面条", "虾"], { avoidFoods: ["油"] }).status).toBe("clear");
+    expect(assessFoodSafety(["橄榄油", "青菜"], { avoidFoods: ["油"] }).status).toBe("conflict");
+    // 忌口"蛋"：不再连带屏蔽牛奶/大豆，但含蛋的菜被拦
+    expect(assessFoodSafety(["牛奶", "豆腐"], { avoidFoods: ["蛋"] }).status).toBe("clear");
+    expect(assessFoodSafety(["鸡蛋", "番茄"], { avoidFoods: ["蛋"] }).status).toBe("conflict");
+  });
+
+  it("过敏仍然宽松展开：写'奶'命中黄油，写'虾'命中虾仁", () => {
+    expect(assessFoodSafety(["黄油", "面包"], { allergies: ["奶"] }).status).toBe("conflict");
+    expect(assessFoodSafety(["虾仁", "西芹"], { allergies: ["虾"] }).status).toBe("conflict");
+    // 同一用户：忌口"糖"不拦牛奶，但过敏"奶"仍然拦
+    expect(assessFoodSafety(["牛奶"], { avoidFoods: ["糖"], allergies: ["奶"] }).status).toBe("conflict");
+  });
+
   it("共享安全判定识别过敏原别名与复合调味料，并将未知项设为待核实", () => {
     expect(assessFoodSafety(["虾仁"], { allergies: ["甲壳类"] }).status).toBe("conflict");
     expect(assessFoodSafety(["蚝油"], { allergies: ["shellfish"] }).status).toBe("conflict");
