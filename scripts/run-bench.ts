@@ -46,7 +46,13 @@ process.env.DIET_AGENT_DB_PATH = ":memory:";
 
 const store = await import("../src/store/index.js");
 const agentModule = await import("../src/agent/createDietAgent.js");
-const { sendDietAgentMessage, clearUserAgentSession, disposeAllAgentSessions } = agentModule;
+const {
+  sendDietAgentMessage,
+  clearUserAgentSession,
+  disposeAllAgentSessions,
+  getSessionResolutionCounts,
+  resetSessionResolutionCounts,
+} = agentModule;
 const { resolveModelCandidates } = await import("../src/agent/modelAdapter.js");
 const { getTraceWindow } = await import("../src/store/repositories/traceRepository.js");
 
@@ -69,8 +75,11 @@ interface TurnRun {
   reply?: string;
   /** 本轮工具调用生命周期（名称 + 结果码）。 */
   toolCalls?: ToolCallStatus[];
-  /** 本轮所属 session；与上一轮不同 = 发生过重建。 */
+  /** 本轮所属 session（restoreSessionManager 复用会话文件时可能跨重建不变，只作参考）。 */
   sessionId?: string;
+  /** getOrCreateSession 判定结果（created_fresh/reused_unchanged/reused_streaming/rebuilt_*）。 */
+  sessionResolution?: string;
+  /** 权威重建判定：来自 getOrCreateSession 重建分支的计数器增量。 */
   rebuiltSession?: boolean;
 }
 
@@ -101,11 +110,14 @@ function setupConversation(userId: string, setup: { allergies?: string[]; avoidF
 }
 
 try {
+  resetSessionResolutionCounts();
   for (const conversation of BENCH_CONVERSATIONS) {
     setupConversation(conversation.userId, conversation.setup);
     const turnRuns: TurnRun[] = [];
     for (let index = 0; index < conversation.turns.length; index++) {
       const toolCalls: ToolCallStatus[] = [];
+      const countsBefore = new Map(getSessionResolutionCounts());
+      let resolution: string | undefined;
       try {
         const result = await sendDietAgentMessage(conversation.userId, conversation.turns[index]!, {
           entry: "bench",
@@ -113,12 +125,18 @@ try {
             toolCalls.push({ name: status.toolName, phase: status.phase, outcome: status.outcome });
           },
         });
+        // 权威重建判定：直接读 getOrCreateSession 重建分支的计数器增量。
+        // sessionId 与 [MODEL] 日志都不可靠（restoreSessionManager 复用会话文件时 sessionId 可能不变）。
+        const delta = [...getSessionResolutionCounts()].filter(([kind, count]) => (countsBefore.get(kind) ?? 0) !== count);
+        resolution = delta.map(([kind]) => kind).join("+");
         turnRuns.push({
           turn: index + 1,
           ok: true,
           reply: result.reply,
           toolCalls,
           sessionId: result.sessionId,
+          sessionResolution: resolution,
+          rebuiltSession: delta.some(([kind]) => kind === "rebuilt_memory" || kind === "rebuilt_model"),
         });
       } catch (error) {
         turnRuns.push({
@@ -126,22 +144,14 @@ try {
           ok: false,
           error: error instanceof Error ? error.name : typeof error,
           toolCalls,
+          sessionResolution: resolution,
         });
-      }
-    }
-    // session 重建判定：同段对话相邻两轮 sessionId 变化即发生过重建
-    // （getOrCreateSession 在用户记忆变化时删旧建新）。
-    for (let index = 1; index < turnRuns.length; index++) {
-      const previous = turnRuns[index - 1]!;
-      const current = turnRuns[index]!;
-      if (previous.sessionId && current.sessionId) {
-        current.rebuiltSession = current.sessionId !== previous.sessionId;
       }
     }
     runs.push({ id: conversation.id, category: conversation.category, turns: turnRuns });
     const toolCount = turnRuns.reduce((acc, turn) => acc + (turn.toolCalls?.filter((call) => call.phase !== "pending").length ?? 0), 0);
     const rebuilds = turnRuns.filter((turn) => turn.rebuiltSession).length;
-    console.log(`▶ ${conversation.id}（${conversation.category}）：${turnRuns.filter((turn) => turn.ok).length}/${turnRuns.length} 轮成功 · 工具 ${toolCount} 次 · session 重建 ${rebuilds}`);
+    console.log(`▶ ${conversation.id}（${conversation.category}）：${turnRuns.filter((turn) => turn.ok).length}/${turnRuns.length} 轮成功 · 工具 ${toolCount} 次 · session 重建 ${rebuilds}${rebuilds > 0 ? "（" + turnRuns.filter((turn) => turn.rebuiltSession).map((turn) => `轮${turn.turn}:${turn.sessionResolution}`).join("、") + "）" : ""}`);
     clearUserAgentSession(conversation.userId);
   }
 } finally {
@@ -178,6 +188,7 @@ const summary = {
   turnErrors: runs.flatMap((run) => run.turns).filter((turn) => !turn.ok).length,
   turnsWithToolCalls: runs.flatMap((run) => run.turns).filter((turn) => (turn.toolCalls?.length ?? 0) > 0).length,
   sessionRebuilds: runs.flatMap((run) => run.turns).filter((turn) => turn.rebuiltSession === true).length,
+  sessionResolutions: Object.fromEntries([...getSessionResolutionCounts()].map(([kind, count]) => [kind, count])),
   traces: total,
   statusBreakdown: Object.fromEntries([...byStatus.entries()].sort()),
   successRate: total > 0 ? Math.round((okCount / total) * 1000) / 1000 : 0,
