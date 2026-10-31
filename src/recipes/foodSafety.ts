@@ -24,10 +24,11 @@ export function assessFoodSafety(
 ): FoodSafetyAssessment {
   const avoidFoods = (profile.avoidFoods ?? []).filter(Boolean);
   const allergies = (profile.allergies ?? []).filter(Boolean);
-  const blockedAllergens = new Set<AllergenId>([
-    ...resolveAllergenIds(avoidFoods),
-    ...resolveAllergenIds(allergies),
-  ]);
+  // 只有过敏才展开成过敏原类别：过敏走宽松匹配（用户写"虾"要命中虾仁、
+  // "奶"要命中黄油，宁可多拦）。忌口只是口味偏好，误拦没有安全收益——
+  // 旧逻辑把忌口也做类别展开，"葱"会经反向子串屏蔽全部小麦菜、"油"
+  // 几乎过滤整个菜谱库；忌口只按食材名文本匹配（下方 textMatches）。
+  const blockedAllergens = new Set<AllergenId>(resolveAllergenIds(allergies));
   const conflicts = new Set<string>();
   for (const tag of explicitAllergenTags) {
     if (blockedAllergens.has(tag)) conflicts.add(tag);
@@ -62,9 +63,10 @@ export function assessFoodSafety(
 
 function textMatches(normalizedIngredient: string, restriction: string): boolean {
   const normalizedRestriction = normalizeText(restriction);
-  return Boolean(normalizedRestriction.length >= 2 && (
-    normalizedIngredient === normalizedRestriction ||
-    normalizedIngredient.includes(normalizedRestriction) ||
-    normalizedRestriction.includes(normalizedIngredient)
-  ));
+  // 忌口/过敏描述允许单字（"葱""鱼""油"）：精确相等或作为食材名子串都算命中。
+  // 反向（描述包含食材名）要求描述 ≥2 字，避免空串/单字误匹配。
+  if (!normalizedRestriction) return false;
+  return normalizedIngredient === normalizedRestriction
+    || normalizedIngredient.includes(normalizedRestriction)
+    || normalizedRestriction.includes(normalizedIngredient);
 }
