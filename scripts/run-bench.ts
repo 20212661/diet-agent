@@ -10,6 +10,10 @@
  * 用途是"改动前 vs 改动后"对比（如把动态记忆移出 system prompt）：
  * 工作负载固定，缓存命中率、首 token 延迟前后才可比。改一次跑一次，
  * 结果文件带 git commit、模型与日期。评测消耗真实 API 配额，不进 CI。
+ *
+ * 每轮额外记录 toolCalls（名称+结果码）、回复原文（合成数据，可存）
+ * 与 session 重建（相邻两轮 sessionId 变化）——诊断"口头答应但没调
+ * 工具"与"写后重建 session"两类问题，指标统计仍以 trace 为准。
  */
 import "dotenv/config";
 import { execSync } from "node:child_process";
@@ -51,10 +55,23 @@ if (candidates.length === 0) {
   throw new Error("未配置任何模型 API key。请先在 .env 配置并运行 npm run doctor。");
 }
 
+interface ToolCallStatus {
+  name: string;
+  phase: "pending" | "success" | "error";
+  outcome?: string;
+}
+
 interface TurnRun {
   turn: number;
   ok: boolean;
   error?: string;
+  /** 回复原文：bench 用户全是合成数据，可存，用于诊断"口头答应但没调工具"类问题。 */
+  reply?: string;
+  /** 本轮工具调用生命周期（名称 + 结果码）。 */
+  toolCalls?: ToolCallStatus[];
+  /** 本轮所属 session；与上一轮不同 = 发生过重建。 */
+  sessionId?: string;
+  rebuiltSession?: boolean;
 }
 
 interface ConversationRun {
@@ -88,19 +105,43 @@ try {
     setupConversation(conversation.userId, conversation.setup);
     const turnRuns: TurnRun[] = [];
     for (let index = 0; index < conversation.turns.length; index++) {
+      const toolCalls: ToolCallStatus[] = [];
       try {
-        await sendDietAgentMessage(conversation.userId, conversation.turns[index]!, { entry: "bench" });
-        turnRuns.push({ turn: index + 1, ok: true });
+        const result = await sendDietAgentMessage(conversation.userId, conversation.turns[index]!, {
+          entry: "bench",
+          onToolStatus: (status) => {
+            toolCalls.push({ name: status.toolName, phase: status.phase, outcome: status.outcome });
+          },
+        });
+        turnRuns.push({
+          turn: index + 1,
+          ok: true,
+          reply: result.reply,
+          toolCalls,
+          sessionId: result.sessionId,
+        });
       } catch (error) {
         turnRuns.push({
           turn: index + 1,
           ok: false,
           error: error instanceof Error ? error.name : typeof error,
+          toolCalls,
         });
       }
     }
+    // session 重建判定：同段对话相邻两轮 sessionId 变化即发生过重建
+    // （getOrCreateSession 在用户记忆变化时删旧建新）。
+    for (let index = 1; index < turnRuns.length; index++) {
+      const previous = turnRuns[index - 1]!;
+      const current = turnRuns[index]!;
+      if (previous.sessionId && current.sessionId) {
+        current.rebuiltSession = current.sessionId !== previous.sessionId;
+      }
+    }
     runs.push({ id: conversation.id, category: conversation.category, turns: turnRuns });
-    console.log(`▶ ${conversation.id}（${conversation.category}）：${turnRuns.filter((turn) => turn.ok).length}/${turnRuns.length} 轮成功`);
+    const toolCount = turnRuns.reduce((acc, turn) => acc + (turn.toolCalls?.filter((call) => call.phase !== "pending").length ?? 0), 0);
+    const rebuilds = turnRuns.filter((turn) => turn.rebuiltSession).length;
+    console.log(`▶ ${conversation.id}（${conversation.category}）：${turnRuns.filter((turn) => turn.ok).length}/${turnRuns.length} 轮成功 · 工具 ${toolCount} 次 · session 重建 ${rebuilds}`);
     clearUserAgentSession(conversation.userId);
   }
 } finally {
@@ -135,6 +176,8 @@ const summary = {
   conversations: BENCH_CONVERSATIONS.length,
   turnsPlanned: BENCH_CONVERSATIONS.reduce((acc, conversation) => acc + conversation.turns.length, 0),
   turnErrors: runs.flatMap((run) => run.turns).filter((turn) => !turn.ok).length,
+  turnsWithToolCalls: runs.flatMap((run) => run.turns).filter((turn) => (turn.toolCalls?.length ?? 0) > 0).length,
+  sessionRebuilds: runs.flatMap((run) => run.turns).filter((turn) => turn.rebuiltSession === true).length,
   traces: total,
   statusBreakdown: Object.fromEntries([...byStatus.entries()].sort()),
   successRate: total > 0 ? Math.round((okCount / total) * 1000) / 1000 : 0,
@@ -167,7 +210,7 @@ writeFileSync(resultFile, `${JSON.stringify(output, null, 2)}\n`, "utf8");
 
 const ms = (value: number | undefined) => (value === undefined ? "-" : `${(value / 1000).toFixed(2)}s`);
 console.log(`\n📊 回放基准：${summary.conversations} 段 / ${summary.traces} 轮请求`);
-console.log(`  成功率=${(summary.successRate * 100).toFixed(1)}%  降级=${summary.fallbackTraces}  平均工具调用=${summary.avgToolCalls ?? "-"}`);
+console.log(`  成功率=${(summary.successRate * 100).toFixed(1)}%  降级=${summary.fallbackTraces}  平均工具调用=${summary.avgToolCalls ?? "-"}  调工具轮数=${summary.turnsWithToolCalls}/${summary.turnsPlanned}  session 重建=${summary.sessionRebuilds}`);
 console.log(`  请求耗时 p50=${ms(summary.requestMs.p50)}  p95=${ms(summary.requestMs.p95)}  首 token p50=${ms(summary.firstTokenMs.p50)}`);
 console.log(`  平均 input=${summary.avgInputTokens ?? "-"}  平均 cacheRead=${summary.avgCacheReadTokens ?? "-"}  缓存命中率=${summary.cacheHitRate === undefined ? "-" : `${(summary.cacheHitRate * 100).toFixed(1)}%`}`);
 console.log(`结果已写入 ${resultFile}`);
