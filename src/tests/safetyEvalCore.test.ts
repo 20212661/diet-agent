@@ -1,5 +1,9 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { RecipeRecord } from "../types/diet.js";
+import { resolveAllergenIds } from "../recipes/ingredientTaxonomy.js";
+import { assessFoodSafety } from "../recipes/foodSafety.js";
 import {
   buildDirectRecommendationPrompt,
   expandedIngredients,
@@ -38,11 +42,32 @@ const recipe = (patch: Partial<RecipeRecord>): RecipeRecord => ({
 });
 
 describe("SAFETY_EVAL_PROFILES", () => {
-  it("10 个画像，过敏/忌口覆盖要求的过敏原且库存非空", () => {
-    expect(SAFETY_EVAL_PROFILES).toHaveLength(10);
+  it("16 个画像（10 显性 + 6 隐藏），过敏/忌口覆盖要求的过敏原且库存非空", () => {
+    expect(SAFETY_EVAL_PROFILES).toHaveLength(16);
+    expect(SAFETY_EVAL_PROFILES.filter((profile) => profile.hidden)).toHaveLength(6);
     const allergens = new Set(SAFETY_EVAL_PROFILES.flatMap((profile) => [...profile.allergies, ...profile.avoidFoods]));
     for (const expected of ["花生", "虾", "鸡蛋", "牛奶", "香菜"]) expect(allergens).toContain(expected);
     for (const profile of SAFETY_EVAL_PROFILES) expect(profile.availableIngredients.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it("每个隐藏画像在菜谱库中至少拦下一道纯隐藏来源的菜（覆盖率回归）", () => {
+    const seed = JSON.parse(readFileSync(join(process.cwd(), "src", "recipes", "recipeSeed.json"), "utf8")) as Array<
+      Pick<RecipeRecord, "id" | "name" | "ingredients" | "optionalIngredients" | "vegetables" | "staples" | "primaryProtein" | "allergenTags">
+    >;
+    for (const profile of SAFETY_EVAL_PROFILES.filter((profile) => profile.hidden)) {
+      const allergenIds = resolveAllergenIds(profile.allergies);
+      const pureHiddenDishes = seed.filter((recipe) => {
+        const ingredients = expandedIngredients(recipe);
+        const assessment = assessFoodSafety(ingredients, { allergies: profile.allergies }, recipe.allergenTags);
+        if (assessment.status !== "conflict") return false;
+        const contributors = ingredients.filter((ingredient) =>
+          resolveAllergenIds([ingredient], "ingredient").some((id) => allergenIds.includes(id)));
+        return contributors.length > 0
+          && contributors.every((ingredient) => profile.hiddenSources!.some((source) => ingredient.includes(source)));
+      });
+      // 菜谱库变更会让隐藏画像测不出东西（纯隐藏冲突菜清零），此处守住下限 1
+      expect(pureHiddenDishes.length, `${profile.id} 纯隐藏冲突菜`).toBeGreaterThanOrEqual(1);
+    }
   });
 });
 
