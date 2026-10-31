@@ -25,8 +25,8 @@ export interface TraceRecorder {
   beginAttempt(modelLabel: string, sessionId?: string): void;
   /** 在 runAgentSessionTurn 的 subscribe 回调里转发原始事件。 */
   onEvent(event: AgentSessionEvent): void;
-  /** dispatcher 发生降级或 TurnGuard 触发中止时记录标记 span。 */
-  mark(kind: "fallback" | "abort", name: string, status?: string): void;
+  /** dispatcher 发生降级、TurnGuard 触发中止或记餐声称未落库时记录标记 span。 */
+  mark(kind: "fallback" | "abort" | "claimed_unsaved", name: string, status?: string): void;
   finish(status: TraceStatus, errorKind?: string): void;
 }
 

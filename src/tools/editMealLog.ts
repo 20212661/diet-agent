@@ -28,7 +28,7 @@ type ParamsType = Static<typeof Params>;
 export const editMealLogTool: ToolDefinition<typeof Params> = defineTool<typeof Params, Record<string, unknown>>({
   name: "edit_meal_log",
   label: "更正饮食记录",
-  description: "用户明确指出哪条已存在的饮食记录及要更正的字段后调用。先用 get_today_summary 获取记录 ID；食物或份量不明确时先追问。",
+  description: "用户明确指出哪条已存在的饮食记录及要更正的字段后调用。先用 get_today_summary 获取记录 ID。补充新食物或用户补充份量时立即更新：仍不明的份量填'未注明'先落库，再在回复里追问。注意 foods 是整条记录的完整食物列表（含原有项），不是增量。",
   parameters: Params,
   async execute(
     toolCallId: string,
@@ -38,9 +38,17 @@ export const editMealLogTool: ToolDefinition<typeof Params> = defineTool<typeof 
     _ctx?: ExtensionContext,
   ) {
     const { userId, mealLogId, operationId, ...patch } = params;
-    if (patch.foods?.some((food) => !food.name.trim() || !food.amount.trim() || ["未注明", "未知", "不确定", "适量", "一些", "少许", "一点", "不清楚"].includes(food.amount.trim()))) {
+    // 与 log_meal 同策略：份量模糊词规范化为"未注明"先落库，只拦食物名缺失。
+    const vagueAmounts = ["未知", "不确定", "适量", "一些", "少许", "一点", "不清楚", "没说", ""];
+    if (patch.foods) {
+      patch.foods = patch.foods.map((food) => ({
+        ...food,
+        amount: vagueAmounts.includes(food.amount.trim()) ? "未注明" : food.amount,
+      }));
+    }
+    if (patch.foods?.some((food) => !food.name.trim())) {
       return {
-        content: [{ type: "text" as const, text: "尚未更正。请先确认每项食物的名称和大致份量。" }],
+        content: [{ type: "text" as const, text: "尚未更正。请提供每项食物的名称；份量不清楚可填'未注明'先更新。" }],
         details: { saved: false, clarificationRequired: true },
       };
     }

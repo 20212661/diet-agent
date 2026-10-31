@@ -14,7 +14,7 @@ import { isTraceableNutrition } from "../nutrition/nutritionEstimate.js";
 // ---- 参数 Schema ----
 const MealFoodSchema = Type.Object({
   name: Type.String({ description: "食物名称" }),
-  amount: Type.String({ minLength: 1, description: "食用量，如 '1个'、'200ml'；信息不清时先追问，不得填未注明" }),
+  amount: Type.String({ minLength: 1, description: "食用量，如 '1个'、'200ml'；用户没说清就填'未注明'，先记录再追问" }),
   nutrition: Type.Optional(Type.Object({
     status: Type.Union([Type.Literal("verified"), Type.Literal("range"), Type.Literal("unavailable")]),
     calories: Type.Optional(Type.Number({ minimum: 0 })),
@@ -50,7 +50,7 @@ export const logMealTool: ToolDefinition<typeof LogMealParams> = defineTool<type
   name: "log_meal",
   label: "记录饮食",
   description:
-    "记录用户明确说出的餐食。必须确认食物和份量；未说明份量或日期有歧义时先追问。重试同一写入时复用 operationId。",
+    "用户说了吃了什么就立即调用本工具记录，不要等信息凑齐：份量不明的食物 amount 填'未注明'先落库，然后在回复里追问，用户补充后用 edit_meal_log 更新同一条记录。只有日期有歧义（提到昨天/前天/明天等相对日期且无法确定具体哪天）时才先确认日期再记录。重试同一写入时复用 operationId。",
   parameters: LogMealParams,
   async execute(
     _toolCallId: string,
@@ -59,11 +59,13 @@ export const logMealTool: ToolDefinition<typeof LogMealParams> = defineTool<type
     _onUpdate?: unknown,
     _ctx?: ExtensionContext
   ) {
-    const { userId, mealType, foods, note } = params;
-    const unclearAmounts = ["未注明", "未知", "不确定", "适量", "一些", "少许", "一点", "不清楚"];
-    const unclearFood = foods.find((food) =>
-      !food.name.trim() || !food.amount.trim() || unclearAmounts.includes(food.amount.trim())
-    );
+    const { userId, mealType, note } = params;
+    // 份量模糊词统一规范化为"未注明"：先记录保住数据，份量由后续 edit_meal_log 补。
+    const vagueAmounts = ["未知", "不确定", "适量", "一些", "少许", "一点", "不清楚", "没说", ""];
+    const foods = params.foods.map((food) => ({
+      ...food,
+      amount: vagueAmounts.includes(food.amount.trim()) ? "未注明" : food.amount,
+    }));
     const invalidNutrition = foods.find((food) => food.nutrition && !isTraceableNutrition(food.nutrition));
     if (invalidNutrition) {
       return {
@@ -71,9 +73,9 @@ export const logMealTool: ToolDefinition<typeof LogMealParams> = defineTool<type
         details: { saved: false, clarificationRequired: true, invalidNutrition: true },
       };
     }
-    if (!foods.length || unclearFood) {
+    if (!foods.length || foods.some((food) => !food.name.trim())) {
       return {
-        content: [{ type: "text" as const, text: "尚未写入饮食记录。请先确认食物名称和大致份量（例如 1 碗、半份或约 200 克），我再记录。" }],
+        content: [{ type: "text" as const, text: "尚未写入饮食记录。请至少提供食物名称；份量不清楚可填'未注明'先记录。" }],
         details: { saved: false, clarificationRequired: true },
       };
     }

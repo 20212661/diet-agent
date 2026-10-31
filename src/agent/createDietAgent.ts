@@ -39,7 +39,7 @@ import {
 } from "./toolOutcomes.js";
 import type { TraceStatus } from "../store/repositories/traceRepository.js";
 import { PROVIDER_CONFIGS } from "./modelProviders.js";
-import { setActiveUserMessage } from "../utils/userTurnContext.js";
+import { setActiveUserMessage, detectUnsavedMealClaim, MEAL_CLAIM_UNSAVED_NOTICE } from "../utils/userTurnContext.js";
 import * as store from "../store/index.js";
 import { generateCookingPlanTool } from "../tools/generateCookingPlan.js";
 import { generateMealPlanTool } from "../tools/generateMealPlan.js";
@@ -321,14 +321,34 @@ export function createDietAgentDispatcher(
         const session = await deps.getSession(userId, candidate);
         tracer.beginAttempt(candidate.label, session.sessionId);
         const callerOnSessionEvent = options?.onSessionEvent;
+        const callerOnToolStatus = options?.onToolStatus;
+        const mealWriteOutcomes: string[] = [];
         const turnOptions: DietAgentSendOptions = {
           ...options,
           onSessionEvent: (event) => {
             tracer.onEvent(event);
             callerOnSessionEvent?.(event);
           },
+          onToolStatus: (status) => {
+            // 记餐写入必须 saved=true 才算数（clarificationRequired 不算）；
+            // 反馈/库存写入成功也算"本轮有落库"，避免"已记录反馈"被误判成记餐声称。
+            if (status.phase === "success") {
+              if (status.toolName === "log_meal" || status.toolName === "edit_meal_log") {
+                mealWriteOutcomes.push(status.outcome ?? "");
+              } else if (status.toolName === "log_cooking_feedback" || status.toolName === "update_ingredient_inventory") {
+                mealWriteOutcomes.push("saved=true");
+              }
+            }
+            callerOnToolStatus?.(status);
+          },
         };
         const result = await runAgentSessionTurn(session, userId, message, candidate, deps.logger, turnOptions, turnLimits);
+        // 兜底校验：回复声称已记录但本轮没有任何成功的写入 → 追加提示并记 trace，
+        // 不让"口头答应、没写库"静默通过（log_meal 已改为立即记录，这里是第二道防线）。
+        if (!mealWriteOutcomes.some((outcome) => outcome.includes("saved=true")) && detectUnsavedMealClaim(result.reply)) {
+          result.reply += `\n\n${MEAL_CLAIM_UNSAVED_NOTICE}`;
+          tracer.mark("claimed_unsaved", "log_meal");
+        }
         tracer.finish("ok");
         return result;
       } catch (error) {

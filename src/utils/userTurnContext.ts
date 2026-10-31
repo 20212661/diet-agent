@@ -33,5 +33,23 @@ export function isTemporaryAvoidanceMessage(message: string | undefined): boolea
 export function hasAmbiguousMealDate(message: string | undefined): boolean {
   if (!message) return false;
   if (/(?:昨天|前天|大前天|明天|后天|上周|上个月|几天前|周末|周[一二三四五六日天])/.test(message)) return true;
-  return !/(?:今天|今晚|今早|今天早|今天中午|今天晚|刚才|刚刚|刚吃|早饭|早餐|中午|午饭|午餐|晚饭|晚餐|加餐)/.test(message);
+  // 早上/晚上/夜宵等时段词默认指今天（无相对日期词时先到达此行），避免"早上喝了一杯拿铁"被反复追问日期。
+  return !/(?:今天|今晚|今早|今天早|今天中午|今天晚|刚才|刚刚|刚吃|早饭|早餐|早上|早晨|中午|午饭|午餐|晚饭|晚餐|晚上|夜宵|宵夜|加餐)/.test(message);
+}
+
+/** 回复末尾追加的未落库提示（bench 以此标记统计 claimed_unsaved）。 */
+export const MEAL_CLAIM_UNSAVED_NOTICE =
+  "⚠️ 注意：这条饮食记录还没有保存到数据库（本轮没有成功的记录写入）。如需保存，请让我现在记录。";
+
+/**
+ * 兜底校验用：回复是否声称"已记录/记下了"，但可能实际没有落库。
+ * 按句检测：句子含完成态声称词且不含否定词（没/未/别/不）。
+ * "记成"必须后跟数量或餐次（记成 1 杯），避免撞上"登记成现有食材"；
+ * 不收"记进"（会撞"记进库存"），此类漏报由词表演进兜底。
+ * 误报的代价只是多一句提示，且提示内容（尚未保存）在无成功写入时恒为事实。
+ */
+export function detectUnsavedMealClaim(reply: string): boolean {
+  const claimWords = /(已记录|已经记录|已帮你记录|帮你记下了|记录了|记下了|记上了|记成了?(?=\s*[0-9一二两三四五六七八九十半杯碗盘份个根]))/;
+  const sentences = reply.split(/[。！？!?\n]/);
+  return sentences.some((sentence) => claimWords.test(sentence) && !/[没未别不]/.test(sentence));
 }

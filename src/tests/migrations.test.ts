@@ -32,6 +32,19 @@ function createLegacyAgentTraces(db: Database.Database, checkEntries = "'web','t
     cache_write_tokens INTEGER,
     cost_usd REAL
   )`);
+  db.exec(`CREATE TABLE agent_trace_spans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    trace_id TEXT NOT NULL REFERENCES agent_traces(trace_id) ON DELETE CASCADE,
+    attempt INTEGER NOT NULL,
+    kind TEXT NOT NULL CHECK(kind IN ('llm','tool','retry','fallback','abort')),
+    name TEXT,
+    started_at INTEGER NOT NULL,
+    duration_ms INTEGER,
+    status TEXT,
+    input_tokens INTEGER,
+    output_tokens INTEGER,
+    cache_read_tokens INTEGER
+  )`);
 }
 
 afterEach(() => {
@@ -154,6 +167,27 @@ describe("SQLite 版本化迁移", { timeout: 15_000 }, () => {
     db.prepare(`INSERT INTO agent_traces (trace_id, user_id, entry, status, started_at, attempts)
       VALUES ('t3', 'u1', 'bench', 'ok', 125, 1)`).run();
     expect(db.prepare("SELECT COUNT(*) AS count FROM agent_traces").get()).toEqual({ count: 2 });
+    db.close();
+  });
+
+  it("v21 agent_trace_spans 的 kind 增加 claimed_unsaved，重建后保留既有行", () => {
+    const db = new Database(":memory:");
+    db.pragma("user_version = 20");
+    createLegacyAgentTraces(db);
+    db.prepare(`INSERT INTO agent_traces (trace_id, user_id, entry, status, started_at, attempts)
+      VALUES ('t1', 'u1', 'web', 'ok', 123, 1)`).run();
+    db.prepare(`INSERT INTO agent_trace_spans (trace_id, attempt, kind, name, started_at)
+      VALUES ('t1', 1, 'llm', 'deepseek-flash', 124)`).run();
+    expect(() => db.prepare(`INSERT INTO agent_trace_spans (trace_id, attempt, kind, name, started_at)
+      VALUES ('t1', 1, 'claimed_unsaved', 'log_meal', 125)`).run()).toThrow();
+
+    const result = runMigrations(db, ":memory:");
+    expect(result.to).toBe(CURRENT_SCHEMA_VERSION);
+    expect(db.prepare("SELECT COUNT(*) AS count FROM agent_trace_spans WHERE kind = 'llm'").get())
+      .toEqual({ count: 1 });
+    db.prepare(`INSERT INTO agent_trace_spans (trace_id, attempt, kind, name, started_at)
+      VALUES ('t1', 1, 'claimed_unsaved', 'log_meal', 126)`).run();
+    expect(db.prepare("SELECT COUNT(*) AS count FROM agent_trace_spans").get()).toEqual({ count: 2 });
     db.close();
   });
 

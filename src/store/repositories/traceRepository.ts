@@ -42,7 +42,7 @@ export interface AgentTraceRecord {
 
 export interface AgentTraceSpanRecord {
   attempt: number;
-  kind: "llm" | "tool" | "retry" | "fallback" | "abort";
+  kind: "llm" | "tool" | "retry" | "fallback" | "abort" | "claimed_unsaved";
   name?: string;
   startedAt: number;
   durationMs?: number;
