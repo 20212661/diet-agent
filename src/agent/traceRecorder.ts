@@ -18,7 +18,7 @@ import {
 } from "../store/repositories/traceRepository.js";
 import { getDatabase } from "../store/database.js";
 
-export type TraceEntry = "web" | "tui" | "eval";
+export type TraceEntry = "web" | "tui" | "eval" | "bench";
 
 export interface TraceRecorder {
   /** dispatcher 每次尝试一个候选模型时调用；attempt 序号随之递增。 */

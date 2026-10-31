@@ -3,7 +3,7 @@ import { copyFileSync, existsSync, readdirSync, statSync, unlinkSync } from "nod
 import { dirname, extname, basename, join } from "node:path";
 import { deriveRecipeIngredientMetadata } from "../../recipes/ingredientTaxonomy.js";
 
-export const CURRENT_SCHEMA_VERSION = 19;
+export const CURRENT_SCHEMA_VERSION = 20;
 
 interface Migration {
   version: number;
@@ -364,6 +364,42 @@ const migrations: readonly Migration[] = [
     description: "分类表新增咖喱块等隐藏过敏原条目，重算存量菜谱过敏原标签",
     up(db) {
       recomputeAllergenTags(db);
+    },
+  },
+  {
+    version: 20,
+    description: "agent_traces 的 entry 增加 bench 类型（固定回放基准流量）",
+    up(db) {
+      // SQLite 无法就地修改 CHECK 约束：重建表并保留既有行。
+      db.exec(`
+        CREATE TABLE agent_traces_v20 (
+          trace_id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          operation_id TEXT,
+          session_id TEXT,
+          entry TEXT NOT NULL CHECK(entry IN ('web','tui','eval','bench')),
+          status TEXT NOT NULL CHECK(status IN
+            ('running','ok','verification_required','failed','timeout','budget_exceeded','interrupted')),
+          error_kind TEXT,
+          started_at INTEGER NOT NULL,
+          duration_ms INTEGER,
+          first_token_ms INTEGER,
+          attempts INTEGER NOT NULL DEFAULT 1,
+          final_model TEXT,
+          llm_calls INTEGER NOT NULL DEFAULT 0,
+          tool_calls INTEGER NOT NULL DEFAULT 0,
+          tool_errors INTEGER NOT NULL DEFAULT 0,
+          input_tokens INTEGER,
+          output_tokens INTEGER,
+          cache_read_tokens INTEGER,
+          cache_write_tokens INTEGER,
+          cost_usd REAL
+        );
+        INSERT INTO agent_traces_v20 SELECT * FROM agent_traces;
+        DROP TABLE agent_traces;
+        ALTER TABLE agent_traces_v20 RENAME TO agent_traces;
+        CREATE INDEX IF NOT EXISTS idx_traces_user_time ON agent_traces(user_id, started_at);
+      `);
     },
   },
 ];

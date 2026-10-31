@@ -7,6 +7,33 @@ import { CURRENT_SCHEMA_VERSION, runMigrations } from "../store/migrations/index
 
 const temporaryDirectories: string[] = [];
 
+/** v17 形态的 agent_traces（真实 v17+ 库都有；v20 会重建它放宽 entry CHECK）。 */
+function createLegacyAgentTraces(db: Database.Database, checkEntries = "'web','tui','eval'"): void {
+  db.exec(`CREATE TABLE agent_traces (
+    trace_id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    operation_id TEXT,
+    session_id TEXT,
+    entry TEXT NOT NULL CHECK(entry IN (${checkEntries})),
+    status TEXT NOT NULL CHECK(status IN
+      ('running','ok','verification_required','failed','timeout','budget_exceeded','interrupted')),
+    error_kind TEXT,
+    started_at INTEGER NOT NULL,
+    duration_ms INTEGER,
+    first_token_ms INTEGER,
+    attempts INTEGER NOT NULL DEFAULT 1,
+    final_model TEXT,
+    llm_calls INTEGER NOT NULL DEFAULT 0,
+    tool_calls INTEGER NOT NULL DEFAULT 0,
+    tool_errors INTEGER NOT NULL DEFAULT 0,
+    input_tokens INTEGER,
+    output_tokens INTEGER,
+    cache_read_tokens INTEGER,
+    cache_write_tokens INTEGER,
+    cost_usd REAL
+  )`);
+}
+
 afterEach(() => {
   for (const directory of temporaryDirectories.splice(0)) {
     rmSync(directory, { recursive: true, force: true });
@@ -58,6 +85,7 @@ describe("SQLite 版本化迁移", { timeout: 15_000 }, () => {
   it("v18 重算存量菜谱过敏原标签，消除反向子串误报", () => {
     const db = new Database(":memory:");
     db.pragma("user_version = 17");
+    createLegacyAgentTraces(db);
     // 手工建 v17 形态的 recipe_book 并插入一条带旧规则误报（葱→小麦、糖→牛奶）的记录
     db.exec(`CREATE TABLE recipe_book (
       id TEXT PRIMARY KEY, name TEXT NOT NULL, mode TEXT NOT NULL,
@@ -83,6 +111,7 @@ describe("SQLite 版本化迁移", { timeout: 15_000 }, () => {
   it("v19 分类表新增咖喱块后重算存量过敏原标签", () => {
     const db = new Database(":memory:");
     db.pragma("user_version = 18");
+    createLegacyAgentTraces(db);
     // 手工建 v18 形态的 recipe_book 并插入一条含咖喱块的记录（v18 时解析不出过敏原）
     db.exec(`CREATE TABLE recipe_book (
       id TEXT PRIMARY KEY, name TEXT NOT NULL, mode TEXT NOT NULL,
@@ -102,6 +131,29 @@ describe("SQLite 版本化迁移", { timeout: 15_000 }, () => {
     const row = db.prepare("SELECT allergen_tags_json FROM recipe_book WHERE id = 'r1'").get() as { allergen_tags_json: string };
     // 咖喱块以面粉为基底：小麦/麸质补上；牛奶品牌非必含，不标
     expect(JSON.parse(row.allergen_tags_json)).toEqual(["gluten", "wheat"]);
+    db.close();
+  });
+
+  it("v20 agent_traces 的 entry 增加 bench 类型，重建后保留既有行", () => {
+    const db = new Database(":memory:");
+    db.pragma("user_version = 19");
+    // 手工建 v17/v19 形态的 agent_traces（旧 CHECK 只有 web/tui/eval）并插入一条既有记录
+    createLegacyAgentTraces(db);
+    db.prepare(`INSERT INTO agent_traces (trace_id, user_id, entry, status, started_at, attempts)
+      VALUES ('t1', 'u1', 'web', 'ok', 123, 1)`).run();
+    // 旧 CHECK 下 bench 会被拒绝——迁移要放开的就是这条约束
+    expect(() => db.prepare(`INSERT INTO agent_traces (trace_id, user_id, entry, status, started_at, attempts)
+      VALUES ('t2', 'u1', 'bench', 'ok', 124, 1)`).run()).toThrow();
+
+    const result = runMigrations(db, ":memory:");
+    expect(result.to).toBe(CURRENT_SCHEMA_VERSION);
+    // 既有行保留
+    const legacy = db.prepare("SELECT entry, status FROM agent_traces WHERE trace_id = 't1'").get();
+    expect(legacy).toEqual({ entry: "web", status: "ok" });
+    // 新 CHECK 允许 bench
+    db.prepare(`INSERT INTO agent_traces (trace_id, user_id, entry, status, started_at, attempts)
+      VALUES ('t3', 'u1', 'bench', 'ok', 125, 1)`).run();
+    expect(db.prepare("SELECT COUNT(*) AS count FROM agent_traces").get()).toEqual({ count: 2 });
     db.close();
   });
 
