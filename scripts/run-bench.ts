@@ -199,6 +199,8 @@ const summary = {
   turnsPlanned: BENCH_CONVERSATIONS.reduce((acc, conversation) => acc + conversation.turns.length, 0),
   turnErrors: runs.flatMap((run) => run.turns).filter((turn) => !turn.ok).length,
   turnsWithToolCalls: runs.flatMap((run) => run.turns).filter((turn) => (turn.toolCalls?.length ?? 0) > 0).length,
+  claimedUnsavedTurns: runs.flatMap((run) => run.turns)
+    .filter((turn) => (turn.reply ?? "").includes("还没有保存到数据库")).length,
   sessionRebuilds: runs.flatMap((run) => run.turns).filter((turn) => turn.rebuiltSession === true).length,
   sessionResolutions: Object.fromEntries([...getSessionResolutionCounts()].map(([kind, count]) => [kind, count])),
   mealLogPersistence: (() => {

@@ -209,13 +209,24 @@ describe("计划与汇总工具集成", () => {
     expect(textOf(result)).toContain("热量合计未显示");
   });
 
-  it("份量不清时不写入；相同操作 ID 重试只落一条记录", async () => {
+  it("份量未注明也先落库，模糊份量词规范化；相同操作 ID 重试只落一条记录", async () => {
     const userId = user("meal_idempotent");
+    // 新策略：立即记录，份量不明填"未注明"保住数据，不再以追问为由拒绝写入
     const unclear = await execute(logMealTool, {
-      userId, mealType: "lunch", foods: [{ name: "米饭", amount: "未注明" }],
+      userId, mealType: "lunch", foods: [{ name: "米饭", amount: "适量" }],
     });
-    expect(unclear.details).toMatchObject({ saved: false, clarificationRequired: true });
-    expect(store.getAllMealLogs(userId)).toHaveLength(0);
+    expect(unclear.details).toMatchObject({ saved: true });
+    expect(store.getAllMealLogs(userId)).toHaveLength(1);
+    expect(store.getAllMealLogs(userId)[0]?.foods[0]).toMatchObject({ name: "米饭", amount: "未注明" });
+    // edit_meal_log 同策略：补充食物份量未注明也先更新，不再拒绝
+    const edited = await execute(editMealLogTool, {
+      userId, mealLogId: store.getAllMealLogs(userId)[0]!.id, operationId: "edit-unspecified",
+      foods: [{ name: "米饭", amount: "适量" }, { name: "苹果", amount: "未注明" }],
+    });
+    expect(edited.details).toMatchObject({ saved: true });
+    expect(store.getAllMealLogs(userId)[0]?.foods).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "米饭", amount: "未注明" }), expect.objectContaining({ name: "苹果", amount: "未注明" })]),
+    );
 
     const params = {
       userId, operationId: "same-log-operation", date: "2026-09-22", mealType: "lunch",
@@ -224,8 +235,9 @@ describe("计划与汇总工具集成", () => {
     const first = await execute(logMealTool, params);
     const retry = await execute(logMealTool, params);
     expect(first.details.id).toBe(retry.details.id);
-    expect(store.getAllMealLogs(userId)).toHaveLength(1);
-    expect(store.getAllMealLogs(userId)[0]?.date).toBe("2026-09-22");
+    // 第一笔（份量适量→未注明）立即落库 + 幂等这批 1 条
+    expect(store.getAllMealLogs(userId)).toHaveLength(2);
+    expect(store.getAllMealLogs(userId).at(-1)?.date).toBe("2026-09-22");
     await expect(execute(logMealTool, { ...params, foods: [{ name: "面条", amount: "1碗" }] }))
       .rejects.toThrow("operationId");
   });

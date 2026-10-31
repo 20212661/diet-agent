@@ -156,6 +156,83 @@ const scenarios: Scenario[] = [
     }],
   },
   {
+    id: "casual_breakfast_multi_food",
+    setup: () => {},
+    turns: [{
+      message: "我早餐吃了燕麦粥和一个煮鸡蛋",
+      requiredTools: ["log_meal"],
+      expectedMealLogDelta: 1,
+      check: (userId) => {
+        const names = store.getAllMealLogs(userId).flatMap((log) => log.foods.map((food) => food.name)).join("、");
+        return ["燕麦粥", "鸡蛋"].filter((expected) => !names.includes(expected))
+          .map((expected) => `口语化多食物记餐缺了 ${expected}（已记：${names || "无"}）`);
+      },
+    }],
+  },
+  {
+    id: "casual_dinner_two_turns",
+    setup: () => {},
+    turns: [
+      {
+        message: "我晚餐吃了土豆炖牛腩，分量挺大",
+        requiredTools: ["log_meal"],
+        expectedMealLogDelta: 1,
+        check: (userId) => {
+          const names = store.getAllMealLogs(userId).flatMap((log) => log.foods.map((food) => food.name)).join("、");
+          return names.includes("土豆炖牛腩") || names.includes("牛腩") ? [] : [`第一轮口语化记餐没写库（已记：${names || "无"}）`];
+        },
+      },
+      {
+        message: "再补记一碗米饭",
+        // 不预设记录条数：模型可能 edit 进同一条（delta 0）也可能新开一条（delta 1），以米饭落库为准。
+        check: (userId) => {
+          const names = store.getAllMealLogs(userId).flatMap((log) => log.foods.map((food) => food.name)).join("、");
+          return names.includes("米饭") ? [] : [`第二轮补充记餐没写库（已记：${names || "无"}）`];
+        },
+      },
+    ],
+  },
+  {
+    id: "casual_snack_one_food",
+    setup: () => {},
+    turns: [{
+      message: "下午加餐吃了一个苹果，记一下",
+      requiredTools: ["log_meal"],
+      expectedMealLogDelta: 1,
+      check: (userId) => {
+        const names = store.getAllMealLogs(userId).flatMap((log) => log.foods.map((food) => food.name)).join("、");
+        return names.includes("苹果") ? [] : [`加餐记餐没写库（已记：${names || "无"}）`];
+      },
+    }],
+  },
+  {
+    id: "casual_cafeteria_three_foods",
+    setup: () => {},
+    turns: [{
+      message: "我中午在食堂吃了清蒸鲈鱼、炒青菜和一小碗米饭",
+      requiredTools: ["log_meal"],
+      expectedMealLogDelta: 1,
+      check: (userId) => {
+        const names = store.getAllMealLogs(userId).flatMap((log) => log.foods.map((food) => food.name)).join("、");
+        return ["鲈鱼", "青菜", "米饭"].filter((expected) => !names.includes(expected))
+          .map((expected) => `食堂多食物记餐缺了 ${expected}（已记：${names || "无"}）`);
+      },
+    }],
+  },
+  {
+    id: "casual_morning_drink",
+    setup: () => {},
+    turns: [{
+      message: "早上喝了一杯拿铁，帮我记一下",
+      requiredTools: ["log_meal"],
+      expectedMealLogDelta: 1,
+      check: (userId) => {
+        const names = store.getAllMealLogs(userId).flatMap((log) => log.foods.map((food) => food.name)).join("、");
+        return names.includes("拿铁") ? [] : [`时段词记餐被日期追问卡住没写库（已记：${names || "无"}）`];
+      },
+    }],
+  },
+  {
     id: "hypothetical_without_write",
     setup: () => {},
     turns: [{

@@ -3,7 +3,7 @@ import { copyFileSync, existsSync, readdirSync, statSync, unlinkSync } from "nod
 import { dirname, extname, basename, join } from "node:path";
 import { deriveRecipeIngredientMetadata } from "../../recipes/ingredientTaxonomy.js";
 
-export const CURRENT_SCHEMA_VERSION = 20;
+export const CURRENT_SCHEMA_VERSION = 21;
 
 interface Migration {
   version: number;
@@ -399,6 +399,32 @@ const migrations: readonly Migration[] = [
         DROP TABLE agent_traces;
         ALTER TABLE agent_traces_v20 RENAME TO agent_traces;
         CREATE INDEX IF NOT EXISTS idx_traces_user_time ON agent_traces(user_id, started_at);
+      `);
+    },
+  },
+  {
+    version: 21,
+    description: "agent_trace_spans 的 kind 增加 claimed_unsaved（记餐声称未落库标记）",
+    up(db) {
+      // SQLite 无法就地修改 CHECK 约束：重建表并保留既有行。
+      db.exec(`
+        CREATE TABLE agent_trace_spans_v21 (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          trace_id TEXT NOT NULL REFERENCES agent_traces(trace_id) ON DELETE CASCADE,
+          attempt INTEGER NOT NULL,
+          kind TEXT NOT NULL CHECK(kind IN ('llm','tool','retry','fallback','abort','claimed_unsaved')),
+          name TEXT,
+          started_at INTEGER NOT NULL,
+          duration_ms INTEGER,
+          status TEXT,
+          input_tokens INTEGER,
+          output_tokens INTEGER,
+          cache_read_tokens INTEGER
+        );
+        INSERT INTO agent_trace_spans_v21 SELECT * FROM agent_trace_spans;
+        DROP TABLE agent_trace_spans;
+        ALTER TABLE agent_trace_spans_v21 RENAME TO agent_trace_spans;
+        CREATE INDEX IF NOT EXISTS idx_trace_spans_trace ON agent_trace_spans(trace_id);
       `);
     },
   },
