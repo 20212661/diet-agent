@@ -21,6 +21,9 @@ export const INGREDIENT_DEFINITIONS: readonly IngredientDefinition[] = [
   { id: "milk", aliases: ["牛奶", "乳制品", "奶油", "黄油", "芝士", "奶酪"], allergens: ["milk"] },
   { id: "tofu", aliases: ["内酯豆腐", "豆腐"], allergens: ["soy"] },
   { id: "fermented_tofu", aliases: ["红腐乳", "腐乳"], allergens: ["soy"] },
+  // 豆瓣酱按"宁可多拦"保留 soy：郫县豆瓣主料蚕豆+小麦粉（蚕豆≠大豆，wheat 确定），
+  // 但部分品牌含豆粕/酱油，摘掉 soy 会变成安全漏洞；盲标口径 wheat 确定/soy 待定
+  // （allergenGold unsure），经人工裁决保留 soy，代价仅大豆过敏用户多拦 3 道菜。
   { id: "soy_sauce", aliases: ["生抽", "老抽", "酱油", "豆瓣酱", "黄豆酱", "甜面酱"], allergens: ["soy", "wheat", "gluten"] },
   { id: "oyster_sauce", aliases: ["蚝油", "蚝油汁"], allergens: ["shellfish", "soy", "wheat", "gluten"] },
   { id: "wheat_noodle", aliases: ["面条"], allergens: ["wheat", "gluten"] },
