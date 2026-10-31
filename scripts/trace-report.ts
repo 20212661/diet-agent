@@ -1,5 +1,5 @@
 /**
- * Agent trace 汇总报告：npm run trace:report [-- <days>] [--entry web|tui|eval|all]
+ * Agent trace 汇总报告：npm run trace:report [-- <days>] [--entry web|tui|eval|bench|all]
  *
  * 输出最近 N 天（默认 7）的稳定性/延迟/成本指标：
  * - 成功率、超时率、降级率、verification_required 率、崩溃（interrupted）次数
@@ -7,11 +7,11 @@
  * - 每个工具的调用量与错误率
  * - token 用量、成本与缓存命中率
  *
- * 入口过滤：默认排除 eval（评测流量大，会污染真实使用基线）；
- * `--entry eval` 只看评测，`--entry web` / `--entry tui` 只看单入口，
- * `--entry all` 全部。
+ * 入口过滤：默认排除 eval 与 bench（评测和回放基准流量大且可重复，
+ * 会污染真实使用统计）；`--entry eval` / `--entry bench` 只看对应流量，
+ * `--entry web` / `--entry tui` 只看单入口，`--entry all` 全部。
  * 缓存命中率尤其值得盯：把动态记忆移出 system prompt 之类的改动，
- * 改动前后对比这一项即可验证效果。
+ * 用固定回放基准（npm run bench）改动前后各跑一遍对比这一项即可验证效果。
  */
 import "dotenv/config";
 import * as store from "../src/store/index.js";
@@ -23,7 +23,7 @@ import {
 } from "../src/store/repositories/traceRepository.js";
 
 // 严格参数解析：未知参数直接报错，避免"以为改了口径其实没生效"。
-const ENTRY_VALUES = ["web", "tui", "eval", "all"] as const;
+const ENTRY_VALUES = ["web", "tui", "eval", "bench", "all"] as const;
 const rawArgs = process.argv.slice(2);
 const positional: string[] = [];
 let entryValue: (typeof ENTRY_VALUES)[number] | undefined;
@@ -32,7 +32,7 @@ for (let i = 0; i < rawArgs.length; i++) {
   if (arg === "--entry") {
     const value = rawArgs[++i];
     if (value === undefined || !ENTRY_VALUES.includes(value as (typeof ENTRY_VALUES)[number])) {
-      throw new Error(`--entry 可选 ${ENTRY_VALUES.join(" | ")}（收到 ${value}；默认排除 eval）`);
+      throw new Error(`--entry 可选 ${ENTRY_VALUES.join(" | ")}（收到 ${value}；默认排除 eval+bench）`);
     }
     entryValue = value as (typeof ENTRY_VALUES)[number];
     continue;
@@ -46,13 +46,13 @@ if (positional.length > 1) throw new Error(`至多一个位置参数（天数）
 const days = Math.max(1, Math.floor(Number(positional[0] ?? 7)) || 7);
 const sinceMs = Date.now() - days * 24 * 60 * 60 * 1000;
 
+const KNOWN_ENTRIES = ["web", "tui", "eval", "bench"] as const;
 const entries: readonly string[] | undefined =
   entryValue === "all" ? undefined
-    : entryValue === undefined ? ["web", "tui"]
-      : [entryValue];
+  : entryValue === undefined ? ["web", "tui"]
+    : [entryValue];
 const entryLabel = entries === undefined ? "全部"
-  : entries.length === 1 && entries[0] === "eval" ? "仅 eval"
-    : `${entries.join("+")}（排除 eval）`;
+  : `仅 ${entries.join("+")}（排除 ${KNOWN_ENTRIES.filter((entry) => !entries.includes(entry)).join("+")}）`;
 
 const db = store.getDatabase();
 const rows = getTraceWindow(db, sinceMs, entries);

@@ -21,7 +21,7 @@ export interface AgentTraceRecord {
   userId: string;
   operationId?: string;
   sessionId?: string;
-  entry: "web" | "tui" | "eval";
+  entry: "web" | "tui" | "eval" | "bench";
   status: TraceStatus;
   errorKind?: string;
   startedAt: number;
