@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectUnsavedMealClaim, hasAmbiguousMealDate } from "../utils/userTurnContext.js";
+import { currentDateTimeContext, detectUnsavedMealClaim, hasAmbiguousMealDate } from "../utils/userTurnContext.js";
 
 describe("detectUnsavedMealClaim（记餐声称未落库兜底）", () => {
   it("完成态声称词命中：已记录/记下了/记成/帮你记了", () => {
@@ -39,5 +39,17 @@ describe("hasAmbiguousMealDate（时段词默认今天）", () => {
   it("相对日期词仍然追问", () => {
     expect(hasAmbiguousMealDate("前天吃了一碗米饭")).toBe(true);
     expect(hasAmbiguousMealDate("昨天夜宵吃了一包泡面")).toBe(true);
+  });
+});
+
+describe("currentDateTimeContext（每轮注入的当前时间）", () => {
+  it("格式为〔当前时间：YYYY-MM-DD 周X HH:mm（时区）〕，用本地时间与 todayDate 同口径", () => {
+    const text = currentDateTimeContext(new Date(2026, 10, 1, 9, 5)); // 2026-11-01 周日 09:05（本地构造）
+    expect(text).toMatch(/^〔当前时间：2026-11-01 周日 09:05（.+）〕$/);
+  });
+
+  it("星期随日期正确滚动", () => {
+    expect(currentDateTimeContext(new Date(2026, 10, 2, 23, 59))).toContain("周一");
+    expect(currentDateTimeContext(new Date(2026, 10, 6, 0, 0))).toContain("周五");
   });
 });

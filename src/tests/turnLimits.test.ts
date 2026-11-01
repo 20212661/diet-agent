@@ -219,8 +219,8 @@ describe("dispatcher 超时后的队列与降级", () => {
   }
 
   it("某轮超时后，同一用户的下一条消息不再被卡死（本次修复的 bug）", async () => {
-    const session = new FakeSession("recovery", (message, emit) => {
-      if (message === "hang") return never();
+    const session = new FakeSession("recovery", (promptMessage, emit) => {
+      if ((promptMessage.split("\n\n").pop() ?? promptMessage) === "hang") return never(); // 剥掉注入的时间上下文
       emit(textDelta("恢复成功"));
       emit(agentEnd());
     });
