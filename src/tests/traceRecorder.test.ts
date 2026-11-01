@@ -101,6 +101,7 @@ describe("TraceRecorder", () => {
       subscribe: (listener: (event: AgentSessionEvent) => void) => {
         listener(asEvent({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "好的" } }));
         listener(asEvent({ type: "agent_end", messages: [{ role: "assistant", content: [{ type: "text", text: "好的" }] }], willRetry: false }));
+        listener(asEvent({ type: "agent_settled" }));
         return () => {};
       },
       prompt: async () => {},
@@ -115,6 +116,7 @@ describe("TraceRecorder", () => {
         }));
         listener(asEvent({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "失败" } }));
         listener(asEvent({ type: "agent_end", messages: [], willRetry: false }));
+        listener(asEvent({ type: "agent_settled" }));
         return () => {};
       },
       prompt: async () => {},

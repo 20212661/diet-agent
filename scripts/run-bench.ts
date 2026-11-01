@@ -81,6 +81,8 @@ interface TurnRun {
   sessionResolution?: string;
   /** 权威重建判定：来自 getOrCreateSession 重建分支的计数器增量。 */
   rebuiltSession?: boolean;
+  /** 本轮墙钟耗时（含 agent_settled 等待），对比重建/非重建轮的代价用。 */
+  elapsedMs?: number;
 }
 
 interface ConversationRun {
@@ -119,6 +121,7 @@ try {
     for (let index = 0; index < conversation.turns.length; index++) {
       const toolCalls: ToolCallStatus[] = [];
       const countsBefore = new Map(getSessionResolutionCounts());
+      const turnStartedAt = Date.now();
       let resolution: string | undefined;
       try {
         const result = await sendDietAgentMessage(conversation.userId, conversation.turns[index]!, {
@@ -139,6 +142,7 @@ try {
           sessionId: result.sessionId,
           sessionResolution: resolution,
           rebuiltSession: delta.some(([kind]) => kind === "rebuilt_memory" || kind === "rebuilt_model"),
+          elapsedMs: Date.now() - turnStartedAt,
         });
       } catch (error) {
         turnRuns.push({
@@ -147,6 +151,7 @@ try {
           error: error instanceof Error ? error.name : typeof error,
           toolCalls,
           sessionResolution: resolution,
+          elapsedMs: Date.now() - turnStartedAt,
         });
       }
     }
