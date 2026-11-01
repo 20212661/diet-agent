@@ -41,6 +41,24 @@ export function hasAmbiguousMealDate(message: string | undefined): boolean {
 export const MEAL_CLAIM_UNSAVED_NOTICE =
   "⚠️ 注意：这条饮食记录还没有保存到数据库（本轮没有成功的记录写入）。如需保存，请让我现在记录。";
 
+const WEEKDAY_LABELS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"] as const;
+
+/**
+ * 每轮注入用户消息前的当前时间上下文（模型没有可靠的"今天"概念，
+ * "昨天/明天"类相对日期全靠猜）。用与 store 的 todayDate() 相同的
+ * 本地时间 getters，保证模型说的"今天"和数据库写入的"今天"一致；
+ * 不进 system prompt——那会让前缀缓存每天零点失效一次。
+ */
+export function currentDateTimeContext(now = new Date()): string {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? "本地时区";
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const hour = String(now.getHours()).padStart(2, "0");
+  const minute = String(now.getMinutes()).padStart(2, "0");
+  return `〔当前时间：${year}-${month}-${day} ${WEEKDAY_LABELS[now.getDay()]} ${hour}:${minute}（${timezone}）〕`;
+}
+
 /**
  * 兜底校验用：回复是否声称"已记录/记下了"，但可能实际没有落库。
  * 按句检测：句子含完成态声称词且不含否定词（没/未/别/不）。

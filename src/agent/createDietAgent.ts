@@ -39,7 +39,7 @@ import {
 } from "./toolOutcomes.js";
 import type { TraceStatus } from "../store/repositories/traceRepository.js";
 import { PROVIDER_CONFIGS } from "./modelProviders.js";
-import { setActiveUserMessage, detectUnsavedMealClaim, MEAL_CLAIM_UNSAVED_NOTICE } from "../utils/userTurnContext.js";
+import { setActiveUserMessage, detectUnsavedMealClaim, MEAL_CLAIM_UNSAVED_NOTICE, currentDateTimeContext } from "../utils/userTurnContext.js";
 import * as store from "../store/index.js";
 import { generateCookingPlanTool } from "../tools/generateCookingPlan.js";
 import { generateMealPlanTool } from "../tools/generateMealPlan.js";
@@ -543,11 +543,17 @@ export async function runAgentSessionTurn(
   });
 
   const clearActiveMessage = setActiveUserMessage(userId, message, options?.operationId);
+  // 每轮注入当前时间（与 todayDate() 同口径的本地时区），模型才能正确解析
+  // "昨天/明天"这类相对日期。只注入给模型：NLP 启发式（日期歧义/声称检测）
+  // 与 web 层的消息哈希都继续用原始 message，避免时间块污染两者。
+  const promptMessage = `${currentDateTimeContext()}
+
+${message}`;
   let promptError: unknown;
   try {
     // prompt() 本身可能挂住不返回；与 donePromise 赛跑，任一先结束都放行本轮。
     await Promise.race([
-      session.prompt(message, { streamingBehavior: "followUp" }).then(() => donePromise),
+      session.prompt(promptMessage, { streamingBehavior: "followUp" }).then(() => donePromise),
       donePromise,
     ]);
   } catch (error) {

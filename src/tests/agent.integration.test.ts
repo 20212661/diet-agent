@@ -75,6 +75,17 @@ describe("Agent 会话事件集成", () => {
     expect(streamed).toEqual(["连接", "连接成功"]);
   });
 
+  it("每轮注入当前时间上下文：时间块在开头、用户原文在结尾", async () => {
+    let seen = "";
+    const session = new FakeSession("time-session", async (message, emit) => {
+      seen = message;
+      emit(agentEnd([{ role: "assistant", content: [{ type: "text", text: "好的" }] }], false));
+    });
+    await runAgentSessionTurn(session, "u1", "我昨天晚上吃了一碗面", candidate("first"), silentLogger);
+    expect(seen.startsWith("〔当前时间：")).toBe(true);
+    expect(seen.endsWith("我昨天晚上吃了一碗面")).toBe(true);
+  });
+
   it("从 agent_end 返回最终 assistant 文本", async () => {
     const session = new FakeSession("final-session", async (_message, emit) => {
       emit(agentEnd([{ role: "assistant", content: [{ type: "text", text: "最终回复" }] }]));
@@ -296,7 +307,9 @@ describe("Agent fallback 与队列集成", () => {
       getSession: async (userId) => {
         let session = sessions.get(userId);
         if (!session) {
-          session = new FakeSession(`session-${userId}`, async (message, emit) => {
+          session = new FakeSession(`session-${userId}`, async (promptMessage, emit) => {
+            // runAgentSessionTurn 会在消息前注入时间上下文，剥掉取原文
+            const message = promptMessage.split("\n\n").pop() ?? promptMessage;
             active += 1;
             maxActive = Math.max(maxActive, active);
             order.push(`start:${message}`);
@@ -327,7 +340,8 @@ describe("Agent fallback 与队列集成", () => {
   });
 
   it("前一请求失败后，队列仍能处理下一请求", async () => {
-    const session = new FakeSession("recovery-session", async (message, emit) => {
+    const session = new FakeSession("recovery-session", async (promptMessage, emit) => {
+      const message = promptMessage.split("\n\n").pop() ?? promptMessage; // 剥掉注入的时间上下文
       if (message === "bad") {
         emit(agentEnd([{ role: "assistant", content: [], errorMessage: "invalid_request" }]));
       } else {

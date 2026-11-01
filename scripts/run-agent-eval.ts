@@ -233,6 +233,28 @@ const scenarios: Scenario[] = [
     }],
   },
   {
+    id: "casual_relative_date_yesterday",
+    setup: () => {},
+    turns: [{
+      message: "昨天晚上吃了一碗牛肉面，帮我记一下",
+      requiredTools: ["log_meal"],
+      expectedMealLogDelta: 1,
+      check: (userId) => {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const expected = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
+        const logs = store.getAllMealLogs(userId);
+        const failures: string[] = [];
+        if (logs.length !== 1 || logs[0]?.date !== expected) {
+          failures.push(`相对日期记餐写入日期为 ${logs.map((log) => log.date).join("、") || "无"}，预期昨天 ${expected}`);
+        }
+        const names = logs.flatMap((log) => log.foods.map((food) => food.name)).join("、");
+        if (!names.includes("牛肉面") && !names.includes("面")) failures.push(`昨天记餐没写库（已记：${names || "无"}）`);
+        return failures;
+      },
+    }],
+  },
+  {
     id: "hypothetical_without_write",
     setup: () => {},
     turns: [{
