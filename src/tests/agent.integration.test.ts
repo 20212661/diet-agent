@@ -36,6 +36,9 @@ class FakeSession implements AgentSessionLike {
     await this.onPrompt(message, (event) => {
       for (const listener of this.listeners) listener(event as AgentSessionEvent);
     });
+    // SDK 在 agent_end 后完成收尾才发 agent_settled；runAgentSessionTurn
+    // 会等 settle 再返回（5s 兜底），假机模拟同一时序避免每轮多等 5s。
+    for (const listener of this.listeners) listener({ type: "agent_settled" });
   }
 }
 

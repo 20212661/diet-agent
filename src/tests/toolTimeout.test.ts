@@ -47,10 +47,15 @@ class FakeSession implements AgentSessionLike {
     return () => this.listeners.delete(listener);
   }
 
-  prompt(message: string): Promise<unknown> {
-    return this.onPrompt(message, (event) => {
+  async prompt(message: string): Promise<unknown> {
+    const result = this.onPrompt(message, (event) => {
       for (const listener of this.listeners) listener(event as AgentSessionEvent);
-    }) ?? Promise.resolve();
+    });
+    if (result) await result;
+    // SDK 在 agent_end 后完成收尾才发 agent_settled；runAgentSessionTurn
+    // 会等 settle 再返回（5s 兜底），假机模拟同一时序避免每轮多等 5s。
+    for (const listener of this.listeners) listener({ type: "agent_settled" });
+    return undefined;
   }
 }
 

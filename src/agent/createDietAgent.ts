@@ -411,6 +411,9 @@ function traceErrorKindFor(error: unknown): string {
   return classifyModelError(error).kind;
 }
 
+/** agent_end 后等待 SDK 收尾（agent_settled）的上限；bench 实测收尾约 50ms。 */
+const SETTLE_WAIT_MS = 5_000;
+
 export async function runAgentSessionTurn(
   session: AgentSessionLike,
   userId: string,
@@ -437,6 +440,10 @@ export async function runAgentSessionTurn(
   const donePromise = new Promise<void>((resolve, reject) => {
     resolveDone = resolve;
     rejectDone = reject;
+  });
+  let resolveSettled!: () => void;
+  const settledPromise = new Promise<void>((resolve) => {
+    resolveSettled = resolve;
   });
 
   // TurnGuard 兜底 provider 挂死：触发后 abort 会话，等待宽限期即结束本轮，
@@ -505,6 +512,10 @@ export async function runAgentSessionTurn(
       guard.onToolEnd();
     }
 
+    if (event.type === "agent_settled") {
+      resolveSettled();
+    }
+
     if (event.type === "agent_end") {
       const replyFromMessages = extractLastAssistantText(event.messages);
       if (replyFromMessages) finalReply = replyFromMessages;
@@ -515,8 +526,18 @@ export async function runAgentSessionTurn(
       if (!event.willRetry) {
         // 若限制已触发，即使 abort 后 SDK 补发了 agent_end 也按超时处理，
         // 保证错误分类稳定（进入现有的 promptError 分支）。
-        if (turnLimitError) rejectDone(turnLimitError);
-        else resolveDone();
+        if (turnLimitError) {
+          rejectDone(turnLimitError);
+          return;
+        }
+        // agent_end 后 SDK 还有收尾工作（持久化/压缩检查等），isStreaming
+        // 要到 agent_settled 才翻 false（bench 实测收尾约 50ms）。此刻就返回，
+        // 下一轮 getOrCreateSession 会撞上 isStreaming=true，跳过记忆变化后
+        // 本应发生的 session 重建——连续发消息必中此竞态。等 settle 再放行；
+        // 回复已在手，5 秒兜底后即使 SDK 收尾卡住也照常返回，重建由下一轮
+        // 的 memoryPrompt 比对兜底。回复完整后 guard 不再需要。
+        guard.dispose();
+        void Promise.race([settledPromise, sleep(SETTLE_WAIT_MS)]).then(resolveDone);
       }
     }
   });
