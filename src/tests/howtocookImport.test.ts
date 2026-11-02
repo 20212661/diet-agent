@@ -4,6 +4,8 @@ import { separateUtensils } from "../import/howtocook/separateUtensils.js";
 import { normalizeIngredientText } from "../import/howtocook/normalize.js";
 import { buildFunnelReport } from "../import/howtocook/funnel.js";
 import { sha256Of } from "../import/howtocook/fetchSource.js";
+import { applyRules, mergeSplitGroups } from "../import/howtocook/applyRules.js";
+import type { TaxonomyProposal } from "../import/howtocook/clusterPropose.js";
 import type { HtcParseResult, HtcSourceRef } from "../import/howtocook/types.js";
 
 const source: HtcSourceRef = {
@@ -272,5 +274,65 @@ describe("buildFunnelReport 覆盖率口径", () => {
 describe("sha256Of", () => {
   it("定版 tarball 摘要常量与函数口径一致", () => {
     expect(sha256Of(Buffer.from(""))).toBe("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+  });
+});
+
+describe("applyRules（P2 规则执行器）", () => {
+  const proposal = (canonical: string, overrides: Partial<TaxonomyProposal> = {}): TaxonomyProposal => ({
+    canonical,
+    aliases: [canonical],
+    existingMatch: undefined,
+    suggestedNewId: undefined,
+    allergens: [],
+    suspectedAllergens: [],
+    rationale: "",
+    occurrences: 1,
+    dishCount: 1,
+    sampleDishes: [],
+    channel: "review",
+    suspectWeak: false,
+    ...overrides,
+  });
+
+  it("分裂组归并：同名两组合并、频次累加、取更严通道", () => {
+    const merged = mergeSplitGroups([
+      proposal("料酒", { aliases: ["料酒"], occurrences: 64, channel: "review" }),
+      proposal("料酒", { aliases: [" cooking wine"], occurrences: 4, channel: "batch" }),
+    ]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0]!.occurrences).toBe(68);
+    expect(merged[0]!.channel).toBe("review");
+  });
+
+  it("规则表：料酒确定、啤酒 gluten确定+wheat可能、味精/食用油不标、醋按品种", () => {
+    const { applied } = applyRules([
+      proposal("料酒", { occurrences: 64 }),
+      proposal("啤酒", { occurrences: 7 }),
+      proposal("味精", { occurrences: 14 }),
+      proposal("食用油/植物油", { aliases: ["食用油", "植物油"], occurrences: 99 }),
+      proposal("香醋", { occurrences: 8 }),
+      proposal("米醋", { occurrences: 5 }),
+      proposal("醋", { aliases: ["醋"], occurrences: 18 }),
+    ]);
+    const by = (name: string) => applied.find((item) => item.canonical === name)!;
+    expect(by("料酒")).toMatchObject({ allergens: ["gluten", "wheat"], possibleAllergens: [] });
+    expect(by("啤酒")).toMatchObject({ allergens: ["gluten"], possibleAllergens: ["wheat"] });
+    expect(by("味精")).toMatchObject({ allergens: [], possibleAllergens: [] });
+    expect(by("食用油/植物油")).toMatchObject({ allergens: [], possibleAllergens: [] });
+    expect(by("香醋")).toMatchObject({ allergens: ["gluten", "wheat"] });
+    expect(by("米醋")).toMatchObject({ allergens: [], possibleAllergens: [] });
+    expect(by("醋")).toMatchObject({ allergens: [], possibleAllergens: ["gluten", "wheat"] });
+  });
+
+  it("R7 泛化：LLM 仅不确定的意见全部进 possibleAllergens；确定提议照采", () => {
+    const { applied } = applyRules([
+      proposal("火锅底料", { suspectedAllergens: ["soy", "wheat", "gluten"] }),
+      proposal("香油", { allergens: ["sesame"] }),
+      proposal("麦冬", { channel: "review" }), // B 组：强词表命中但判无
+    ]);
+    const by = (name: string) => applied.find((item) => item.canonical === name)!;
+    expect(by("火锅底料")).toMatchObject({ allergens: [], possibleAllergens: ["gluten", "soy", "wheat"] });
+    expect(by("香油")).toMatchObject({ allergens: ["sesame"] });
+    expect(by("麦冬")).toMatchObject({ allergens: [], possibleAllergens: [] });
   });
 });
