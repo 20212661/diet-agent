@@ -16,9 +16,12 @@ import { buildFunnelReport } from "../src/import/howtocook/funnel.js";
 import { collectUnmapped, clusterPropose } from "../src/import/howtocook/clusterPropose.js";
 import { applyRules } from "../src/import/howtocook/applyRules.js";
 import { generateTaxonomySource } from "../src/import/howtocook/writeTaxonomy.js";
+import { completeFields, crossCheck, type CompletedFields } from "../src/import/howtocook/completeFields.js";
+import { dedupeCheck, htcRecipeId } from "../src/import/howtocook/dedupe.js";
+import { deriveRecipeIngredientMetadata } from "../src/recipes/ingredientTaxonomy.js";
 import { INGREDIENT_DEFINITIONS } from "../src/recipes/ingredientTaxonomy.js";
 
-const STAGES = ["parse", "propose", "apply-rules", "write-taxonomy"] as const;
+const STAGES = ["parse", "propose", "apply-rules", "write-taxonomy", "complete"] as const;
 const rawArgs = process.argv.slice(2);
 const stageArg = rawArgs.length === 2 && rawArgs[0] === "--stage" ? rawArgs[1] : undefined;
 if (!stageArg || !STAGES.includes(stageArg as (typeof STAGES)[number])) {
@@ -156,6 +159,106 @@ export const HTC_ALIAS_EXTENSIONS: Readonly<Record<string, string[]>> = ${JSON.s
   console.log(`📝 分类表生成：新建 ${generated.stats.newEntries} 条目 / 挂靠扩别名 ${generated.stats.aliasExtensions} 个 / 人工补丁 ${generated.stats.patched} 项 / 跳过 ${generated.stats.skipped} 组`);
   console.log(`已写入 ${target}`);
   console.log("后续：npm run recipes:enrich && npm run validate:recipes");
+} else if (runStage === "complete") {
+  // P3：LLM 补全结构字段 + 校验 + 去重 → 候选与审阅报告（不入库）
+  const seedRecipes = JSON.parse(readFileSync(join(projectRoot, "src", "recipes", "recipeSeed.json"), "utf8"));
+  const recipes = parseAll().map((entry) => entry.result.recipe).filter((recipe): recipe is HtcRawRecipe => recipe !== undefined);
+  console.log(`📥 补全 ${recipes.length} 道（批量 5 道/请求）…`);
+  const completions = await completeFields(recipes);
+
+  const timingMismatches: Array<{ name: string; totalMinutes: number; stepMinutes: number; source: string }> = [];
+  const candidates: unknown[] = [];
+  const flagged: Array<{ id: string; name: string; flags: string[] }> = [];
+  const pendingQueue: Array<{ name: string; source: string; problems: string[] }> = [];
+  const acceptedSoFar: Array<{ name: string; ingredients: string[] }> = [];
+
+  for (const { recipe, fields, problems, retried } of completions) {
+    if (!fields) {
+      const allProblems = [...problems, ...(retried ? ["已重试"] : [])];
+      pendingQueue.push({ name: recipe.name, source: recipe.source.path, problems: allProblems });
+      // 耗时不一致的菜因校验失败进待处理队列——统计必须包含它们（幸存者偏差修正）
+      const timingProblem = problems.find((problem) => problem.includes("与步骤分钟合计") && problem.includes("不一致"));
+      if (timingProblem && recipe.stepMinutesTotal !== undefined) {
+        const total = Number(timingProblem.match(/totalMinutes=(\d+)/)?.[1] ?? 0);
+        timingMismatches.push({ name: recipe.name, totalMinutes: total, stepMinutes: recipe.stepMinutesTotal, source: recipe.source.path });
+      }
+      continue;
+    }
+    // 耗时一致性统计（用户要求单独口径：totalMinutes 与步骤分钟合计差超出 [-20,+45]）
+    if (recipe.stepMinutesTotal !== undefined) {
+      const delta = fields.totalMinutes - recipe.stepMinutesTotal;
+      if (delta < -20 || delta > 45) {
+        timingMismatches.push({ name: recipe.name, totalMinutes: fields.totalMinutes, stepMinutes: recipe.stepMinutesTotal, source: recipe.source.path });
+      }
+    }
+    const dedupe = dedupeCheck(recipe, [...seedRecipes, ...acceptedSoFar.map((a) => ({ name: a.name, ingredients: a.ingredients, optionalIngredients: [], vegetables: [], staples: [] }))]);
+    const flags: string[] = [];
+    if (dedupe.nameDuplicateOf) flags.push(`与种子/已收菜同名：${dedupe.nameDuplicateOf}（变体保留）`);
+    if (dedupe.suspectedDuplicates.length > 0) flags.push(`疑似重复（Jaccard≥0.7）：${dedupe.suspectedDuplicates.join("、")}`);
+    if (recipe.utensils.some((u) => /锅|碗|盆/.test(u)) && fields.cookware.length === 0) flags.push("解析出厨具但 LLM 未填 cookware");
+
+    const id = htcRecipeId(recipe.source.path);
+    const ingredientIds = deriveRecipeIngredientMetadata([...recipe.requiredItems, ...recipe.optionalItems]);
+    candidates.push({
+      id,
+      name: recipe.name,
+      mode: fields.mode,
+      modes: fields.modes,
+      mealTypes: fields.mealTypes,
+      suitableGoals: fields.suitableGoals,
+      ingredients: recipe.requiredItems,
+      optionalIngredients: recipe.optionalItems,
+      ingredientIds: ingredientIds.ingredientIds,
+      allergenTags: ingredientIds.allergenTags,
+      primaryProtein: fields.primaryProtein,
+      vegetables: fields.vegetables,
+      staples: fields.staples,
+      cookware: fields.cookware,
+      appliances: fields.appliances,
+      activeMinutes: fields.activeMinutes,
+      totalMinutes: fields.totalMinutes,
+      difficulty: recipe.difficulty,
+      dishCount: fields.dishCount,
+      tasteTags: fields.tasteTags,
+      preferenceTags: fields.preferenceTags,
+      steps: recipe.steps,
+      timeline: fields.timeline,
+      lowEnergySwap: fields.lowEnergySwap,
+      source: recipe.source,
+      computeLines: recipe.computeLines,
+      dedupeFlags: flags,
+    });
+    if (flags.length > 0) flagged.push({ id, name: recipe.name, flags });
+    acceptedSoFar.push({ name: recipe.name, ingredients: [...recipe.requiredItems, ...recipe.optionalItems] });
+  }
+
+  const timingDenominator = completions.filter((c) => c.fields).length + timingMismatches.filter((m) => !completions.find((c) => c.recipe.name === m.name && c.fields)).length;
+  const mismatchRatio = timingDenominator > 0
+    ? Math.round((1000 * timingMismatches.length) / timingDenominator) / 1000
+    : 0;
+  const report = {
+    generatedAt: new Date().toISOString(),
+    totals: {
+      input: recipes.length,
+      completed: candidates.length,
+      pending: pendingQueue.length,
+      flagged: flagged.length,
+      nameDuplicates: flagged.filter((f) => f.flags.some((x) => x.includes("同名"))).length,
+      suspectedDuplicates: flagged.filter((f) => f.flags.some((x) => x.includes("疑似"))).length,
+      timingMismatchCount: timingMismatches.length,
+      timingMismatchRatio: mismatchRatio,
+    },
+    timingMismatches,
+    timingMismatchExamples: timingMismatches.slice(0, 5),
+    pendingQueue,
+    flagged,
+    candidates,
+  };
+  writeFileSync(join(outputDir, "htc-p3-report.json"), `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  console.log(`✅ 补全 ${candidates.length}/${recipes.length}（待处理 ${pendingQueue.length}，重试后仍败 ${pendingQueue.filter((p) => p.problems.some((x) => x.includes("重试"))).length}）`);
+  console.log(`  标记：同名 ${report.totals.nameDuplicates} / 疑似重复 ${report.totals.suspectedDuplicates}（可重叠）`);
+  console.log(`  ⏱ 耗时不一致：${timingMismatches.length} 道（${(mismatchRatio * 100).toFixed(1)}%），前 5 例：${timingMismatches.slice(0, 5).map((m) => `${m.name}(LLM ${m.totalMinutes} vs 步骤 ${m.stepMinutes})`).join("、")}`);
+  console.log(`报告与候选已写入 data/import/htc-p3-report.json`);
 } else {
   throw new Error("unreachable");
 }
