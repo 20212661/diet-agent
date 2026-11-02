@@ -8,6 +8,7 @@ import {
 } from "../recipes/ingredientTaxonomy.js";
 import { validateRecipeSeed } from "../recipes/recipeSchema.js";
 import { assessFoodSafety } from "../recipes/foodSafety.js";
+import { matchRecipesDetailed } from "../recipes/recipeMatcher.js";
 
 const seed = JSON.parse(readFileSync(join(process.cwd(), "src", "recipes", "recipeSeed.json"), "utf8"));
 
@@ -117,6 +118,39 @@ describe("菜谱 Schema 与过敏原元数据", () => {
     expect(assessFoodSafety(["虾仁", "西芹"], { allergies: ["虾"] }).status).toBe("conflict");
     // 同一用户：忌口"糖"不拦牛奶，但过敏"奶"仍然拦
     expect(assessFoodSafety(["牛奶"], { avoidFoods: ["糖"], allergies: ["奶"] }).status).toBe("conflict");
+  });
+
+  it("可能含过敏原：鸡精对鸡蛋过敏是 needs_verification 并被推荐拦下，小麦过敏仍是 conflict", () => {
+    // 鸡精：wheat/gluten 确定、egg 可能含（配方因品牌而异）
+    const forEgg = assessFoodSafety(["青菜", "鸡精"], { allergies: ["鸡蛋"] });
+    expect(forEgg.status).toBe("needs_verification");
+    expect(forEgg.possibleAllergenHits).toEqual(["鸡精 (可能含 egg)"]);
+    const forWheat = assessFoodSafety(["青菜", "鸡精"], { allergies: ["小麦"] });
+    expect(forWheat.status).toBe("conflict");
+    expect(forWheat.conflicts).toContain("鸡精 (wheat)");
+    const forMilk = assessFoodSafety(["青菜", "鸡精"], { allergies: ["牛奶"] });
+    expect(forMilk.status).toBe("clear");
+    // 无过敏/忌口时不触发可能含检查
+    expect(assessFoodSafety(["青菜", "鸡精"]).status).toBe("clear");
+    // 推荐路径同样拦下（matchRecipesDetailed 排除一切非 clear，含 needs_verification）
+    const gprRecipe = {
+      id: "test_chicken_essence", name: "鸡精炒青菜", mode: "quick",
+      ingredients: ["青菜", "鸡精"], optionalIngredients: [], vegetables: [], staples: [],
+      cookware: ["炒锅"], appliances: [], activeMinutes: 5, totalMinutes: 10, allergenTags: [],
+    } as never;
+    const outcome = matchRecipesDetailed({
+      recipes: [gprRecipe],
+      availableIngredients: [], shoppingList: [],
+      kitchenProfile: {
+        userId: "test", updatedAt: "x",
+        burners: 2, hasOven: true, hasMicrowave: false, hasRiceCooker: false, cookware: ["炒锅"],
+        maxActiveMinutes: 20, maxTotalMinutes: 35, tastePreferences: [], cookingPreferences: [],
+      },
+      userProfile: { userId: "test", allergies: ["鸡蛋"], avoidFoods: [] } as never,
+      feedback: [],
+    });
+    expect(outcome.matches.map((match) => match.recipe.name)).not.toContain("鸡精炒青菜");
+    expect(outcome.blockingReasons.join()).toContain("鸡精");
   });
 
   it("忌口类别词精确相等时按词表展开（海鲜/乳制品/豆制品/坚果/面食）", () => {
