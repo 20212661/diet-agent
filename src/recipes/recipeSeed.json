@@ -1016,10 +1016,10 @@
     "ingredientIds": [
       "dumpling_wrapper",
       "egg",
-      "ingredient:饺子肉馅",
       "seaweed",
       "vegetables",
-      "wheat_wrapper"
+      "wheat_wrapper",
+      "wonton"
     ],
     "allergenTags": [
       "egg",
@@ -1367,9 +1367,9 @@
     "freezerReuse": "",
     "proteinLevel": "medium",
     "ingredientIds": [
+      "bean_sprouts",
       "carrot",
       "egg",
-      "ingredient:豆芽",
       "pork",
       "vegetables",
       "wheat_noodle"
@@ -1462,7 +1462,7 @@
     "ingredientIds": [
       "corn",
       "egg",
-      "ingredient:火腿",
+      "ham",
       "pea",
       "rice",
       "scallion"
@@ -1639,9 +1639,9 @@
       "broccoli",
       "chili",
       "garlic",
-      "ingredient:培根",
       "olive_oil",
-      "pasta"
+      "pasta",
+      "processed_pork"
     ],
     "allergenTags": [
       "gluten",
@@ -1880,9 +1880,9 @@
     "ingredientIds": [
       "egg",
       "fermented_tofu",
-      "ingredient:榨菜",
-      "ingredient:肉松",
-      "rice"
+      "pork_floss",
+      "rice",
+      "zhacai"
     ],
     "allergenTags": [
       "egg",
@@ -2544,7 +2544,7 @@
     "ingredientIds": [
       "bell_pepper",
       "garlic",
-      "ingredient:粉丝",
+      "glass_noodles",
       "prawn",
       "scallion",
       "shrimp_meat"
@@ -2967,9 +2967,9 @@
     "freezerReuse": "",
     "proteinLevel": "high",
     "ingredientIds": [
-      "ingredient:淀粉",
       "pork",
       "sesame",
+      "starch",
       "tomato"
     ],
     "allergenTags": [
@@ -3310,9 +3310,9 @@
     "freezerReuse": "",
     "proteinLevel": "high",
     "ingredientIds": [
+      "cooking_oil",
       "cucumber",
       "garlic",
-      "ingredient:红油",
       "pork",
       "scallion"
     ],
@@ -3389,9 +3389,9 @@
     "freezerReuse": "腌好的肉条冷冻，烤前冷藏解冻。",
     "proteinLevel": "high",
     "ingredientIds": [
+      "char_siu_sauce",
       "fermented_tofu",
       "honey",
-      "ingredient:叉烧酱",
       "oyster_sauce",
       "pork"
     ],
@@ -3481,10 +3481,10 @@
     "proteinLevel": "medium",
     "ingredientIds": [
       "cabbage",
-      "ingredient:粉条",
       "pork",
       "potato",
       "star_anise",
+      "starch_noodles",
       "tofu"
     ],
     "allergenTags": [
@@ -4159,15 +4159,17 @@
     "freezerReuse": "炖好的啤酒鸭分装冷冻。",
     "proteinLevel": "high",
     "ingredientIds": [
+      "beer",
       "bell_pepper",
       "duck",
       "garlic",
       "ginger",
-      "ingredient:啤酒",
       "potato",
       "star_anise"
     ],
-    "allergenTags": []
+    "allergenTags": [
+      "gluten"
+    ]
   },
   {
     "id": "smashed_cucumber",
@@ -4580,8 +4582,8 @@
       "chili",
       "garlic",
       "green_beans",
-      "ingredient:榨菜",
-      "pork"
+      "pork",
+      "zhacai"
     ],
     "allergenTags": []
   },
@@ -4741,9 +4743,9 @@
       "cabbage",
       "chili",
       "garlic",
-      "ingredient:醋",
       "peppercorn",
-      "scallion"
+      "scallion",
+      "vinegar"
     ],
     "allergenTags": []
   },
@@ -5086,11 +5088,11 @@
     "proteinLevel": "medium",
     "ingredientIds": [
       "dumpling_wrapper",
-      "ingredient:醋",
-      "ingredient:饺子肉馅",
       "scallion",
       "sesame",
-      "wheat_wrapper"
+      "vinegar",
+      "wheat_wrapper",
+      "wonton"
     ],
     "allergenTags": [
       "gluten",
@@ -5183,10 +5185,10 @@
       "dried_shrimp",
       "dumpling_wrapper",
       "egg",
-      "ingredient:馄饨肉馅",
       "scallion",
       "seaweed",
-      "wheat_wrapper"
+      "wheat_wrapper",
+      "wonton"
     ],
     "allergenTags": [
       "egg",
@@ -5272,10 +5274,10 @@
     "ingredientIds": [
       "corn",
       "egg",
-      "ingredient:火腿",
-      "ingredient:青豆",
+      "ham",
       "rice",
-      "tomato"
+      "tomato",
+      "青豆_豌豆"
     ],
     "allergenTags": [
       "egg"
@@ -5789,7 +5791,7 @@
     "ingredientIds": [
       "bread",
       "egg",
-      "ingredient:火腿",
+      "ham",
       "lettuce",
       "milk",
       "tomato"

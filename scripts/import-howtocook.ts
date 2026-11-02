@@ -15,9 +15,10 @@ import { parseHtcMarkdown } from "../src/import/howtocook/parseMarkdown.js";
 import { buildFunnelReport } from "../src/import/howtocook/funnel.js";
 import { collectUnmapped, clusterPropose } from "../src/import/howtocook/clusterPropose.js";
 import { applyRules } from "../src/import/howtocook/applyRules.js";
+import { generateTaxonomySource } from "../src/import/howtocook/writeTaxonomy.js";
 import { INGREDIENT_DEFINITIONS } from "../src/recipes/ingredientTaxonomy.js";
 
-const STAGES = ["parse", "propose", "apply-rules"] as const;
+const STAGES = ["parse", "propose", "apply-rules", "write-taxonomy"] as const;
 const rawArgs = process.argv.slice(2);
 const stageArg = rawArgs.length === 2 && rawArgs[0] === "--stage" ? rawArgs[1] : undefined;
 if (!stageArg || !STAGES.includes(stageArg as (typeof STAGES)[number])) {
@@ -135,6 +136,26 @@ if (runStage === "parse") {
   const withPossible = applied.filter((item) => item.possibleAllergens.length > 0);
   console.log("  含 possibleAllergens 的组：" + withPossible.length + "（Top：" + withPossible.slice(0, 8).map((item) => item.canonical + "[" + item.possibleAllergens.join("/") + "]").join("、") + "）");
   console.log("结果已写入 data/import/htc-applied-rules.json");
+} else if (runStage === "write-taxonomy") {
+  // P2-3：把扫表定案的判定写成数据文件（人工补丁内置于生成器）
+  const applied = JSON.parse(readFileSync(join(outputDir, "htc-applied-rules.json"), "utf8")).applied;
+  const generated = generateTaxonomySource(applied);
+  const fileContent = `// 自动生成：npm run import:htc -- --stage write-taxonomy（判定=人工规则表+扫表定案 2026-11-02）。请勿手改，重跑生成器覆写。
+// 数据来源 HowToCook（Unlicense）commit ${HTC_COMMIT.slice(0, 7)} 的食材聚类；人工补丁见 src/import/howtocook/writeTaxonomy.ts。
+import type { AllergenId } from "../types/diet.js";
+
+export const HTC_INGREDIENT_DEFINITIONS: ReadonlyArray<{
+  id: string; aliases: string[]; allergens: AllergenId[]; possibleAllergens: AllergenId[];
+}> = ${JSON.stringify(generated.definitions, null, 2)};
+
+export const HTC_ALIAS_EXTENSIONS: Readonly<Record<string, string[]>> = ${JSON.stringify(generated.aliasExtensions, null, 2)};
+`;
+  const target = join(projectRoot, "src", "recipes", "ingredientTaxonomyHowToCook.ts");
+  const { writeFileSync: writeFile } = await import("node:fs");
+  writeFile(target, fileContent, "utf8");
+  console.log(`📝 分类表生成：新建 ${generated.stats.newEntries} 条目 / 挂靠扩别名 ${generated.stats.aliasExtensions} 个 / 人工补丁 ${generated.stats.patched} 项 / 跳过 ${generated.stats.skipped} 组`);
+  console.log(`已写入 ${target}`);
+  console.log("后续：npm run recipes:enrich && npm run validate:recipes");
 } else {
   throw new Error("unreachable");
 }

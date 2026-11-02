@@ -256,18 +256,30 @@ describe("separateUtensils", () => {
 });
 
 describe("buildFunnelReport 覆盖率口径", () => {
-  it("按出现次数与按种类分别计算；鸡蛋/盐已映射、料酒未映射", () => {
-    const results = [
-      { path: "a.md", result: parse(GONGBAO) },
-      { path: "b.md", result: parse(FRIED_RICE, "staple") },
-    ];
-    const report = buildFunnelReport(results, { repo: "x", commit: "c", tarballSha256: "s" });
+  it("按出现次数与按种类分别计算；未映射项标疑似过敏原", () => {
+    // 手写解析结果，不依赖真实分类表的映射状态（分类表扩充后样例写法可能全部映射）
+    const handmade = (ingredients: string[], path: string) => ({
+      path,
+      result: {
+        recipe: {
+          name: path, category: "meat_dish" as const, difficulty: 1,
+          requiredItems: ingredients, optionalItems: [], utensils: [], computeLines: [],
+          steps: ["做菜"], chosenVariant: undefined, variantCount: 1, stepMinutesTotal: 1,
+          source: { repo: "x", commit: "c", path },
+        },
+        problems: [],
+      },
+    });
+    const report = buildFunnelReport(
+      [handmade(["鸡蛋", "兹拉克斯粒"], "a.md"), handmade(["鸡蛋"], "b.md")],
+      { repo: "x", commit: "c", tarballSha256: "s" },
+    );
     expect(report.totals.parsed).toBe(2);
-    expect(report.totals.multiVersion).toBe(1);
-    // 两道菜出现的写法：手枪腿…未映射、料酒未映射、鸡蛋/盐/胡椒粉已映射等
-    expect(report.coverage.coverageByOccurrence).toBeGreaterThan(0);
-    expect(report.coverage.coverageByOccurrence).toBeLessThan(1);
-    expect(report.topUnmapped.some((item) => item.name === "料酒" && item.suspectAllergen)).toBe(true);
+    expect(report.coverage).toMatchObject({ ingredientOccurrences: 3, mappedOccurrences: 2 });
+    expect(report.coverage.coverageByOccurrence).toBeCloseTo(2 / 3, 2);
+    expect(report.coverage.distinctNames).toBe(2);
+    expect(report.coverage.coverageByVariant).toBe(0.5);
+    expect(report.topUnmapped[0]).toMatchObject({ name: "兹拉克斯粒", count: 1, suspectAllergen: false });
   });
 });
 

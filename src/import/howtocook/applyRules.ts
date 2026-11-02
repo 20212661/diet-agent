@@ -12,6 +12,7 @@
  * 其余：A 组采纳 LLM 确定提议（与第二意见一致）；B 组默认通过
  * （LLM 说无过敏原且不命中强词表）。
  */
+import type { AllergenId } from "../../types/diet.js";
 import type { TaxonomyProposal } from "./clusterPropose.js";
 
 export interface AppliedJudgement {
@@ -19,16 +20,16 @@ export interface AppliedJudgement {
   aliases: string[];
   existingMatch: string | undefined;
   suggestedNewId: string | undefined;
-  allergens: string[];
-  possibleAllergens: string[];
+  allergens: AllergenId[];
+  possibleAllergens: AllergenId[];
   basis: string;
   occurrences: number;
 }
 
 const LEGAL = new Set(["peanut", "tree_nut", "milk", "egg", "soy", "wheat", "gluten", "fish", "shellfish", "sesame"]);
 
-function onlyLegal(values: readonly string[]): string[] {
-  return [...new Set(values.filter((value) => LEGAL.has(value)))].sort();
+function onlyLegal(values: readonly string[]): AllergenId[] {
+  return [...new Set(values.filter((value): value is AllergenId => LEGAL.has(value)))].sort();
 }
 
 /** 合并跨批分裂的同名组（如"料酒"两批各一组）：以更严通道（review）为准。 */
@@ -52,7 +53,7 @@ export function mergeSplitGroups(proposals: readonly TaxonomyProposal[]): Taxono
   return [...byCanonical.values()].sort((a, b) => b.occurrences - a.occurrences);
 }
 
-function applyRuleTable(proposal: TaxonomyProposal): { allergens: string[]; possible: string[]; basis: string } | undefined {
+function applyRuleTable(proposal: TaxonomyProposal): { allergens: AllergenId[]; possible: AllergenId[]; basis: string } | undefined {
   const name = proposal.canonical;
   const aliasesText = [name, ...proposal.aliases].join("、");
 
@@ -103,8 +104,8 @@ export function applyRules(
   for (const proposal of merged) {
     if (proposal.canonical === "__UTENSIL__") continue; // 工具误入，不进分类表
     const ruled = applyRuleTable(proposal);
-    let allergens: string[];
-    let possible: string[];
+    let allergens: AllergenId[];
+    let possible: AllergenId[];
     let basis: string;
 
     if (ruled) {

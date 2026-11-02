@@ -1,6 +1,7 @@
 import type { AllergenId } from "../types/diet.js";
+import { HTC_ALIAS_EXTENSIONS, HTC_INGREDIENT_DEFINITIONS } from "./ingredientTaxonomyHowToCook.js";
 
-interface IngredientDefinition {
+export interface IngredientDefinition {
   id: string;
   aliases: readonly string[];
   allergens?: readonly AllergenId[];
@@ -12,7 +13,8 @@ interface IngredientDefinition {
   possibleAllergens?: readonly AllergenId[];
 }
 
-export const INGREDIENT_DEFINITIONS: readonly IngredientDefinition[] = [
+/** 人工维护的种子分类表（HowToCook 导入条目在 ingredientTaxonomyHowToCook.ts，由管道生成）。 */
+export const BASE_INGREDIENT_DEFINITIONS: readonly IngredientDefinition[] = [
   { id: "allergen_peanut", aliases: ["花生类", "花生过敏"], allergens: ["peanut"] },
   { id: "allergen_tree_nut", aliases: ["树坚果", "坚果过敏"], allergens: ["tree_nut"] },
   { id: "allergen_shellfish", aliases: ["甲壳类", "贝类", "甲壳动物"], allergens: ["shellfish"] },
@@ -31,12 +33,17 @@ export const INGREDIENT_DEFINITIONS: readonly IngredientDefinition[] = [
   // 但部分品牌含豆粕/酱油，摘掉 soy 会变成安全漏洞；盲标口径 wheat 确定/soy 待定
   // （allergenGold unsure），经人工裁决保留 soy，代价仅大豆过敏用户多拦 3 道菜。
   { id: "soy_sauce", aliases: ["生抽", "老抽", "酱油", "豆瓣酱", "黄豆酱", "甜面酱"], allergens: ["soy", "wheat", "gluten"] },
-  // possibleAllergens 语义的载体条目（HowToCook 规则表首批定案项，种子菜不含、零迁移牵动）：
-  // 主流鸡精含小麦淀粉（确定），不少品牌加全蛋粉（可能含）。
-  { id: "chicken_essence", aliases: ["鸡精", "鸡粉"], allergens: ["wheat", "gluten"], possibleAllergens: ["egg"] },
   { id: "oyster_sauce", aliases: ["蚝油", "蚝油汁"], allergens: ["shellfish", "soy", "wheat", "gluten"] },
   { id: "wheat_noodle", aliases: ["面条"], allergens: ["wheat", "gluten"] },
   { id: "wheat_wrapper", aliases: ["冷冻饺子", "冷冻馄饨", "冷冻葱油饼"], allergens: ["wheat", "gluten"] },
+  // 原UNRESOLVED 待审项定案（2026-11-02）：皮=小麦确定；肉馅常加大豆蛋白，可能含
+  { id: "wonton", aliases: ["馄饨（肉馅）", "饺子（肉馅）"], allergens: ["wheat", "gluten"], possibleAllergens: ["soy"] },
+  // 其余原UNRESOLVED 待审项定案（2026-11-02，种子特有写法）：
+  // 肉松常加大豆蛋白与酱油（soy 确定、wheat 可能含）；榨菜为芥菜腌制品无常见过敏原；
+  // 叉烧酱以酱油/海鲜酱为基（soy/wheat/gluten 确定，部分品牌含芝麻酱）。
+  { id: "pork_floss", aliases: ["肉松"], allergens: ["soy"], possibleAllergens: ["wheat"] },
+  { id: "zhacai", aliases: ["榨菜"], allergens: [] },
+  { id: "char_siu_sauce", aliases: ["叉烧酱"], allergens: ["soy", "wheat", "gluten"], possibleAllergens: ["sesame"] },
   { id: "tuna", aliases: ["金枪鱼罐头", "金枪鱼"], allergens: ["fish"] },
   { id: "sole", aliases: ["龙利鱼"], allergens: ["fish"] },
   { id: "perch", aliases: ["鲈鱼"], allergens: ["fish"] },
@@ -120,25 +127,24 @@ export const INGREDIENT_DEFINITIONS: readonly IngredientDefinition[] = [
   { id: "millet", aliases: ["小米"] },
   { id: "flour", aliases: ["面粉"], allergens: ["wheat", "gluten"] },
   { id: "curry_roux", aliases: ["咖喱块"], allergens: ["wheat", "gluten"] },
+  { id: "chicken_essence", aliases: ["鸡精", "鸡粉"], allergens: ["wheat", "gluten"], possibleAllergens: ["egg"] },
 ] as const;
+
+// 挂靠现有条目的导入别名（生成器保证过敏原集合与现有条目兼容）
+const baseWithExtensions: readonly IngredientDefinition[] = BASE_INGREDIENT_DEFINITIONS.map((definition) => {
+  const extra = HTC_ALIAS_EXTENSIONS[definition.id];
+  return extra ? { ...definition, aliases: [...definition.aliases, ...extra] } : definition;
+});
+
+export const INGREDIENT_DEFINITIONS: readonly IngredientDefinition[] = [
+  ...baseWithExtensions,
+  ...HTC_INGREDIENT_DEFINITIONS,
+];
 
 /** Unresolved seed names stay blocked for allergy-sensitive recommendations. */
 export const UNRESOLVED_RECIPE_INGREDIENTS: Readonly<Record<string, string>> = {
-  "饺子（肉馅）": "肉馅成分未注明",
-  "馄饨（肉馅）": "馅料成分未注明",
-  "火腿": "加工配料未注明",
-  "培根": "腌制配料未注明",
-  "肉松": "加工配料未注明",
-  "榨菜": "加工配料未注明",
-  "粉丝": "淀粉来源未注明",
-  "粉条": "淀粉来源未注明",
-  "淀粉": "植物来源未注明",
-  "豆芽": "豆类品种未注明",
-  "青豆": "豆类品种未注明",
-  "红油": "油料和调味配方未注明",
-  "叉烧酱": "品牌配方未注明",
-  "啤酒": "谷物配方未注明",
-  "醋": "谷物来源未注明",
+  // 2026-11-02 清空：HowToCook 分类表扩充后，原 16 项待审食材（火腿/培根/豆芽/粉丝/淀粉/红油/叉烧酱/咖喱块/啤酒/醋…）
+  // 已全部建立映射。机制保留：新种子出现未映射食材时，不在此清单即直接 fail（validate:recipes / CI）。
 };
 
 function normalizedText(value: string): string {

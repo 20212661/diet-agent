@@ -7,6 +7,18 @@ import { CURRENT_SCHEMA_VERSION, runMigrations } from "../store/migrations/index
 
 const temporaryDirectories: string[] = [];
 
+/** 最小 v5+ 形态 recipe_book：v19/v22 的重算迁移需要（recomputeAllergenTags）。 */
+function createLegacyRecipeBook(db: Database.Database): void {
+  db.exec(`CREATE TABLE recipe_book (
+    id TEXT PRIMARY KEY, name TEXT NOT NULL, mode TEXT NOT NULL,
+    ingredients_json TEXT NOT NULL, optional_ingredients_json TEXT NOT NULL DEFAULT '[]',
+    cookware_json TEXT NOT NULL, active_minutes INTEGER NOT NULL, total_minutes INTEGER NOT NULL,
+    steps_json TEXT NOT NULL, low_energy_swap TEXT, updated_at TEXT NOT NULL,
+    vegetables_json TEXT NOT NULL DEFAULT '[]', staples_json TEXT NOT NULL DEFAULT '[]', primary_protein TEXT,
+    allergen_tags_json TEXT
+  )`);
+}
+
 /** v17 形态的 agent_traces（真实 v17+ 库都有；v20 会重建它放宽 entry CHECK）。 */
 function createLegacyAgentTraces(db: Database.Database, checkEntries = "'web','tui','eval'"): void {
   db.exec(`CREATE TABLE agent_traces (
@@ -150,6 +162,7 @@ describe("SQLite 版本化迁移", { timeout: 15_000 }, () => {
   it("v20 agent_traces 的 entry 增加 bench 类型，重建后保留既有行", () => {
     const db = new Database(":memory:");
     db.pragma("user_version = 19");
+    createLegacyRecipeBook(db);
     // 手工建 v17/v19 形态的 agent_traces（旧 CHECK 只有 web/tui/eval）并插入一条既有记录
     createLegacyAgentTraces(db);
     db.prepare(`INSERT INTO agent_traces (trace_id, user_id, entry, status, started_at, attempts)
@@ -173,6 +186,7 @@ describe("SQLite 版本化迁移", { timeout: 15_000 }, () => {
   it("v21 agent_trace_spans 的 kind 增加 claimed_unsaved，重建后保留既有行", () => {
     const db = new Database(":memory:");
     db.pragma("user_version = 20");
+    createLegacyRecipeBook(db);
     createLegacyAgentTraces(db);
     db.prepare(`INSERT INTO agent_traces (trace_id, user_id, entry, status, started_at, attempts)
       VALUES ('t1', 'u1', 'web', 'ok', 123, 1)`).run();
