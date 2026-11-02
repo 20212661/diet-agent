@@ -371,7 +371,7 @@ describe("做饭与周计划工具", () => {
   it("晚餐记录只做提示，完成计划必须显式操作且换菜清除旧状态", () => {
     const userId = freshUser("weekly_explicit_done");
     store.clearUserData(userId);
-    baseKitchen(userId, { cookware: ["炒锅", "汤锅", "烤盘", "平底锅", "保鲜袋"] });
+    baseKitchen(userId, { cookware: ["炒锅", "汤锅", "烤盘", "平底锅", "保鲜袋", "碗", "盘"] }); // 合并库后排序首位的导入菜（乾隆白菜）需碗盘
     const [firstRecipe, secondRecipe] = store.getRecipeBook();
     const weekStartDate = "2026-09-21";
     const date = weekStartDate;

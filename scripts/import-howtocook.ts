@@ -21,7 +21,7 @@ import { dedupeCheck, htcRecipeId } from "../src/import/howtocook/dedupe.js";
 import { deriveRecipeIngredientMetadata } from "../src/recipes/ingredientTaxonomy.js";
 import { INGREDIENT_DEFINITIONS } from "../src/recipes/ingredientTaxonomy.js";
 
-const STAGES = ["parse", "propose", "apply-rules", "write-taxonomy", "complete"] as const;
+const STAGES = ["parse", "propose", "apply-rules", "write-taxonomy", "complete", "select", "admit"] as const;
 const rawArgs = process.argv.slice(2);
 const stageArg = rawArgs.length === 2 && rawArgs[0] === "--stage" ? rawArgs[1] : undefined;
 if (!stageArg || !STAGES.includes(stageArg as (typeof STAGES)[number])) {
@@ -259,6 +259,133 @@ export const HTC_ALIAS_EXTENSIONS: Readonly<Record<string, string[]>> = ${JSON.s
   console.log(`  标记：同名 ${report.totals.nameDuplicates} / 疑似重复 ${report.totals.suspectedDuplicates}（可重叠）`);
   console.log(`  ⏱ 耗时不一致：${timingMismatches.length} 道（${(mismatchRatio * 100).toFixed(1)}%），前 5 例：${timingMismatches.slice(0, 5).map((m) => `${m.name}(LLM ${m.totalMinutes} vs 步骤 ${m.stepMinutes})`).join("、")}`);
   console.log(`报告与候选已写入 data/import/htc-p3-report.json`);
+} else if (runStage === "select") {
+  // P4 首批选择：从候选按定案标准选 100-150 道，排除同名/疑似/耗时候选；
+  // 导出名单+审阅卡片（随机 20 道全字段 + 标记条目 + activeMinutes 抽查 15 道）
+  const report = JSON.parse(readFileSync(join(outputDir, "htc-p3-report.json"), "utf8"));
+  const candidates: Array<Record<string, unknown>> = report.candidates;
+  const excluded = { name: 0, suspected: 0, unmapped: 0 };
+  const TEMPLATE_MARKERS = ["桥接模式", "抽象层", "实现层", "extends", "implements", "万物皆可酿"];
+  const eligible = candidates.filter((c) => {
+    const flags = (c.dedupeFlags as string[]) ?? [];
+    if (flags.some((f) => f.includes("同名"))) { excluded.name += 1; return false; }
+    if (flags.some((f) => f.includes("疑似"))) { excluded.suspected += 1; return false; }
+    return true;
+  }).filter((c) => {
+    // 模板/元菜谱（如"桂林十八酿"讲的是桥接模式方法论，不是具体菜）
+    if ((c.steps as string[]).some((step) => TEMPLATE_MARKERS.some((marker) => step.includes(marker)))) { excluded.unmapped += 0; (excluded as Record<string, number>).template = ((excluded as Record<string, number>).template ?? 0) + 1; return false; }
+    return true;
+  }).filter((c) => {
+    const unmapped = (c.ingredientIds as string[]).some((id) => id.startsWith("ingredient:"));
+    if (unmapped) { excluded.unmapped += 1; return false; }
+    return true;
+  });
+
+  // 隐藏过敏原优先（allergenTags 非空或食材命中 possible 条目——用候选的 allergenTags 非空近似 + 食材名单含加工品）
+  const HIDDEN_HINTS = ["蚝油", "料酒", "豆豉", "鸡精", "味精", "芝士", "蛋黄酱", "沙拉酱", "十三香", "五香粉", "火腿", "午餐肉", "腊肠", "培根", "方便面", "啤酒", "醋"];
+  const hiddenAllergen = (c: Record<string, unknown>) => {
+    const ings = [...(c.ingredients as string[]), ...(c.optionalIngredients as string[])];
+    return HIDDEN_HINTS.some((hint) => ings.some((i) => i.includes(hint)));
+  };
+  // 难度≤3 与主动≤40 为优先档，超出的进次级档截断用
+  const quota: Record<string, number> = { aquatic: 11, breakfast: 10, meat_dish: 43, soup: 9, staple: 23, vegetable_dish: 25 };
+  const picked: Array<Record<string, unknown>> = [];
+  for (const [category, limit] of Object.entries(quota)) {
+    const pool = eligible.filter((c) => (c.source as Record<string, string>).path.includes(`dishes/${category}/`));
+    const primary = pool.filter((c) => (c.difficulty as number) <= 3 && (c.activeMinutes as number) <= 40);
+    const secondary = pool.filter((c) => !primary.includes(c));
+    primary.sort((a, b) => Number(hiddenAllergen(b)) - Number(hiddenAllergen(a)));
+    secondary.sort((a, b) => Number(hiddenAllergen(b)) - Number(hiddenAllergen(a)));
+    picked.push(...primary.slice(0, limit), ...secondary.slice(0, Math.max(0, limit - primary.length)));
+  }
+
+  const byCategory = picked.reduce((acc: Record<string, number>, c) => {
+    const cat = (c.source as Record<string, string>).path.match(/dishes\/([a-z_]+)\//)?.[1] ?? "?";
+    acc[cat] = (acc[cat] ?? 0) + 1;
+    return acc;
+  }, {});
+  const hiddenCount = picked.filter(hiddenAllergen).length;
+  const activeValues = picked.map((c) => c.activeMinutes as number);
+
+  writeFileSync(join(outputDir, "htc-p4-selection.json"), `${JSON.stringify({ generatedAt: new Date().toISOString(), total: picked.length, byCategory, hiddenAllergenCount: hiddenCount, excluded, picked }, null, 2)}\n`, "utf8");
+
+  // 审阅卡片：随机 20 道全字段 + activeMinutes 抽查 15 道（步骤全文+LLM 值）
+  const shuffled = [...picked].sort(() => Math.random() - 0.5);
+  const cardRecipes = shuffled.slice(0, 20);
+  const timingSample = shuffled.slice(20, 35);
+  const card = (c: Record<string, unknown>) => [
+    `### ${c.name}（${(c.source as Record<string, string>).path}）`,
+    `- 分类 ${c.mode}/${(c.mealTypes as string[]).join("+")}｜难度 ${c.difficulty}★｜主动 ${c.activeMinutes}min / 总 ${c.totalMinutes}min｜${c.dishCount} 盘｜器具 ${(c.appliances as string[]).join("+") || "-"} ${(c.cookware as string[]).join("/")}`,
+    `- 食材：${(c.ingredients as string[]).join("、")}${(c.optionalIngredients as string[]).length ? `（可选：${(c.optionalIngredients as string[]).join("、")}）` : ""}`,
+    `- 过敏原标签：${(c.allergenTags as string[]).join(",") || "无"}`,
+    `- 口味：${(c.tasteTags as string[]).join("/") || "-"}｜蛋白 ${c.primaryProtein ?? "-"}｜主食 ${(c.staples as string[]).join("/") || "-"}`,
+    `- 步骤：\n${(c.steps as string[]).map((s) => `  ${s}`).join("\n")}`,
+  ].join("\n");
+  const timingCard = (c: Record<string, unknown>) => `### ${c.name}｜LLM 主动 ${c.activeMinutes}min / 总 ${c.totalMinutes}min（步骤分钟合计 ${(c as Record<string, unknown>).stepMinutesTotal ?? "未提取"}）\n${(c.steps as string[]).map((s) => `  ${s}`).join("\n")}`;
+  const review = [
+    `# P4 首批审阅卡片（${picked.length} 道，排除同名 ${excluded.name}/疑似 ${excluded.suspected}/含未映射食材 ${excluded.unmapped}）`,
+    ``,
+    `分类分布：${JSON.stringify(byCategory)}；隐藏过敏原菜 ${hiddenCount} 道；主动分钟 avg ${Math.round(activeValues.reduce((a, b) => a + b, 0) / activeValues.length)}。`,
+    ``,
+    `## 一、随机 20 道全字段卡片`,
+    ...cardRecipes.map(card),
+    ``,
+    `## 二、activeMinutes 抽查 15 道（重点字段，请人工估算动手时间与 LLM 值比对）`,
+    ...timingSample.map(timingCard),
+  ].join("\n");
+  writeFileSync(join(outputDir, "htc-p4-review.md"), review, "utf8");
+  console.log(`📋 首批选择：${picked.length} 道（排除同名 ${excluded.name} / 疑似 ${excluded.suspected} / 未映射 ${excluded.unmapped}）`);
+  console.log(`  分类：${JSON.stringify(byCategory)}；隐藏过敏原 ${hiddenCount} 道`);
+  console.log(`审阅卡片：data/import/htc-p4-review.md（随机 20 全字段 + activeMinutes 抽查 15）`);
+} else if (runStage === "admit") {
+  // P4 准入：把人工通过的首批名单写成 src/recipes/imported/howtocook.json（进 git+CI）
+  // schema 兼容字段；来源追溯放顶层 _meta（加载方忽略下划线键）
+  const selection = JSON.parse(readFileSync(join(outputDir, "htc-p4-selection.json"), "utf8"));
+  const SCHEMA_KEYS = new Set(["id","name","mode","modes","mealTypes","suitableGoals","ingredients","optionalIngredients","ingredientIds","allergenTags","primaryProtein","vegetables","staples","cookware","appliances","activeMinutes","totalMinutes","difficulty","dishCount","tasteTags","preferenceTags","seasonTags","steps","timeline","lowEnergySwap","weekendPrep","freezerReuse","nutrition","proteinLevel"]);
+  const REQUIRED_KEYS = ["id","name","mode","modes","mealTypes","suitableGoals","ingredients","optionalIngredients","ingredientIds","allergenTags","vegetables","staples","cookware","appliances","activeMinutes","totalMinutes","difficulty","dishCount","tasteTags","preferenceTags","steps"];
+  const OPTIONAL_KEYS = ["primaryProtein","seasonTags","timeline","lowEnergySwap","weekendPrep","freezerReuse","nutrition","proteinLevel"];
+  const APPLIANCE_TERMS: Record<string, string[]> = { oven: ["烤箱"], microwave: ["微波"], rice_cooker: ["电饭煲", "电饭锅"], stove: ["锅", "煎", "炒", "煮", "炖", "焯", "蒸"] };
+  const recipes = selection.picked.map((c: Record<string, unknown>) => {
+    const entry: Record<string, unknown> = {};
+    for (const key of REQUIRED_KEYS) entry[key] = c[key] ?? (["optionalIngredients","vegetables","staples","tasteTags","preferenceTags","suitableGoals","cookware"].includes(key) ? [] : undefined);
+    for (const key of OPTIONAL_KEYS) if (c[key] !== undefined && !(Array.isArray(c[key]) && (c[key] as unknown[]).length === 0)) entry[key] = c[key];
+    // 器具反向一致性：声明的 appliance 在步骤文本中完全无迹 → 摘除（LLM 过度声明，如拌饭菜声明电饭煲；
+    // 只看步骤不看 cookware——cookware 的同名声明同样站不住时会一并弱化）
+    const stepsText = (c.steps as string[]).join(" ");
+    entry.appliances = (entry.appliances as string[]).filter((appliance) =>
+      (APPLIANCE_TERMS[appliance] ?? [""]).some((term) => stepsText.includes(term)));
+    // ingredientIds/allergenTags 按完整食材面重派生（P3 时只用了 required+optional，
+    // LLM 挪进 vegetables/staples/primaryProtein 的食材没参与，导致校验不匹配）
+    const fullFace = [
+      ...(entry.ingredients as string[]), ...(entry.optionalIngredients as string[]),
+      ...(entry.vegetables as string[]), ...(entry.staples as string[]),
+      ...(entry.primaryProtein ? [entry.primaryProtein as string] : []),
+    ];
+    const derived = deriveRecipeIngredientMetadata(fullFace);
+    entry.ingredientIds = derived.ingredientIds;
+    entry.allergenTags = derived.allergenTags;
+    return entry;
+  }).filter((entry) => {
+    // 重派生后仍有未映射食材（如娃娃菜/牛腱子/东北米——分类表长尾）→ 剔出首批
+    const unmapped = ((entry as Record<string, unknown>).ingredientIds as string[]).some((id) => id.startsWith("ingredient:"));
+    if (unmapped) return false;
+    return true;
+  });
+  const payload = {
+    _meta: {
+      source: "HowToCook (github.com/Anduin2017/HowToCook, Unlicense)",
+      commit: HTC_COMMIT,
+      generatedAt: new Date().toISOString(),
+      count: recipes.length,
+      note: "npm run import:htc -- --stage admit 生成；首批人工审阅通过（2026-11-02）。隐藏过敏原优先仅用于首批选择，后续补菜取消该优先级。",
+    },
+    recipes,
+  };
+  const target = join(projectRoot, "src", "recipes", "imported", "howtocook.json");
+  mkdirSync(join(projectRoot, "src", "recipes", "imported"), { recursive: true });
+  writeFileSync(target, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+  console.log(`📦 准入 ${recipes.length} 道写入 ${target}`);
+  console.log("后续：npm run validate:recipes（含导入校验）+ npm test");
 } else {
   throw new Error("unreachable");
 }

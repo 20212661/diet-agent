@@ -18,7 +18,18 @@ function loadRecipeSeed(): RecipeBookItem[] {
   return parsed as RecipeBookItem[];
 }
 
-export const recipeBook = loadRecipeSeed();
+/** HowToCook 导入菜谱（人工审阅通过后准入；来源与生成信息在文件顶层 _meta）。 */
+function loadImportedRecipes(): RecipeBookItem[] {
+  const dir = dirname(fileURLToPath(import.meta.url));
+  const filePath = join(dir, "imported", "howtocook.json");
+  const parsed = JSON.parse(readFileSync(filePath, "utf8")) as { recipes?: unknown };
+  const recipes = parsed.recipes ?? [];
+  const errors = validateRecipeSeed(recipes);
+  if (errors.length > 0) throw new Error(`Invalid imported/howtocook.json:\n${errors.join("\n")}`);
+  return recipes as RecipeBookItem[];
+}
+
+export const recipeBook = [...loadRecipeSeed(), ...loadImportedRecipes()];
 
 export function findRecipeCandidates(ingredients: string[], avoidFoods: string[] = []) {
   const normalized = ingredients.map((item) => item.toLowerCase());
