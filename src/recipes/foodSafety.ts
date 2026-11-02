@@ -1,5 +1,5 @@
 import type { AllergenId } from "../types/diet.js";
-import { normalizeIngredientId, resolveAllergenIds } from "./ingredientTaxonomy.js";
+import { normalizeIngredientId, resolveAllergenIds, resolvePossibleAllergenIds } from "./ingredientTaxonomy.js";
 
 export interface FoodSafetyProfile {
   avoidFoods?: readonly string[];
@@ -10,6 +10,8 @@ export interface FoodSafetyAssessment {
   status: "clear" | "conflict" | "needs_verification";
   conflicts: string[];
   unknownIngredients: string[];
+  /** "可能含"命中（如"鸡精 (可能含 egg)"）：配方因品牌而异，按失败即关闭处理。 */
+  possibleAllergenHits: string[];
 }
 
 function normalizeText(value: string): string {
@@ -56,12 +58,22 @@ export function assessFoodSafety(
   }
 
   const unknownIngredients: string[] = [];
+  const possibleAllergenHits: string[] = [];
   for (const ingredient of ingredients) {
     const ingredientId = normalizeIngredientId(ingredient);
     if (ingredientId.startsWith("ingredient:")) unknownIngredients.push(ingredient);
     const ingredientAllergens = resolveAllergenIds([ingredient], "ingredient");
     for (const allergen of ingredientAllergens) {
       if (blockedAllergens.has(allergen)) conflicts.add(`${ingredient} (${allergen})`);
+    }
+    // "可能含"：用户过敏原落在 possible 里 → 需要确认（失败即关闭），
+    // 与确定 conflict 的区别是不算违规，但从推荐中照样拦下。
+    if (blockedAllergens.size > 0) {
+      for (const allergen of resolvePossibleAllergenIds([ingredient], "ingredient")) {
+        if (blockedAllergens.has(allergen) && !ingredientAllergens.includes(allergen)) {
+          possibleAllergenHits.push(`${ingredient} (可能含 ${allergen})`);
+        }
+      }
     }
 
     const normalizedIngredient = normalizeText(ingredient);
@@ -74,12 +86,18 @@ export function assessFoodSafety(
   }
 
   if (conflicts.size > 0) {
-    return { status: "conflict", conflicts: [...conflicts], unknownIngredients: [...new Set(unknownIngredients)] };
+    return { status: "conflict", conflicts: [...conflicts], unknownIngredients: [...new Set(unknownIngredients)], possibleAllergenHits: [] };
   }
-  if ((avoidFoods.length > 0 || allergies.length > 0) && unknownIngredients.length > 0) {
-    return { status: "needs_verification", conflicts: [], unknownIngredients: [...new Set(unknownIngredients)] };
+  const hasRestrictions = avoidFoods.length > 0 || allergies.length > 0;
+  if (hasRestrictions && (unknownIngredients.length > 0 || possibleAllergenHits.length > 0)) {
+    return {
+      status: "needs_verification",
+      conflicts: [],
+      unknownIngredients: [...new Set(unknownIngredients)],
+      possibleAllergenHits: [...new Set(possibleAllergenHits)],
+    };
   }
-  return { status: "clear", conflicts: [], unknownIngredients: [] };
+  return { status: "clear", conflicts: [], unknownIngredients: [...new Set(unknownIngredients)], possibleAllergenHits: [] };
 }
 
 function textMatches(normalizedIngredient: string, restriction: string): boolean {

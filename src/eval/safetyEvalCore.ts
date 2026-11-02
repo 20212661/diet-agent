@@ -97,6 +97,8 @@ export interface RecipeJudgement {
   name: string;
   verdict: SafetyVerdict;
   conflicts: string[];
+  /** "可能含"命中（needs_verification 时非空）：单独统计，不算违规。 */
+  possibleHits: string[];
 }
 
 export function judgeRecipe(
@@ -108,7 +110,12 @@ export function judgeRecipe(
     { allergies: profile.allergies, avoidFoods: profile.avoidFoods },
     recipe.allergenTags,
   );
-  return { name: recipe.name, verdict: assessment.status, conflicts: assessment.conflicts };
+  return {
+    name: recipe.name,
+    verdict: assessment.status,
+    conflicts: assessment.conflicts,
+    possibleHits: assessment.possibleAllergenHits,
+  };
 }
 
 const normalizeText = (value: string): string => value.toLowerCase().replace(/\s+/g, "");

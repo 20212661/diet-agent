@@ -4,6 +4,12 @@ interface IngredientDefinition {
   id: string;
   aliases: readonly string[];
   allergens?: readonly AllergenId[];
+  /**
+   * "可能含"过敏原：配方因品牌/工艺而异、无法确定不含（鸡精的蛋、
+   * 只写"醋"的谷物麸皮）。判定时按失败即关闭处理——对相应过敏用户
+   * 返回 needs_verification 并从推荐中拦下，宁可少推荐不冒险。
+   */
+  possibleAllergens?: readonly AllergenId[];
 }
 
 export const INGREDIENT_DEFINITIONS: readonly IngredientDefinition[] = [
@@ -25,6 +31,9 @@ export const INGREDIENT_DEFINITIONS: readonly IngredientDefinition[] = [
   // 但部分品牌含豆粕/酱油，摘掉 soy 会变成安全漏洞；盲标口径 wheat 确定/soy 待定
   // （allergenGold unsure），经人工裁决保留 soy，代价仅大豆过敏用户多拦 3 道菜。
   { id: "soy_sauce", aliases: ["生抽", "老抽", "酱油", "豆瓣酱", "黄豆酱", "甜面酱"], allergens: ["soy", "wheat", "gluten"] },
+  // possibleAllergens 语义的载体条目（HowToCook 规则表首批定案项，种子菜不含、零迁移牵动）：
+  // 主流鸡精含小麦淀粉（确定），不少品牌加全蛋粉（可能含）。
+  { id: "chicken_essence", aliases: ["鸡精", "鸡粉"], allergens: ["wheat", "gluten"], possibleAllergens: ["egg"] },
   { id: "oyster_sauce", aliases: ["蚝油", "蚝油汁"], allergens: ["shellfish", "soy", "wheat", "gluten"] },
   { id: "wheat_noodle", aliases: ["面条"], allergens: ["wheat", "gluten"] },
   { id: "wheat_wrapper", aliases: ["冷冻饺子", "冷冻馄饨", "冷冻葱油饼"], allergens: ["wheat", "gluten"] },
@@ -182,6 +191,30 @@ export function resolveAllergenIds(
     if (isAllergenId(normalized)) allergens.add(normalized);
   }
   return [...allergens].sort();
+}
+
+/**
+ * "可能含"过敏原解析：与 resolveAllergenIds 同一套匹配，收集
+ * possibleAllergens（配方因品牌而异）。判定时对相应过敏用户按
+ * needs_verification 处理（失败即关闭），不计入确定的 allergenTags。
+ */
+export function resolvePossibleAllergenIds(
+  names: readonly string[],
+  mode: AllergenMatchMode = "user-description",
+): AllergenId[] {
+  const possible = new Set<AllergenId>();
+  for (const name of names) {
+    const normalized = normalizedText(name);
+    for (const { alias, definition } of aliasEntries) {
+      const hit = mode === "user-description"
+        ? normalized === alias || normalized.includes(alias) || alias.includes(normalized)
+        : normalized === alias || (alias.length >= 2 && normalized.includes(alias));
+      if (hit) {
+        for (const allergen of definition.possibleAllergens ?? []) possible.add(allergen);
+      }
+    }
+  }
+  return [...possible].sort();
 }
 
 export function deriveRecipeIngredientMetadata(

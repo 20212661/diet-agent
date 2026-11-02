@@ -147,7 +147,8 @@ export function matchRecipesDetailed(input: MatchRecipeInput): MatchRecipeOutcom
       if (safety.status === "conflict") {
         blockers.add(`过敏或忌口冲突：${safety.conflicts.join("、")}`);
       } else {
-        blockers.add(`部分食材无法确认是否符合过敏/忌口要求：${safety.unknownIngredients.join("、")}`);
+        const uncertain = [...safety.unknownIngredients, ...safety.possibleAllergenHits];
+        blockers.add(`部分食材无法确认是否符合过敏/忌口要求：${uncertain.join("、")}`);
       }
       continue;
     }
