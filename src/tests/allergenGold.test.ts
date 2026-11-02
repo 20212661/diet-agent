@@ -8,7 +8,11 @@ import {
   loadAllergenGold,
 } from "../eval/allergenGold.js";
 
-const seed = JSON.parse(readFileSync(join(process.cwd(), "src", "recipes", "recipeSeed.json"), "utf8")) as Array<{
+// 合并库：种子 + HowToCook 导入（gold 扩充条目的 recipeId 在导入文件里）
+const seed = [
+  ...JSON.parse(readFileSync(join(process.cwd(), "src", "recipes", "recipeSeed.json"), "utf8")),
+  ...(JSON.parse(readFileSync(join(process.cwd(), "src", "recipes", "imported", "howtocook.json"), "utf8")).recipes ?? []),
+] as Array<{
   id: string;
   name: string;
   allergenTags: AllergenId[];

@@ -76,7 +76,7 @@ const RecipeSeedSchema = Type.Array(RecipeSeedItemSchema, { minItems: 1 });
 const applianceStepTerms: Record<string, readonly string[]> = {
   oven: ["烤箱"],
   microwave: ["微波"],
-  rice_cooker: ["电饭煲"],
+  rice_cooker: ["电饭煲", "电饭锅"],
   stove: ["锅", "煎", "炒", "煮", "炖", "焯"],
 };
 
