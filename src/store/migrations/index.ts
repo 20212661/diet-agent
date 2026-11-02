@@ -3,7 +3,7 @@ import { copyFileSync, existsSync, readdirSync, statSync, unlinkSync } from "nod
 import { dirname, extname, basename, join } from "node:path";
 import { deriveRecipeIngredientMetadata } from "../../recipes/ingredientTaxonomy.js";
 
-export const CURRENT_SCHEMA_VERSION = 21;
+export const CURRENT_SCHEMA_VERSION = 22;
 
 interface Migration {
   version: number;
@@ -426,6 +426,13 @@ const migrations: readonly Migration[] = [
         ALTER TABLE agent_trace_spans_v21 RENAME TO agent_trace_spans;
         CREATE INDEX IF NOT EXISTS idx_trace_spans_trace ON agent_trace_spans(trace_id);
       `);
+    },
+  },
+  {
+    version: 22,
+    description: "HowToCook 分类表大规模扩充（218 新条目+41 别名扩展），重算存量菜谱过敏原标签",
+    up(db) {
+      recomputeAllergenTags(db);
     },
   },
 ];

@@ -179,7 +179,10 @@ describe("菜谱 Schema 与过敏原元数据", () => {
     expect(assessFoodSafety(["虾仁"], { allergies: ["甲壳类"] }).status).toBe("conflict");
     expect(assessFoodSafety(["蚝油"], { allergies: ["shellfish"] }).status).toBe("conflict");
     expect(assessFoodSafety(["豆瓣酱"], { allergies: ["小麦"] }).status).toBe("conflict");
-    expect(assessFoodSafety(["火锅底料"], { allergies: ["花生"] }).status).toBe("needs_verification");
+    // 分类表扩充后（PR #22 起）火锅底料有明确条目：possible=soy/wheat/gluten——
+    // 对花生不再因"未知"而待核实（clear），对小麦因"可能含"而待核实
+    expect(assessFoodSafety(["火锅底料"], { allergies: ["小麦"] }).status).toBe("needs_verification");
+    expect(assessFoodSafety(["火锅底料"], { allergies: ["花生"] }).status).toBe("clear");
     expect(assessFoodSafety(["未知食材"], { avoidFoods: ["辣椒"] })).toMatchObject({
       status: "needs_verification",
       unknownIngredients: ["未知食材"],
