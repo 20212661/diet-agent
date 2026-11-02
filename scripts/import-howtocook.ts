@@ -14,9 +14,10 @@ import { HTC_COMMIT, HTC_REPO, HTC_TARBALL_SHA256, ensureHtcSourceAvailable } fr
 import { parseHtcMarkdown } from "../src/import/howtocook/parseMarkdown.js";
 import { buildFunnelReport } from "../src/import/howtocook/funnel.js";
 import { collectUnmapped, clusterPropose } from "../src/import/howtocook/clusterPropose.js";
+import { applyRules } from "../src/import/howtocook/applyRules.js";
 import { INGREDIENT_DEFINITIONS } from "../src/recipes/ingredientTaxonomy.js";
 
-const STAGES = ["parse", "propose"] as const;
+const STAGES = ["parse", "propose", "apply-rules"] as const;
 const rawArgs = process.argv.slice(2);
 const stageArg = rawArgs.length === 2 && rawArgs[0] === "--stage" ? rawArgs[1] : undefined;
 if (!stageArg || !STAGES.includes(stageArg as (typeof STAGES)[number])) {
@@ -76,7 +77,7 @@ if (runStage === "parse") {
   const suspects = report.topUnmapped.filter((item) => item.suspectAllergen);
   console.log(`  未映射 Top50 中疑似过敏原 ${suspects.length} 项：${suspects.slice(0, 12).map((item) => item.name).join("、")}${suspects.length > 12 ? " …" : ""}`);
   console.log(`报告已写入 ${reportFile}`);
-} else {
+} else if (runStage === "propose") {
   // P2 propose：聚类提议（LLM），产出人工审核文件——过敏原以人工批注为准
   const recipes = parseAll()
     .map((entry) => entry.result.recipe)
@@ -114,4 +115,27 @@ if (runStage === "parse") {
   console.log(`🧩 聚类：${unmapped.size} 种写法 → ${proposals.length} 个规范名组（review ${review.length} / batch ${batch.length}）`);
   console.log(`  review 组 Top：${review.slice(0, 10).map((proposal) => `${proposal.canonical}(${proposal.occurrences})`).join("、")}`);
   console.log(`审核文件已写入 ${proposalFile}`);
+} else if (runStage === "apply-rules") {
+  // P2 规则执行：读提议 → 应用人工规则表 → 导出最终判定（人工扫表通过后才写分类表）
+  const proposals = JSON.parse(readFileSync(join(outputDir, "htc-taxonomy-proposals.json"), "utf8")).proposals;
+  const { applied, readmeTodos } = applyRules(proposals);
+  writeFileSync(join(outputDir, "htc-applied-rules.json"), `${JSON.stringify({ generatedAt: new Date().toISOString(), readmeTodos, applied }, null, 2)}\n`, "utf8");
+
+  const byBasis = new Map<string, { count: number; occurrences: number }>();
+  for (const item of applied) {
+    const entry = byBasis.get(item.basis) ?? { count: 0, occurrences: 0 };
+    entry.count += 1;
+    entry.occurrences += item.occurrences;
+    byBasis.set(item.basis, entry);
+  }
+  console.log("📋 规则执行：" + applied.length + " 组（分裂组已归并）");
+  for (const [basis, entry] of [...byBasis.entries()].sort((a, b) => b[1].occurrences - a[1].occurrences)) {
+    console.log("  " + basis + "：" + entry.count + " 组 / " + entry.occurrences + " 次");
+  }
+  const withPossible = applied.filter((item) => item.possibleAllergens.length > 0);
+  console.log("  含 possibleAllergens 的组：" + withPossible.length + "（Top：" + withPossible.slice(0, 8).map((item) => item.canonical + "[" + item.possibleAllergens.join("/") + "]").join("、") + "）");
+  console.log("结果已写入 data/import/htc-applied-rules.json");
+} else {
+  throw new Error("unreachable");
 }
+
