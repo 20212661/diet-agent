@@ -31,9 +31,10 @@ describe("crossCheck（P3 交叉检查）", () => {
 
   it("耗时不一致：totalMinutes 偏离步骤分钟合计超出 [-20,+45] 容差", () => {
     const recipe = rawRecipe({ stepMinutesTotal: 210 });
-    expect(crossCheck(recipe, fields({ totalMinutes: 240 })).join()).toContain("与步骤分钟合计 210 不一致");
-    // 容差内不报：210-10=200 ✓，210+45=255 ✓
-    expect(crossCheck(recipe, fields({ totalMinutes: 200 }))).toEqual([]);
+    expect(crossCheck(recipe, fields({ totalMinutes: 260 })).join()).toContain("与步骤分钟合计 210 不一致"); // +50 超上限
+    expect(crossCheck(recipe, fields({ totalMinutes: 180 })).join()).toContain("与步骤分钟合计 210 不一致"); // -30 超下限
+    // 容差内不报：210-20=190 ✓，210+45=255 ✓
+    expect(crossCheck(recipe, fields({ totalMinutes: 190 }))).toEqual([]);
     expect(crossCheck(recipe, fields({ totalMinutes: 255 }))).toEqual([]);
   });
 
@@ -56,8 +57,8 @@ describe("dedupe（P3 去重）", () => {
   });
 
   it("同名判重与 Jaccard 疑似重复（≥0.7），种子优先保留变体", () => {
-    const existing = [{ name: "番茄炒蛋", ingredients: ["番茄", "鸡蛋", "糖"], optionalIngredients: [], vegetables: [], staples: [] }];
-    const sameName = rawRecipe({ name: "家常番茄炒蛋", requiredItems: ["番茄", "鸡蛋", "盐"] });
+    const existing = [{ name: "番茄炒蛋", ingredients: ["番茄", "鸡蛋", "盐", "葱"], optionalIngredients: [], vegetables: [], staples: [] }];
+    const sameName = rawRecipe({ name: "家常番茄炒蛋", requiredItems: ["番茄", "鸡蛋", "盐"] }); // Jaccard 3/4 = 0.75
     const outcome = dedupeCheck(sameName, existing);
     expect(outcome.nameDuplicateOf).toBe("番茄炒蛋");
     expect(outcome.suspectedDuplicates).toContain("番茄炒蛋"); // 食材高度重合
