@@ -8,6 +8,11 @@ await cp(
   join(root, "dist", "recipes", "recipeSeed.json")
 );
 await cp(
+  join(root, "src", "recipes", "imported"),
+  join(root, "dist", "recipes", "imported"),
+  { recursive: true }
+);
+await cp(
   join(root, "src", "nutrition", "nutritionCatalog.json"),
   join(root, "dist", "nutrition", "nutritionCatalog.json")
 );
