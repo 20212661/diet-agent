@@ -32,6 +32,8 @@ export interface MatchRecipeInput {
   energyLevel?: EnergyLevel;
   desiredStyle?: string;
   date?: string;
+  /** 食材匹配函数（可注入，评测用旧版做对照；默认用当前修复版） */
+  ingredientMatcher?: (ingredient: string, available: string[]) => boolean;
 }
 
 export interface MatchRecipeResult {
@@ -118,6 +120,7 @@ export function matchRecipesDetailed(input: MatchRecipeInput): MatchRecipeOutcom
     timeLimitMinutes,
     energyLevel,
     desiredStyle,
+    ingredientMatcher = ingredientMatched,
   } = input;
 
   // 库存中实际拥有的食材名称
@@ -170,13 +173,13 @@ export function matchRecipesDetailed(input: MatchRecipeInput): MatchRecipeOutcom
     // ========== 2. 食材匹配 ==========
     // 区分"库存已有"和"购物清单中待购"
     const matchedRequired = recipe.ingredients.filter((ing) =>
-      ingredientMatched(ing, allAvailableNames)
+      ingredientMatcher(ing, allAvailableNames)
     );
     const matchedFromOwned = matchedRequired.filter((ing) =>
-      ingredientMatched(ing, ownedNames)
+      ingredientMatcher(ing, ownedNames)
     );
     const matchedFromShopping = matchedRequired.filter((ing) =>
-      !ingredientMatched(ing, ownedNames) && ingredientMatched(ing, shoppingNames)
+      !ingredientMatcher(ing, ownedNames) && ingredientMatcher(ing, shoppingNames)
     );
 
     score += matchedRequired.length * 8;
@@ -197,31 +200,31 @@ export function matchRecipesDetailed(input: MatchRecipeInput): MatchRecipeOutcom
 
     // 可选食材命中
     const matchedOptional = (recipe.optionalIngredients ?? []).filter((ing) =>
-      ingredientMatched(ing, allAvailableNames)
+      ingredientMatcher(ing, allAvailableNames)
     );
     score += matchedOptional.length * 3;
 
     // primaryProtein 命中
-    if (recipe.primaryProtein && ingredientMatched(recipe.primaryProtein, allAvailableNames)) {
+    if (recipe.primaryProtein && ingredientMatcher(recipe.primaryProtein, allAvailableNames)) {
       score += 6;
-      const fromOwned = ingredientMatched(recipe.primaryProtein, ownedNames);
+      const fromOwned = ingredientMatcher(recipe.primaryProtein, ownedNames);
       reasons.push(`主要蛋白质 ${recipe.primaryProtein} ${fromOwned ? "库存已有" : "需购买"}`);
     }
 
     // vegetables 命中
     const matchedVeg = (recipe.vegetables ?? []).filter((ing) =>
-      ingredientMatched(ing, allAvailableNames)
+      ingredientMatcher(ing, allAvailableNames)
     );
     score += matchedVeg.length * 4;
 
     // staples 命中
     const matchedStaples = (recipe.staples ?? []).filter((ing) =>
-      ingredientMatched(ing, allAvailableNames)
+      ingredientMatcher(ing, allAvailableNames)
     );
     score += matchedStaples.length * 3;
 
     // 快过期食材优先（复用 ingredientMatched 同一匹配函数，消除子串误判）
-    const expiringHit = recipe.ingredients.filter((ing) => ingredientMatched(ing, expiringNames));
+    const expiringHit = recipe.ingredients.filter((ing) => ingredientMatcher(ing, expiringNames));
     if (expiringHit.length > 0) {
       score += expiringHit.length * 5;
       reasons.push(`${expiringHit.join("、")}快过期，优先处理`);
