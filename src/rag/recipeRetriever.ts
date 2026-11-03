@@ -206,19 +206,34 @@ let _retrieverPromise: Promise<RecipeRetriever | null> | undefined;
 /**
  * 获取 hybrid 检索器单例（懒加载，首次调用时索引菜谱）。
  * 向量通道需要 embedding key；FTS5 关键词通道不需要 key。
- * 两通道都不可用时返回 null（调用方退回纯 matcher）。
+ * local embedding 加载失败（未安装/离线/下载失败）时打一行原因并退回纯 FTS，
+ * 不报错、不阻塞启动。两通道都不可用时返回 null（调用方退回纯 matcher）。
  */
 export function getRetriever(): Promise<RecipeRetriever | null> {
   if (_retrieverPromise) return _retrieverPromise;
   _retrieverPromise = (async () => {
-    const config = resolveEmbeddingConfig(); // 可能 null（无 embedding key）
+    const config = resolveEmbeddingConfig(); // 可能 null（EMBEDDING_PROVIDER=off）
+    if (config?.provider === "local") {
+      // local embedding 优先尝试索引；失败（未安装/离线/下载失败）退回纯 FTS
+      try {
+        const retriever = new RecipeRetriever(store.getDatabase(), config);
+        const { embedded, reused } = await retriever.indexRecipes(store.getRecipeBook());
+        const b = retriever.backends;
+        console.log(
+          `[RAG] indexed: embedded=${embedded} reused=${reused} | vector=${b.vector ?? "off"} fts=${b.fts ? "on" : "off"}`
+        );
+        return retriever.isAvailable() ? retriever : null;
+      } catch (e) {
+        // 提取可读原因（localEmbedder 的错误消息已含说明），打一行退回纯 FTS
+        const reason = e instanceof Error ? e.message.slice(0, 120) : String(e).slice(0, 120);
+        console.log(`[RAG] local embedding 不可用（${reason}），退回纯 FTS5 关键词通道`);
+        // 不 return null——FTS 仍然可用，构建无向量通道的 retriever
+      }
+    }
+    // 纯 FTS（EMBEDDING_PROVIDER=off 或 local 加载失败退回）
     try {
-      const retriever = new RecipeRetriever(store.getDatabase(), config ?? null);
-      const { embedded, reused } = await retriever.indexRecipes(store.getRecipeBook());
-      const b = retriever.backends;
-      console.log(
-        `[RAG] indexed: embedded=${embedded} reused=${reused} | vector=${b.vector ?? "off"} fts=${b.fts ? "on" : "off"}`
-      );
+      const retriever = new RecipeRetriever(store.getDatabase(), null);
+      await retriever.indexRecipes(store.getRecipeBook());
       if (!retriever.isAvailable()) {
         console.warn("[RAG] no recall channel available, RAG disabled");
         return null;
