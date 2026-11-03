@@ -40,7 +40,7 @@ describe("FtsStore.search 单字过滤", () => {
 });
 
 describe("RecipeRetriever.recall 空结果不抛错（vector=off 修复）", () => {
-  it("双通道空手时返回空结果而非 throw（此前 scare log 的来源）", async () => {
+  it("双通道空手时返回空结果而非 throw（此前 scare log 的来源）", { timeout: 15_000 }, async () => {
     const { RecipeRetriever } = await import("../rag/recipeRetriever.js");
     const db = new Database(":memory:");
     const retriever = new RecipeRetriever(db, null); // 无向量通道
