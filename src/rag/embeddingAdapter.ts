@@ -46,8 +46,9 @@ const PROVIDER_DEFAULTS: Record<EmbeddingProvider, { model: string; baseUrl: str
 
 /**
  * 解析当前可用的 embedding 配置。
- * 默认关闭向量通道，仅使用 FTS5。只有显式设置 EMBEDDING_PROVIDER 时才启用，
- * 避免默认安装/下载本地模型或意外调用付费 embedding API。
+ * 默认尝试 local（首次下载 ~30MB 模型，首次启动多约 5s；关闭方法：EMBEDDING_PROVIDER=off）。
+ * 显式指定 openai/zai 时优先 API。local 加载失败（未安装/离线/下载失败）由调用方
+ * （getRetriever）捕获并退回纯 FTS，不阻塞启动。
  */
 export function resolveEmbeddingConfig(): EmbeddingConfig | undefined {
   const explicit = process.env.EMBEDDING_PROVIDER;
@@ -55,7 +56,10 @@ export function resolveEmbeddingConfig(): EmbeddingConfig | undefined {
   if (explicit === "local") return makeConfig("local");
   if (explicit === "openai" && process.env.OPENAI_API_KEY) return makeConfig("openai");
   if (explicit === "zai" && process.env.ZAI_API_KEY) return makeConfig("zai");
-  return undefined;
+  // CI 不下载模型（GitHub Actions 设 CI=true），退回纯 FTS
+  if (process.env.CI === "true") return undefined;
+  // 默认 local（比纯 FTS 语义类 Recall 提升 55%→89%）
+  return makeConfig("local");
 }
 
 function makeConfig(provider: EmbeddingProvider): EmbeddingConfig {

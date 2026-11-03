@@ -74,10 +74,13 @@ describe("embedding 适配", () => {
     expect(normalize([0, 0])).toEqual([0, 0]);
   });
 
-  it("resolveEmbeddingConfig：默认只启用 FTS5，不因存在 API Key 自动调用向量服务", () => {
+  it("resolveEmbeddingConfig：默认 local embedding，不因存在 API Key 自动切换到 API", () => {
+    // 2026-11-03 起默认 local（语义类 Recall 55%→89%）；API key 不改变默认
     process.env.ZAI_API_KEY = "z";
     process.env.OPENAI_API_KEY = "o";
-    expect(resolveEmbeddingConfig()).toBeUndefined();
+    delete process.env.EMBEDDING_PROVIDER;
+    delete process.env.CI;
+    expect(resolveEmbeddingConfig()?.provider).toBe("local");
   });
 
   it("resolveEmbeddingConfig：EMBEDDING_PROVIDER=off 关闭向量通道（纯 FTS5）", () => {
