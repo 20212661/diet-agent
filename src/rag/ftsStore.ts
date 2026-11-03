@@ -30,7 +30,11 @@ export class FtsStore {
    * 查询用 OR 拼接 bigram tokens 以扩大召回，相关性交给 bm25 排序。
    */
   search(query: string, k: number): string[] {
-    const tokens = bigramize(query).split(" ").filter(Boolean);
+    const allTokens = bigramize(query).split(" ").filter(Boolean);
+    // 含双字 token 时过滤单字（"炒 饭"的单字在 bigram 索引里不存在独立条目，
+    // MATCH 会空手而归；双字 token 已覆盖其语义。纯单字查询不过滤）
+    const bigrams = allTokens.filter((t) => t.length >= 2);
+    const tokens = bigrams.length > 0 ? bigrams : allTokens;
     if (tokens.length === 0) return [];
     const matchExpr = tokens.join(" OR ");
     const rows = this.db
