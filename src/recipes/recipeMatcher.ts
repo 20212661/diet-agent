@@ -56,13 +56,27 @@ function norm(name: string): string {
   return name.toLowerCase().trim();
 }
 
-/** 判断 available 中是否有能匹配 ingredient 的项 */
-function ingredientMatched(ingredient: string, available: string[]): boolean {
+/**
+ * 判断 available 中是否有能匹配 ingredient 的项。
+ * 与过敏原食材侧（resolveAllergenIds ingredient 模式）同规则：
+ * - 两边都有规范 ID 时按 ID 精确匹配（分类表已处理别名/同义词）
+ * - 否则子串只允许 ≥2 字且禁止反向（"洋葱"⊇"葱"、"蒜苗"⊇"蒜"这类
+ *   单字反向匹配曾把 155+74 条食材误判为"库存已有"）
+ */
+export function ingredientMatched(ingredient: string, available: string[]): boolean {
   const ing = norm(ingredient);
   const ingredientId = normalizeIngredientId(ingredient);
   return available.some((a) => {
     const na = norm(a);
-    return normalizeIngredientId(a) === ingredientId || na.includes(ing) || ing.includes(na);
+    const aId = normalizeIngredientId(a);
+    // 两边都解析出规范 ID（非 ingredient: 前缀）→ 精确匹配
+    if (!ingredientId.startsWith("ingredient:") && !aId.startsWith("ingredient:")) {
+      return ingredientId === aId;
+    }
+    // 否则 ≥2 字子串、禁反向（与 resolveAllergenIds ingredient 模式一致）
+    if (ing.length >= 2 && na.includes(ing)) return true;
+    if (na.length >= 2 && ing.includes(na)) return true;
+    return false;
   });
 }
 
@@ -206,14 +220,8 @@ export function matchRecipesDetailed(input: MatchRecipeInput): MatchRecipeOutcom
     );
     score += matchedStaples.length * 3;
 
-    // 快过期食材优先
-    const expiringHit = recipe.ingredients.filter((ing) =>
-      expiringNames.some((n) => {
-        const ni = norm(ing);
-        const nn = norm(n);
-        return nn.includes(ni) || ni.includes(nn);
-      })
-    );
+    // 快过期食材优先（复用 ingredientMatched 同一匹配函数，消除子串误判）
+    const expiringHit = recipe.ingredients.filter((ing) => ingredientMatched(ing, expiringNames));
     if (expiringHit.length > 0) {
       score += expiringHit.length * 5;
       reasons.push(`${expiringHit.join("、")}快过期，优先处理`);
