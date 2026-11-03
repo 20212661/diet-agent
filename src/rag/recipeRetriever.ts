@@ -137,7 +137,10 @@ export class RecipeRetriever {
     if (ftsIds.length > 0) channelLists.push(ftsIds);
 
     if (channelLists.length === 0) {
-      throw new Error("all recall channels empty");
+      // 双通道空手而归：返回空结果（调用方退回关键词预筛），不抛错——
+      // vector=off 时 FTS 对特定查询（纯单字/空串）返回空是正常路径，
+      // 抛错会让调用方打 scare log 并走 catch 降级分支，浪费且混淆。
+      return { recipes: [], hits: [], channels: { vector: 0, fts: 0 } };
     }
 
     const fused = reciprocalRankFusion(channelLists, RRF_K).slice(0, topK);
