@@ -40,6 +40,10 @@ import {
 import type { TraceStatus } from "../store/repositories/traceRepository.js";
 import { PROVIDER_CONFIGS } from "./modelProviders.js";
 import { setActiveUserMessage, detectUnsavedMealClaim, MEAL_CLAIM_UNSAVED_NOTICE, currentDateTimeContext } from "../utils/userTurnContext.js";
+import { waitForPendingExtraction, enqueueExtraction } from "../tasks/extractionQueue.js";
+import { extractAndApplyTaskPatch } from "../tasks/taskStateExtractor.js";
+import { buildTaskStateInjection } from "../tasks/taskStateInjection.js";
+import { getInjectableTask, hasActiveTask } from "../tasks/taskStateService.js";
 import * as store from "../store/index.js";
 import { generateCookingPlanTool } from "../tools/generateCookingPlan.js";
 import { generateMealPlanTool } from "../tools/generateMealPlan.js";
@@ -259,6 +263,8 @@ export interface DietAgentDispatcherDeps {
   createTracer?: (context: { userId: string; operationId?: string; entry: TraceEntry }) => TraceRecorder;
   loadTurnLimits?: () => TurnLimits;
   loadRequestDeadlineMs?: () => number;
+  /** 成功轮次结束后调用（默认：串行排队语义提取；测试/评测可替换）。 */
+  onTurnSuccess?: (userId: string, message: string, reply: string) => void;
 }
 
 export class WriteNeedsVerificationError extends Error {
@@ -285,6 +291,7 @@ export function createDietAgentDispatcher(
     refreshAfterWrite: refreshWrittenData,
     logger: console,
     createTracer: (context) => createTraceRecorder(context),
+    onTurnSuccess: defaultOnTurnSuccess,
     loadTurnLimits: () => loadTurnLimits(),
     loadRequestDeadlineMs: () => loadRequestDeadlineMs(),
     ...overrides,
@@ -307,6 +314,13 @@ export function createDietAgentDispatcher(
       entry: options?.entry ?? "web",
     });
     let lastError: unknown;
+
+    // 上一轮的语义提取最多等 2 秒：等到用新状态注入；超时用旧状态并记 trace
+    // （fallback span；用户口径第 3 点）。等待放在首次尝试前，降级重试不重复等。
+    const drained = await waitForPendingExtraction(userId, 2_000);
+    if (!drained) {
+      tracer.mark("fallback", "task_state_extraction_timeout", "stale_state_used");
+    }
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const candidate = candidates[attempt];
@@ -387,6 +401,17 @@ export function createDietAgentDispatcher(
     // unhandledRejection（Windows Node 上曾进一步触发 UV assertion）。
     const queued = current.then((result) => result.reply, () => "");
     processingMap.set(userId, queued);
+    // 语义提取 fire-and-forget：每用户串行排队，下一轮开始前最多等 2 秒
+    // （deps.onTurnSuccess 可注入替换——测试与评测不发起真实提取调用）
+    current.then((result) => {
+      try {
+        deps.onTurnSuccess?.(userId, message, result.reply);
+      } catch {
+        // 提取排队失败不影响主流程
+      }
+    }).catch(() => {
+      // 提取只在成功轮次排队；失败轮次由下一轮的旧状态兜底
+    });
 
     try {
       return await current;
@@ -394,6 +419,12 @@ export function createDietAgentDispatcher(
       if (processingMap.get(userId) === queued) processingMap.delete(userId);
     }
   };
+}
+
+/** 默认轮后钩子：串行排队语义提取（每用户；仅 active 任务存在时）。 */
+function defaultOnTurnSuccess(userId: string, message: string, reply: string): void {
+  if (!hasActiveTask(userId)) return;
+  void enqueueExtraction(userId, () => extractAndApplyTaskPatch(userId, message, reply));
 }
 
 export const sendDietAgentMessage = createDietAgentDispatcher();
@@ -546,9 +577,10 @@ export async function runAgentSessionTurn(
   // 每轮注入当前时间（与 todayDate() 同口径的本地时区），模型才能正确解析
   // "昨天/明天"这类相对日期。只注入给模型：NLP 启发式（日期歧义/声称检测）
   // 与 web 层的消息哈希都继续用原始 message，避免时间块污染两者。
-  const promptMessage = `${currentDateTimeContext()}
-
-${message}`;
+  // 任务状态块（active 且最近活跃才有）：块内自带「数据非指令」标注与限长；
+  // NLP 启发式与 web 消息哈希继续用原始 message（见下）。
+  const taskBlock = buildTaskStateInjection(getInjectableTask(userId));
+  const promptMessage = [currentDateTimeContext(), taskBlock, message].filter(Boolean).join("\n\n");
   let promptError: unknown;
   try {
     // prompt() 本身可能挂住不返回；与 donePromise 赛跑，任一先结束都放行本轮。
