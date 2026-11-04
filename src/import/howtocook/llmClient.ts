@@ -10,7 +10,18 @@ import "dotenv/config";
 const API_URL = "https://api.deepseek.com/chat/completions";
 const MODEL = process.env.HTC_IMPORT_MODEL ?? "deepseek-flash";
 
-export async function chatJson<T>(systemPrompt: string, userPrompt: string, retries = 2): Promise<T> {
+export interface ChatJsonUsage {
+  inputTokens?: number;
+  outputTokens?: number;
+  cacheReadTokens?: number;
+}
+
+export async function chatJson<T>(
+  systemPrompt: string,
+  userPrompt: string,
+  retries = 2,
+  onUsage?: (usage: ChatJsonUsage) => void
+): Promise<T> {
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) throw new Error("缺少 DEEPSEEK_API_KEY（.env）");
   let lastError: unknown;
@@ -30,7 +41,17 @@ export async function chatJson<T>(systemPrompt: string, userPrompt: string, retr
         }),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}: ${(await response.text()).slice(0, 300)}`);
-      const payload = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+      const payload = (await response.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+        usage?: { prompt_tokens?: number; completion_tokens?: number; prompt_cache_hit_tokens?: number };
+      };
+      if (onUsage && payload.usage) {
+        onUsage({
+          inputTokens: payload.usage.prompt_tokens,
+          outputTokens: payload.usage.completion_tokens,
+          cacheReadTokens: payload.usage.prompt_cache_hit_tokens,
+        });
+      }
       const content = payload.choices?.[0]?.message?.content;
       if (!content) throw new Error("响应缺少 content");
       return JSON.parse(content) as T;

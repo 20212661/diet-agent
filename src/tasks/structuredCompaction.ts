@@ -48,6 +48,8 @@ export function structuredCompactionHandler(
 ): (event: SessionBeforeCompactEvent) => Promise<SessionBeforeCompactResult | undefined> {
   return async (event) => {
     try {
+      // 评测开关：DIET_STRUCTURED_COMPACT=off 强制走 SDK 默认压缩（三臂对照用）
+      if (process.env.DIET_STRUCTURED_COMPACT === "off") return undefined;
       const state = getInjectableTask(userId);
       if (!state) return undefined;
       const stateBlock = buildTaskStateInjection(state);

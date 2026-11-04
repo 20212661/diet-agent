@@ -199,6 +199,9 @@ const inputTokens = sumField((row) => row.input_tokens);
 const cacheRead = sumField((row) => row.cache_read_tokens);
 const cacheDenominator = inputTokens + cacheRead;
 
+const { getExtractionUsage } = await import("../src/tasks/taskStateExtractor.js");
+const extractionUsage = getExtractionUsage();
+
 const summary = {
   conversations: BENCH_CONVERSATIONS.length,
   turnsPlanned: BENCH_CONVERSATIONS.reduce((acc, conversation) => acc + conversation.turns.length, 0),
@@ -238,6 +241,14 @@ const summary = {
 };
 
 const output = {
+  extraction: {
+    calls: extractionUsage.calls,
+    failures: extractionUsage.failures,
+    inputTokens: extractionUsage.inputTokens,
+    outputTokens: extractionUsage.outputTokens,
+    cacheReadTokens: extractionUsage.cacheReadTokens,
+    totalMs: extractionUsage.totalMs,
+  },
   suite: "fixed replay bench (entry=bench)",
   runId,
   date: new Date().toISOString(),
@@ -257,6 +268,7 @@ console.log(`\n📊 回放基准：${summary.conversations} 段 / ${summary.trac
 console.log(`  成功率=${(summary.successRate * 100).toFixed(1)}%  降级=${summary.fallbackTraces}  平均工具调用=${summary.avgToolCalls ?? "-"}  调工具轮数=${summary.turnsWithToolCalls}/${summary.turnsPlanned}  session 重建=${summary.sessionRebuilds}`);
 console.log(`  请求耗时 p50=${ms(summary.requestMs.p50)}  p95=${ms(summary.requestMs.p95)}  首 token p50=${ms(summary.firstTokenMs.p50)}`);
 console.log(`  平均 input=${summary.avgInputTokens ?? "-"}  平均 cacheRead=${summary.avgCacheReadTokens ?? "-"}  缓存命中率=${summary.cacheHitRate === undefined ? "-" : `${(summary.cacheHitRate * 100).toFixed(1)}%`}`);
+console.log(`  语义提取：${extractionUsage.calls} 次调用（失败 ${extractionUsage.failures}） input=${extractionUsage.inputTokens} output=${extractionUsage.outputTokens} tokens 累计耗时=${ms(extractionUsage.totalMs)}（单独口径，不含于上方 trace 指标）`);
 if (summary.mealLogPersistence.rate !== undefined) {
   console.log(`  记餐落库率=${(summary.mealLogPersistence.rate * 100).toFixed(1)}%（${summary.mealLogPersistence.persisted}/${summary.mealLogPersistence.expectedFoods} 项食物）`);
 }

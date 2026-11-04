@@ -339,6 +339,8 @@ Agent 单轮会话有四道独立限制兜底：单轮总截止时间、空闲�
 
 - **用户导入评测（P5）**：10 份文本（HowToCook 体/网站紧凑体/口述体/笔记体/中英混排/多版本/注入样本，**文本与期望食材标注均为 LLM 生成——期望食材为 LLM 标注，GLM 起草，待人工扫审，不是真实用户数据**）跑真实抽取：抽取召回率 100%、误抽率 0（溯源全通过）、检查器遗漏过敏原 0、注入样本防御成立。安全责任指标（检查器遗漏率）有 CI 确定性夹逼测试（完整抽取与抽掉过敏原食材的残缺抽取两种 canned draft），不依赖网络（`src/tests/importEvalCore.test.ts`）。`npm run eval:import` 重跑。
 
+- **结构化压缩三臂评测**（`npm run eval:compact`，live）：长排菜对话（目标/否决/日期/注入样本）在统一触发点压缩（manual `compact()` 同样经过 `session_before_compact`）——A 无注入+默认压缩、B 有注入+默认压缩、C 有注入+结构化压缩；探针问题按关键词判分，注入样本同时检查**代码层过滤**（被否决菜仍在 `rejectedRecipeIds` 且 matchRecipes 排除）与**回复文本**两层。对话脚本与期望答案为 LLM 起草（GLM），回复原文落报告供人工复核。语义提取的成本在 bench 中**单独口径**报告（调用次数/input+output token/累计耗时，不计入 trace 主指标）。
+
 评测调用真实模型，每个场景/画像用独立合成用户重复多次（默认 3，`--repeat` 可调 1–10），结果写入 `data/eval-results/` 并带模型名、git commit、日期与重复次数，保证可复现。评测脚本对未知参数一律报错退出。按 `MODEL_PROVIDER=deepseek` / `MODEL_PROVIDER=zai` 分别跑 DeepSeek 与 GLM。
 
 - **A 组 · 参数修复中间件**：`npm run eval:agent -- --repair-compare` 同进程先后跑「修复开 → 修复关」两阶段，输出工具调用成功率、轮次通过率与参数问题率（X% 的工具调用存在数组/布尔/数字/缺字段类格式问题）的对比。单独跑对照阶段用环境变量 `DIET_TOOL_REPAIR=off npm run eval:agent`（userId/幂等注入不受开关影响）。两阶段固定先开后关，第二阶段可能受益于 provider 预热缓存，**只比较成功率与问题率，延迟/成本不可跨阶段比较**。
@@ -363,6 +365,7 @@ npm run doctor         # 检查模型供应商、模型名和认证状态（不�
 npm run validate:recipes # 校验菜谱 Schema、ID、范围、电器步骤和过敏原标签
 npm run eval           # 离线运行确定性工具流程评估，不调用模型
 npm run eval:import     # 用户导入评测（10 份文本真实抽取，需 DEEPSEEK_API_KEY）
+npm run eval:compact    # 结构化压缩三臂评测（长对话强制压缩+探针，需模型与 DEEPSEEK_API_KEY）
 npm run eval:agent     # 使用已配置模型运行 Agent 黑盒行为评估，会产生模型 API 请求
 ```
 
