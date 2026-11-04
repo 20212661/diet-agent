@@ -51,6 +51,9 @@ export function structuredCompactionHandler(
       // 评测开关：DIET_STRUCTURED_COMPACT=off 强制走 SDK 默认压缩（三臂对照用）
       if (process.env.DIET_STRUCTURED_COMPACT === "off") return undefined;
       const state = getInjectableTask(userId);
+      if (process.env.DIET_DEBUG_COMPACT === "1") {
+        console.error(`[compact:debug] env=${process.env.DIET_STRUCTURED_COMPACT ?? "(unset)"} state=${state ? state.taskId : "无"}`);
+      }
       if (!state) return undefined;
       const stateBlock = buildTaskStateInjection(state);
       if (!stateBlock) return undefined;
@@ -63,7 +66,10 @@ export function structuredCompactionHandler(
           details: { structured: true, taskId: state.taskId },
         },
       };
-    } catch {
+    } catch (error) {
+      if (process.env.DIET_DEBUG_COMPACT === "1") {
+        console.error("[compact:debug] handler 异常→默认压缩：", error instanceof Error ? error.message : error);
+      }
       return undefined; // 任何异常走默认压缩，绝不 cancel
     }
   };

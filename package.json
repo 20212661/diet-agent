@@ -37,6 +37,7 @@
     "eval:import": "tsx scripts/run-import-eval.ts --live",
     "eval:compact": "tsx scripts/run-compact-eval.ts --live",
     "eval:rejection": "tsx scripts/run-rejection-eval.ts",
+    "eval:week": "tsx scripts/run-week-eval.ts --live",
     "trace:report": "tsx scripts/trace-report.ts",
     "bench": "tsx scripts/run-bench.ts --live",
     "import:htc": "tsx scripts/import-howtocook.ts",
