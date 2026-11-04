@@ -158,10 +158,32 @@ const aliasEntries = INGREDIENT_DEFINITIONS
   })))
   .sort((left, right) => right.alias.length - left.alias.length);
 
+// ---- 纯函数记忆化 ----
+// 分类表进程内不变，而一次全库匹配（search_recipes / matchRecipes / 周计划验证）
+// 会把同一批食材名重复解析几十遍——每名一次 543+ 别名最长优先扫描。记忆化后
+// 结果完全一致，只省重复扫描。缓存设上限防用户输入无界增长，满了整体清空
+// （重新计算即可，无正确性影响）。
+const MEMO_LIMIT = 4096;
+
+function memoized<V>(cache: Map<string, V>, key: string, compute: () => V): V {
+  const hit = cache.get(key);
+  if (hit !== undefined) return hit;
+  const value = compute();
+  if (cache.size >= MEMO_LIMIT) cache.clear();
+  cache.set(key, value);
+  return value;
+}
+
+const idCache = new Map<string, string>();
+const allergenCache = new Map<string, AllergenId[]>();
+const possibleAllergenCache = new Map<string, AllergenId[]>();
+
 export function normalizeIngredientId(name: string): string {
-  const normalized = normalizedText(name);
-  const matched = aliasEntries.find(({ alias }) => normalized === alias || normalized.includes(alias));
-  return matched?.definition.id ?? `ingredient:${normalized}`;
+  return memoized(idCache, name, () => {
+    const normalized = normalizedText(name);
+    const matched = aliasEntries.find(({ alias }) => normalized === alias || normalized.includes(alias));
+    return matched?.definition.id ?? `ingredient:${normalized}`;
+  });
 }
 
 export type AllergenMatchMode = "user-description" | "ingredient";
@@ -181,8 +203,16 @@ export function resolveAllergenIds(
   names: readonly string[],
   mode: AllergenMatchMode = "user-description",
 ): AllergenId[] {
-  const allergens = new Set<AllergenId>();
+  const merged = new Set<AllergenId>();
   for (const name of names) {
+    for (const allergen of resolveAllergenIdsForName(name, mode)) merged.add(allergen);
+  }
+  return [...merged].sort();
+}
+
+function resolveAllergenIdsForName(name: string, mode: AllergenMatchMode): AllergenId[] {
+  return memoized(allergenCache, `${mode}|${name}`, () => {
+    const allergens = new Set<AllergenId>();
     const normalized = normalizedText(name);
     for (const { alias, definition } of aliasEntries) {
       const hit = mode === "user-description"
@@ -195,8 +225,8 @@ export function resolveAllergenIds(
       }
     }
     if (isAllergenId(normalized)) allergens.add(normalized);
-  }
-  return [...allergens].sort();
+    return [...allergens].sort();
+  });
 }
 
 /**
@@ -208,19 +238,25 @@ export function resolvePossibleAllergenIds(
   names: readonly string[],
   mode: AllergenMatchMode = "user-description",
 ): AllergenId[] {
-  const possible = new Set<AllergenId>();
+  const merged = new Set<AllergenId>();
   for (const name of names) {
-    const normalized = normalizedText(name);
-    for (const { alias, definition } of aliasEntries) {
-      const hit = mode === "user-description"
-        ? normalized === alias || normalized.includes(alias) || alias.includes(normalized)
-        : normalized === alias || (alias.length >= 2 && normalized.includes(alias));
-      if (hit) {
-        for (const allergen of definition.possibleAllergens ?? []) possible.add(allergen);
+    for (const allergen of memoized(possibleAllergenCache, `${mode}|${name}`, () => {
+      const possible = new Set<AllergenId>();
+      const normalized = normalizedText(name);
+      for (const { alias, definition } of aliasEntries) {
+        const hit = mode === "user-description"
+          ? normalized === alias || normalized.includes(alias) || alias.includes(normalized)
+          : normalized === alias || (alias.length >= 2 && normalized.includes(alias));
+        if (hit) {
+          for (const allergen of definition.possibleAllergens ?? []) possible.add(allergen);
+        }
       }
+      return [...possible].sort();
+    })) {
+      merged.add(allergen);
     }
   }
-  return [...possible].sort();
+  return [...merged].sort();
 }
 
 export function deriveRecipeIngredientMetadata(
