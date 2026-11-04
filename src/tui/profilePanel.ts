@@ -26,7 +26,7 @@ import {
   getIngredientInventory,
   getTodaySummary,
   getWeeklyPlan,
-  getRecipeBook,
+  getRecipeBookForUser,
 } from "../store/index.js";
 import { cyan, bold, gray, chatMarkdownTheme } from "./theme.js";
 import {
@@ -71,7 +71,7 @@ function loadDetailText(userId: string, key: string): { title: string; text: str
       case "weekly":
         return { title: "本周菜单", text: formatWeeklyPlan(getWeeklyPlan(userId)) };
       case "recipes":
-        return { title: "菜谱库", text: formatRecipeBook(getRecipeBook()) };
+        return { title: "菜谱库", text: formatRecipeBook(getRecipeBookForUser(userId)) };
       default:
         return { title: "档案", text: "未知项。" };
     }

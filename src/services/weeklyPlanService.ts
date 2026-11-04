@@ -4,10 +4,10 @@ import { assessFoodSafety } from "../recipes/foodSafety.js";
 import { recipeBlockReason } from "../recipes/executionConstraints.js";
 import { mealFitsTimeLimits } from "../recipes/mealTiming.js";
 import type { IngredientItem, WeeklyDayPlan } from "../types/diet.js";
-import { getRecipeById } from "../store/repositories/recipeRepository.js";
 
-export function findRecipe(recipeId: string) {
-  return getRecipeById(recipeId);
+/** 按 userId 查菜谱：自己的导入 + 全局库（跨用户隔离）。 */
+export function findRecipe(userId: string, recipeId: string) {
+  return store.getRecipeBookForUser(userId).find((recipe) => recipe.id === recipeId);
 }
 
 export function getWeeklyPlanAlternatives(userId: string, weekStartDate: string, date: string) {
@@ -90,7 +90,7 @@ function getSafeMatches(
   const kitchen = store.getKitchenProfile(userId);
   const usedIds = new Set(days.filter((item) => item.date !== day.date).map((item) => item.mainRecipe.id));
   return matchRecipes({
-    recipes: store.getRecipeBook(),
+    recipes: store.getRecipeBookForUser(userId),
     date: day.date,
     availableIngredients: ownedItems,
     shoppingList: shoppingItems,

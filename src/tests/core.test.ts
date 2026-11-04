@@ -417,7 +417,7 @@ describe("做饭与周计划工具", () => {
     baseKitchen(userId);
     store.upsertUserProfile(userId, { allergies: ["虾"] });
     const candidate = { ...store.getRecipeBook()[0], allergenTags: ["shellfish" as const] };
-    const recipeBookSpy = vi.spyOn(store, "getRecipeBook").mockReturnValue([candidate]);
+    const recipeBookSpy = vi.spyOn(store, "getRecipeBookForUser").mockReturnValue([candidate]);
     let result;
     try {
       result = await generateCookingPlanTool.execute(
@@ -437,7 +437,7 @@ describe("做饭与周计划工具", () => {
     store.clearUserData(userId);
     baseKitchen(userId, { maxActiveMinutes: 15 });
     const template = store.getRecipeBook().find((recipe) => recipe.name === "白灼虾")!;
-    const recipeBookSpy = vi.spyOn(store, "getRecipeBook").mockReturnValue([{ ...template, activeMinutes: 25, totalMinutes: 30 }]);
+    const recipeBookSpy = vi.spyOn(store, "getRecipeBookForUser").mockReturnValue([{ ...template, activeMinutes: 25, totalMinutes: 30 }]);
     let result;
     try {
       result = await generateCookingPlanTool.execute(

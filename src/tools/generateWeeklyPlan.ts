@@ -92,7 +92,7 @@ export const generateWeeklyPlanTool: ToolDefinition<typeof Params> = defineTool(
     const inventory = store.getIngredientInventory(params.userId);
     const dietProfile = store.getUserProfile(params.userId);
     const feedback = store.getCookingFeedback(params.userId);
-    const recipes = store.getRecipeBook();
+    const recipes = store.getRecipeBookForUser(params.userId);
 
     // 计算本周 7 天日期
     const monday = getMondayOfWeek(params.weekStartDate);

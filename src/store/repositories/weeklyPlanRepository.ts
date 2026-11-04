@@ -2,7 +2,7 @@ import { assessFoodSafety } from "../../recipes/foodSafety.js";
 import { recipeBlockReason } from "../../recipes/executionConstraints.js";
 import { isAvailableOn, type IngredientReadiness, type WeeklyDayPlan, type WeeklyPlan } from "../../types/diet.js";
 import { computeIngredientReadiness } from "../../recipes/recipeMatcher.js";
-import { getRecipeBook } from "./recipeRepository.js";
+import { getRecipeBookForUser } from "./userRecipeRepository.js";
 import { getIngredientInventory } from "./inventoryRepository.js";
 import { getKitchenProfile } from "./kitchenProfileRepository.js";
 import { getUserProfile } from "./userProfileRepository.js";
@@ -51,7 +51,7 @@ export function getWeeklyPlan(userId: string, weekStartDate?: string): WeeklyPla
   `).get(userId, weekStartDate ?? getMondayOfWeek()) as Record<string, unknown> | undefined;
   if (!row) return undefined;
   const inventory = getIngredientInventory(userId);
-  const recipeBook = getRecipeBook();
+  const recipeBook = getRecipeBookForUser(userId);
   const recipesById = new Map(recipeBook.map((recipe) => [recipe.id, recipe]));
   const kitchen = getKitchenProfile(userId);
   const profile = getUserProfile(userId);
@@ -173,7 +173,7 @@ export function setWeeklyPlanDayCompleted(
     if (completed) {
       const kitchen = getKitchenProfile(userId);
       const profile = getUserProfile(userId);
-      const recipe = getRecipeBook().find((r) => r.id === recipeId);
+      const recipe = getRecipeBookForUser(userId).find((r) => r.id === recipeId);
       if (!recipe || recipeBlockReason(recipe, kitchen, profile)) {
         return { status: "conflict" } as const;
       }
