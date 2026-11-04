@@ -34,6 +34,7 @@
     "eval": "tsx scripts/run-eval.ts",
     "eval:agent": "tsx scripts/run-agent-eval.ts --live",
     "eval:safety": "tsx scripts/run-safety-eval.ts --live",
+    "eval:import": "tsx scripts/run-import-eval.ts --live",
     "trace:report": "tsx scripts/trace-report.ts",
     "bench": "tsx scripts/run-bench.ts --live",
     "import:htc": "tsx scripts/import-howtocook.ts",
