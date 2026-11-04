@@ -22,6 +22,21 @@ import { TASK_LIMITS, type TaskStatePatch } from "./taskStateTypes.js";
 
 export type ExtractionModel = (systemPrompt: string, userPrompt: string) => Promise<unknown>;
 
+/** 语义提取的用量累计（bench 单独报告 token/成本；不进 agent trace 主口径）。 */
+export interface ExtractionUsage {
+  calls: number;
+  failures: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  totalMs: number;
+}
+let extractionUsage: ExtractionUsage = { calls: 0, failures: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, totalMs: 0 };
+export function getExtractionUsage(): Readonly<ExtractionUsage> { return extractionUsage; }
+export function resetExtractionUsage(): void {
+  extractionUsage = { calls: 0, failures: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, totalMs: 0 };
+}
+
 const SYSTEM_PROMPT = `你是饮食助手对话的任务状态提取器。输入一段对话（用户消息+助手回复）和当前任务状态，输出增量补丁 JSON。只做信息抽取。
 
 规则：
@@ -72,7 +87,14 @@ export async function extractAndApplyTaskPatch(
   userId: string,
   userMessage: string,
   assistantReply: string,
-  model: ExtractionModel = (system, user) => chatJson(system, user)
+  model: ExtractionModel = (system, user) => chatJson(system, user, 2, (usage) => {
+    extractionUsage = {
+      ...extractionUsage,
+      inputTokens: extractionUsage.inputTokens + (usage.inputTokens ?? 0),
+      outputTokens: extractionUsage.outputTokens + (usage.outputTokens ?? 0),
+      cacheReadTokens: extractionUsage.cacheReadTokens + (usage.cacheReadTokens ?? 0),
+    };
+  })
 ): Promise<boolean> {
   const current = getInjectableTask(userId);
   // 提取只维护已存在的 active 任务（建任务由排菜工具调用确定性承担——
@@ -80,16 +102,20 @@ export async function extractAndApplyTaskPatch(
   // 没有任务时不发起模型调用：省一轮 LLM，也让无任务对话零状态开销。
   if (!current) return false;
   let raw: unknown;
+  const startedAt = Date.now();
+  extractionUsage = { ...extractionUsage, calls: extractionUsage.calls + 1 };
   try {
     const userPrompt = [
-      current ? `当前任务状态：${JSON.stringify({ goal: current.goal, stage: current.stage, rejected: current.rejected.map((r) => r.name), openQuestions: current.openQuestions })}` : "当前任务状态：无",
+      `当前任务状态：${JSON.stringify({ goal: current.goal, stage: current.stage, rejected: current.rejected.map((r) => r.name), openQuestions: current.openQuestions })}`,
       `用户消息：${userMessage.slice(0, 2000)}`,
       `助手回复（截断）：${assistantReply.slice(0, 1500)}`,
     ].join("\n\n");
     raw = await model(SYSTEM_PROMPT, userPrompt);
   } catch {
+    extractionUsage = { ...extractionUsage, failures: extractionUsage.failures + 1, totalMs: extractionUsage.totalMs + (Date.now() - startedAt) };
     return false; // 模型不可用：不更新优于错更新
   }
+  extractionUsage = { ...extractionUsage, totalMs: extractionUsage.totalMs + (Date.now() - startedAt) };
 
   const patch = sanitizePatch(raw);
   const task = current ?? (patch.intent === "plan" ? ensureMealPlanTask(userId) : undefined);
