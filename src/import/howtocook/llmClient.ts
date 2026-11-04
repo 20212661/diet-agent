@@ -1,8 +1,9 @@
 /**
- * 管道专用轻量 LLM 客户端：OpenAI 兼容 chat/completions + JSON 输出。
+ * 轻量 LLM 客户端：OpenAI 兼容 chat/completions + JSON 输出。
  *
- * 只给离线导入管道用（批量结构化任务），不进运行时路径；生产 Agent
- * 仍走 SDK 候选链。失败重试 2 次，JSON 解析失败按错误重试。
+ * 给结构化导入任务用：HowToCook 离线管道（批量）与 Web 端用户导入预览
+ * （单道，POST /api/recipes/import/preview）。生产 Agent 对话仍走 SDK
+ * 候选链。失败重试 2 次，JSON 解析失败按错误重试。
  */
 import "dotenv/config";
 
