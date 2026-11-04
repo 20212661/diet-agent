@@ -249,11 +249,22 @@ describe("Web 中间件与辅助函数", () => {
       "/profileKitchenViews.js",
       "/inventoryView.js",
       "/diaryView.js",
+      "/recipeImportView.js",
       "/planAgentViews.js",
       "/styles.css",
       "/index.html",
     ]) {
       expect(staticFiles[file]).toBeDefined();
+    }
+    // 动态守卫：public/ 下每个可服务文件都必须有映射（新增视图忘加白名单 → 线上白屏）
+    const { readdirSync } = await import("node:fs");
+    const { fileURLToPath } = await import("node:url");
+    const { dirname, join } = await import("node:path");
+    const publicDir = dirname(fileURLToPath(import.meta.url)) + "/../../public";
+    for (const name of readdirSync(publicDir)) {
+      if (/\.(js|css|html)$/.test(name)) {
+        expect(staticFiles[`/${name}`], `public/${name} 缺少静态映射`).toBeDefined();
+      }
     }
   });
 });

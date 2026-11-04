@@ -17,6 +17,7 @@ export const staticFiles: Record<string, { file: string; type: string }> = {
   "/profileKitchenViews.js": { file: "profileKitchenViews.js", type: "text/javascript; charset=utf-8" },
   "/inventoryView.js": { file: "inventoryView.js", type: "text/javascript; charset=utf-8" },
   "/diaryView.js": { file: "diaryView.js", type: "text/javascript; charset=utf-8" },
+  "/recipeImportView.js": { file: "recipeImportView.js", type: "text/javascript; charset=utf-8" },
   "/planAgentViews.js": { file: "planAgentViews.js", type: "text/javascript; charset=utf-8" },
 };
 
