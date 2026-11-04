@@ -29,6 +29,14 @@ export {
 export { addCookingFeedback, getCookingFeedback } from "./repositories/feedbackRepository.js";
 export { getRecipeBook, getRecipeById, upsertRecipe } from "./repositories/recipeRepository.js";
 export {
+  deleteUserRecipe,
+  getAllUserRecipes,
+  getRecipeBookForUser,
+  getUserRecipeById,
+  getUserRecipes,
+  upsertUserRecipe,
+} from "./repositories/userRecipeRepository.js";
+export {
   clearWeeklyPlan,
   getWeeklyPlan,
   replaceWeeklyPlanDayMainRecipe,

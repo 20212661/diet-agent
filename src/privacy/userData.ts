@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, unlinkSync, w
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as store from "../store/index.js";
+import { deleteRecipeIndexEntries } from "../rag/index.js";
 import { SHOPPING_TABLES } from "../shopping/types.js";
 
 const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -73,7 +74,7 @@ function tableExists(db: Database.Database, table: string): boolean {
 }
 
 function clearDatabaseRows(db: Database.Database, userId: string): void {
-  const tables = ["user_profiles", "kitchen_profiles", "ingredient_inventory", "meal_logs", "meal_operations", "web_write_operations", "chat_operations", "weekly_plan_day_status", "cooking_feedback", "weekly_plans", "meal_plans"];
+  const tables = ["user_profiles", "kitchen_profiles", "ingredient_inventory", "meal_logs", "meal_operations", "web_write_operations", "chat_operations", "weekly_plan_day_status", "cooking_feedback", "weekly_plans", "meal_plans", "user_recipes"];
   const clear = db.transaction(() => {
     for (const table of [...SHOPPING_TABLES, ...tables]) {
       if (tableExists(db, table)) db.prepare(`DELETE FROM ${table} WHERE user_id = ?`).run(userId);
@@ -108,6 +109,7 @@ export function getUserDataOverview(userId: string): UserDataOverview {
       profile: count("user_profiles"), kitchen: count("kitchen_profiles"), inventory: count("ingredient_inventory"),
       shoppingTasks: count("shopping_tasks"), shoppingReceipts: count("shopping_receipts"), shoppingEvents: count("shopping_events"), shoppingProviderSettings: count("shopping_provider_settings"), shoppingCandidates: count("shopping_candidates"), shoppingProviderChecks: count("shopping_provider_checks"), cartExperiments:count("shopping_cart_experiments"),
       meals: count("meal_logs"), mealOperations: count("meal_operations"), webWriteOperations: count("web_write_operations"), chatOperations: count("chat_operations"), feedback: count("cooking_feedback"), weeklyPlans: count("weekly_plans"), mealPlans: count("meal_plans"),
+      userRecipes: count("user_recipes"),
       agentTraces: tableExists(db, "agent_traces") ? count("agent_traces") : 0,
     },
     sessionFiles: countFiles(sessionDir),
@@ -148,6 +150,7 @@ export function exportUserData(userId: string, transcript: readonly Conversation
       agentTraces,
       agentTraceSpans,
       cookingFeedback: store.getCookingFeedback(userId),
+      userRecipes: store.getUserRecipes(userId),
       weeklyPlans,
       mealPlans,
       shopping: Object.fromEntries(SHOPPING_TABLES.map(table => [table, db.prepare(`SELECT * FROM ${table} WHERE user_id = ?`).all(userId)])),
@@ -176,7 +179,10 @@ export function deleteUserData(userId: string, closeAgentSession: () => void): U
   const overview = getUserDataOverview(userId);
   const db = store.getDatabase();
   const databaseRows = Object.values(overview.database).reduce((sum, value) => sum + value, 0);
+  // 用户菜谱的 RAG 索引条目（共享 fts/vec 表）一并移除；行删除前先取 id
+  const userRecipeIds = store.getUserRecipes(userId).map((recipe) => recipe.id);
   store.clearUserData(userId);
+  deleteRecipeIndexEntries(userRecipeIds);
 
   let backupsScrubbed = 0;
   let backupErrors = 0;

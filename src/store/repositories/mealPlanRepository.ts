@@ -1,5 +1,5 @@
 import { revalidateMealPlan } from "../../recipes/mealPlanValidation.js";
-import { getRecipeBook } from "./recipeRepository.js";
+import { getRecipeBookForUser } from "./userRecipeRepository.js";
 import { getKitchenProfile } from "./kitchenProfileRepository.js";
 import { getIngredientInventory } from "./inventoryRepository.js";
 import { getUserProfile } from "./userProfileRepository.js";
@@ -94,6 +94,6 @@ export function getMealPlanByStartDate(userId: string, startDate: string): MealP
 }
 
 function validate(plan: MealPlan): MealPlan {
-  return revalidateMealPlan(plan, { recipes: getRecipeBook(), kitchen: getKitchenProfile(plan.userId),
+  return revalidateMealPlan(plan, { recipes: getRecipeBookForUser(plan.userId), kitchen: getKitchenProfile(plan.userId),
     inventory: getIngredientInventory(plan.userId), profile: getUserProfile(plan.userId) });
 }

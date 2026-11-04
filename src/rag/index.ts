@@ -19,4 +19,12 @@ export {
   type KnnHit,
 } from "./vectorStore.js";
 export { FtsStore } from "./ftsStore.js";
-export { RecipeRetriever, getRetriever, _resetRetrieverForTests, type RecallResult } from "./recipeRetriever.js";
+export {
+  RecipeRetriever,
+  getRetriever,
+  indexRecipeIncrementally,
+  deleteRecipeIndexEntries,
+  _resetRetrieverForTests,
+  type RecallResult,
+  type RecallScope,
+} from "./recipeRetriever.js";

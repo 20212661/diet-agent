@@ -54,13 +54,14 @@ export const searchRecipesTool: ToolDefinition<typeof Params> = defineTool({
     const inventory = store.getIngredientInventory(params.userId);
     const userProfile = store.getUserProfile(params.userId);
     const feedback = store.getCookingFeedback(params.userId);
-    // 候选菜谱：有自然语言 query 时优先 RAG 语义召回（top-20），否则用关键词预筛
-    let recipes = store.getRecipeBook().filter((recipe) => recipeTextMatches(recipe, params.query));
+    // 候选菜谱：有自然语言 query 时优先 RAG 语义召回（top-20），否则用关键词预筛。
+    // 用户隔离：候选集=全局库+该用户自己的导入，RAG 召回同样按该集合过滤。
+    let recipes = store.getRecipeBookForUser(params.userId).filter((recipe) => recipeTextMatches(recipe, params.query));
     if (params.query?.trim()) {
       const retriever = await getRetriever();
       if (retriever) {
         try {
-          const recalled = await retriever.recall(params.query, 20);
+          const recalled = await retriever.recall(params.query, 20, { recipes });
           if (recalled.recipes.length > 0) {
             recipes = recalled.recipes;
           }

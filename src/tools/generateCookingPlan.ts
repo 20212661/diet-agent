@@ -59,7 +59,7 @@ export const generateCookingPlanTool: ToolDefinition<typeof Params> = defineTool
     const inventory = store.getIngredientInventory(params.userId);
     const dietProfile = store.getUserProfile(params.userId);
     const feedback = store.getCookingFeedback(params.userId);
-    const recipes = store.getRecipeBook();
+    const recipes = store.getRecipeBookForUser(params.userId);
 
     // 只取 status 为 available 或无 status 的食材
     const availableItems: IngredientItem[] = inventory.availableIngredients.filter(isAvailable);

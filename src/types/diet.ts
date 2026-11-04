@@ -306,7 +306,24 @@ export interface RecipeRecord {
   /** 蛋白质水平 */
   proteinLevel?: "low" | "medium" | "high";
 
+  /**
+   * 用户导入时明确关闭的过敏原警告（原文出现该别名、用户判定与菜无关）。
+   * 责任在用户且只对本人生效；为家庭多人模式预留——家人查看/共享菜谱时
+   * 可凭此重新提示确认，而不是无声丢失这条过敏原线索。
+   */
+  dismissedAllergenWarnings?: DismissedAllergenWarning[];
+
   updatedAt: string;
+}
+
+/** 被用户关闭的过敏原警告（见 RecipeRecord.dismissedAllergenWarnings）。 */
+export interface DismissedAllergenWarning {
+  /** 原文中的别名写法。 */
+  ingredient: string;
+  definitionId: string;
+  allergens: AllergenId[];
+  possibleAllergens: AllergenId[];
+  dismissedAt: string;
 }
 
 /** 一周计划中单日的条目 */

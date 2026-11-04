@@ -9,7 +9,7 @@ export async function handleWeeklyPlanRoutes(ctx: RouteContext): Promise<boolean
 
   const recipeMatch = /^\/api\/recipes\/([^/]+)$/.exec(url.pathname);
   if (request.method === "GET" && recipeMatch) {
-    const recipe = findRecipe(decodeURIComponent(recipeMatch[1]!));
+    const recipe = findRecipe(ctx.userId, decodeURIComponent(recipeMatch[1]!));
     sendJson(response, recipe ? 200 : 404, recipe ? { recipe } : { error: "找不到这道菜谱。" });
     return true;
   }

@@ -37,6 +37,11 @@ export interface RecallResult {
   channels: { vector: number; fts: number }; // 各通道命中数（日志/调试）
 }
 
+/** 召回范围（用户隔离）：全局库 + 该用户自己的导入；其他用户的菜不在集合里。 */
+export interface RecallScope {
+  recipes: RecipeRecord[];
+}
+
 export class RecipeRetriever {
   readonly config: EmbeddingConfig | null;
   private readonly vectors: VectorStore | null;
@@ -111,9 +116,16 @@ export class RecipeRetriever {
   }
 
   /** hybrid 召回：双通道并发 + RRF 融合（或单通道降级）。 */
-  async recall(query: string, topK: number): Promise<RecallResult> {
+  async recall(query: string, topK: number, scope?: RecallScope): Promise<RecallResult> {
+    // 用户隔离：scope 限定该用户可见的菜谱（全局库 + 自己导入）。
+    // 通道取全量再过滤（库量级几百，KNN 全扫无压力），保证过滤后排名正确。
+    const allowedIds = scope ? new Set(scope.recipes.map((r) => r.id)) : null;
+    const fetchN = scope
+      ? Math.max(RECALL_N, this.vectors?.size() ?? 0, this.fts?.size() ?? 0)
+      : RECALL_N;
+
     const vectorPromise = this.vectors && this.config
-      ? this.recallVector(query, RECALL_N).catch((e: unknown) => {
+      ? this.recallVector(query, fetchN).catch((e: unknown) => {
           console.warn(`[RAG] vector channel failed (errorType=${e instanceof Error ? e.name : typeof e})`);
           return [] as string[];
         })
@@ -122,7 +134,7 @@ export class RecipeRetriever {
     const ftsPromise = this.fts
       ? new Promise<string[]>((resolve) => {
           try {
-            resolve(this.fts!.search(query, RECALL_N));
+            resolve(this.fts!.search(query, fetchN));
           } catch (e) {
             console.warn(`[RAG] fts channel failed (errorType=${e instanceof Error ? e.name : typeof e})`);
             resolve([]);
@@ -130,7 +142,9 @@ export class RecipeRetriever {
         })
       : Promise.resolve([] as string[]);
 
-    const [vectorIds, ftsIds] = await Promise.all([vectorPromise, ftsPromise]);
+    const [vectorIdsAll, ftsIdsAll] = await Promise.all([vectorPromise, ftsPromise]);
+    const vectorIds = allowedIds ? vectorIdsAll.filter((id) => allowedIds.has(id)) : vectorIdsAll;
+    const ftsIds = allowedIds ? ftsIdsAll.filter((id) => allowedIds.has(id)) : ftsIdsAll;
 
     const channelLists: string[][] = [];
     if (vectorIds.length > 0) channelLists.push(vectorIds);
@@ -145,7 +159,8 @@ export class RecipeRetriever {
 
     const fused = reciprocalRankFusion(channelLists, RRF_K).slice(0, topK);
     const idSet = new Set(fused.map((f) => f.id));
-    const recipes = store.getRecipeBook().filter((r) => idSet.has(r.id));
+    // 水合来源：scope 时用调用方给的菜谱集（该用户可见），否则全局库
+    const recipes = (scope?.recipes ?? store.getRecipeBook()).filter((r) => idSet.has(r.id));
 
     return {
       recipes,
@@ -203,6 +218,11 @@ export class RecipeRetriever {
 
 let _retrieverPromise: Promise<RecipeRetriever | null> | undefined;
 
+/** 共享索引的候选全集：全局库 + 所有用户的导入（查询时按 scope 过滤到可见集合）。 */
+function indexedRecipeUniverse(): RecipeRecord[] {
+  return [...store.getRecipeBook(), ...store.getAllUserRecipes()];
+}
+
 /**
  * 获取 hybrid 检索器单例（懒加载，首次调用时索引菜谱）。
  * 向量通道需要 embedding key；FTS5 关键词通道不需要 key。
@@ -217,7 +237,7 @@ export function getRetriever(): Promise<RecipeRetriever | null> {
       // local embedding 优先尝试索引；失败（未安装/离线/下载失败）退回纯 FTS
       try {
         const retriever = new RecipeRetriever(store.getDatabase(), config);
-        const { embedded, reused } = await retriever.indexRecipes(store.getRecipeBook());
+        const { embedded, reused } = await retriever.indexRecipes(indexedRecipeUniverse());
         const b = retriever.backends;
         console.log(
           `[RAG] indexed: embedded=${embedded} reused=${reused} | vector=${b.vector ?? "off"} fts=${b.fts ? "on" : "off"}`
@@ -233,7 +253,7 @@ export function getRetriever(): Promise<RecipeRetriever | null> {
     // 纯 FTS（EMBEDDING_PROVIDER=off 或 local 加载失败退回）
     try {
       const retriever = new RecipeRetriever(store.getDatabase(), null);
-      await retriever.indexRecipes(store.getRecipeBook());
+      await retriever.indexRecipes(indexedRecipeUniverse());
       if (!retriever.isAvailable()) {
         console.warn("[RAG] no recall channel available, RAG disabled");
         return null;
@@ -245,6 +265,43 @@ export function getRetriever(): Promise<RecipeRetriever | null> {
     }
   })();
   return _retrieverPromise;
+}
+
+/** 用户导入后增量索引一条（best-effort：失败只打日志，不影响已完成的入库）。 */
+export async function indexRecipeIncrementally(recipe: RecipeRecord): Promise<void> {
+  try {
+    const retriever = await getRetriever();
+    if (!retriever) return;
+    await retriever.indexRecipes([recipe]);
+  } catch (e) {
+    console.warn(`[RAG] incremental index failed (errorType=${e instanceof Error ? e.name : typeof e})`);
+  }
+}
+
+/**
+ * 从共享索引中移除菜谱（用户删除数据时用）。直接 SQL，不依赖单例是否已建；
+ * vec0/fts5 虚拟表都支持 DELETE。若单例已用内存向量回退，其内存副本可能残留到
+ * 进程重启——隔离由查询侧 scope 过滤保证，残留只是多余候选，不会泄露给其他用户。
+ */
+export function deleteRecipeIndexEntries(ids: readonly string[]): void {
+  if (ids.length === 0) return;
+  try {
+    const db = store.getDatabase();
+    const placeholders = ids.map(() => "?").join(",");
+    db.prepare(`DELETE FROM fts_recipes WHERE id IN (${placeholders})`).run(...ids);
+    db.prepare(`DELETE FROM vec_recipes WHERE id IN (${placeholders})`).run(...ids);
+    const row = db.prepare("SELECT value FROM rag_meta WHERE key = 'text_hashes'").get() as { value: string } | undefined;
+    if (row) {
+      const hashes = JSON.parse(row.value) as Record<string, string>;
+      let changed = false;
+      for (const id of ids) if (id in hashes) { delete hashes[id]; changed = true; }
+      if (changed) {
+        db.prepare("UPDATE rag_meta SET value = ? WHERE key = 'text_hashes'").run(JSON.stringify(hashes));
+      }
+    }
+  } catch (e) {
+    console.warn(`[RAG] index cleanup failed (errorType=${e instanceof Error ? e.name : typeof e})`);
+  }
 }
 
 /** 测试用：重置单例。 */

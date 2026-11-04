@@ -165,7 +165,7 @@ export function buildAndSaveMealPlan(params: MealPlanRequest) {
   const kitchen = store.getKitchenProfile(params.userId);
   const inventory = store.getIngredientInventory(params.userId);
   const feedback = store.getCookingFeedback(params.userId);
-  const recipes = store.getRecipeBook();
+  const recipes = store.getRecipeBookForUser(params.userId);
   const goal = inferGoal(params.target) ?? savedProfile?.goal;
   const temporaryAvoidFoods = (params.temporaryAvoidFoods ?? []).map((food) => food.trim()).filter(Boolean);
   const userProfile = {

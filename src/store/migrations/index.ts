@@ -3,7 +3,7 @@ import { copyFileSync, existsSync, readdirSync, statSync, unlinkSync } from "nod
 import { dirname, extname, basename, join } from "node:path";
 import { deriveRecipeIngredientMetadata } from "../../recipes/ingredientTaxonomy.js";
 
-export const CURRENT_SCHEMA_VERSION = 22;
+export const CURRENT_SCHEMA_VERSION = 23;
 
 interface Migration {
   version: number;
@@ -433,6 +433,50 @@ const migrations: readonly Migration[] = [
     description: "HowToCook 分类表大规模扩充（218 新条目+41 别名扩展），重算存量菜谱过敏原标签",
     up(db) {
       recomputeAllergenTags(db);
+    },
+  },
+  {
+    version: 23,
+    description: "P5 用户自助导入菜谱：user_recipes 表（列布局与 recipe_book 一致 + user_id，按用户隔离）",
+    up(db) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS user_recipes (
+          user_id TEXT NOT NULL,
+          id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          mode TEXT NOT NULL,
+          meal_types_json TEXT NOT NULL DEFAULT '[]',
+          modes_json TEXT NOT NULL DEFAULT '[]',
+          suitable_goals_json TEXT NOT NULL DEFAULT '[]',
+          ingredients_json TEXT NOT NULL DEFAULT '[]',
+          optional_ingredients_json TEXT NOT NULL DEFAULT '[]',
+          ingredient_ids_json TEXT NOT NULL DEFAULT '[]',
+          allergen_tags_json TEXT NOT NULL DEFAULT '[]',
+          primary_protein TEXT,
+          vegetables_json TEXT NOT NULL DEFAULT '[]',
+          staples_json TEXT NOT NULL DEFAULT '[]',
+          cookware_json TEXT NOT NULL DEFAULT '[]',
+          appliances_json TEXT NOT NULL DEFAULT '[]',
+          active_minutes INTEGER NOT NULL,
+          total_minutes INTEGER NOT NULL,
+          difficulty INTEGER NOT NULL DEFAULT 2,
+          dish_count INTEGER NOT NULL DEFAULT 2,
+          steps_json TEXT NOT NULL DEFAULT '[]',
+          taste_tags_json TEXT NOT NULL DEFAULT '[]',
+          preference_tags_json TEXT NOT NULL DEFAULT '[]',
+          season_tags_json TEXT NOT NULL DEFAULT '[]',
+          timeline_json TEXT NOT NULL DEFAULT '[]',
+          low_energy_swap TEXT,
+          weekend_prep TEXT,
+          freezer_reuse TEXT,
+          protein_level TEXT,
+          nutrition_json TEXT,
+          dismissed_allergen_warnings_json TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          PRIMARY KEY (user_id, id)
+        );
+      `);
     },
   },
 ];
