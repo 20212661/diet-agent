@@ -337,6 +337,8 @@ Agent 单轮会话有四道独立限制兜底：单轮总截止时间、空闲�
 - **本地 embedding**：默认开启（首次下载 ~30MB 模型，首次启动多约 4.7 秒；之后缓存复用，二次启动 67ms）。语义类 Recall 从 55% 提升至 89%，单次查询延迟 +10ms。离线/未安装 transformers/模型下载失败时自动退回纯 FTS5，不阻塞启动。关闭方法：`.env` 设 `EMBEDDING_PROVIDER=off`。
 - **盲标校验**：30 道菜（20 道种子：**LLM 起草、人工复核**，非人工盲标，确认过敏原 49 项，分类表漏标率修复前 4.1% → 0；+10 道导入菜：**LLM 起草、LLM 复核**——期望标签按人工批准的分类表推导，比对 enrich 派生结果，守住导入管道与分类表变更的联动），比对作为 CI 门禁（`src/tests/allergenGold.test.ts`）。HowToCook 导入扩充（218 新条目）的过敏原判定：规则表由 LLM 起草、人工批准；高风险项由 LLM 逐条复核，分歧项由人工裁决；低风险项批量通过并抽检 10%；不确定项一律按"可能含"处理（失败即关闭），标 `possibleAllergens` 的食材对相应过敏用户按需人工确认拦截。
 
+- **用户导入评测（P5）**：10 份文本（HowToCook 体/网站紧凑体/口述体/笔记体/中英混排/多版本/注入样本，**文本与期望食材标注均为 LLM 生成——期望食材为 LLM 标注，GLM 起草，待人工扫审，不是真实用户数据**）跑真实抽取：抽取召回率 100%、误抽率 0（溯源全通过）、检查器遗漏过敏原 0、注入样本防御成立。安全责任指标（检查器遗漏率）有 CI 确定性夹逼测试（完整抽取与抽掉过敏原食材的残缺抽取两种 canned draft），不依赖网络（`src/tests/importEvalCore.test.ts`）。`npm run eval:import` 重跑。
+
 评测调用真实模型，每个场景/画像用独立合成用户重复多次（默认 3，`--repeat` 可调 1–10），结果写入 `data/eval-results/` 并带模型名、git commit、日期与重复次数，保证可复现。评测脚本对未知参数一律报错退出。按 `MODEL_PROVIDER=deepseek` / `MODEL_PROVIDER=zai` 分别跑 DeepSeek 与 GLM。
 
 - **A 组 · 参数修复中间件**：`npm run eval:agent -- --repair-compare` 同进程先后跑「修复开 → 修复关」两阶段，输出工具调用成功率、轮次通过率与参数问题率（X% 的工具调用存在数组/布尔/数字/缺字段类格式问题）的对比。单独跑对照阶段用环境变量 `DIET_TOOL_REPAIR=off npm run eval:agent`（userId/幂等注入不受开关影响）。两阶段固定先开后关，第二阶段可能受益于 provider 预热缓存，**只比较成功率与问题率，延迟/成本不可跨阶段比较**。
@@ -345,7 +347,7 @@ Agent 单轮会话有四道独立限制兜底：单轮总截止时间、空闲�
 
 ## ✅ 测试与持续集成
 
-- **框架**：vitest，覆盖菜谱匹配与结构化过敏原、完整设备硬约束、配置诊断、Agent 流事件/重试/fallback/队列、会话 LRU/TTL、版本化迁移、工具身份隔离/空数据/重复写入/数据库锁、UUID 并发写入和 RAG 等核心逻辑；用 `:memory:` SQLite 隔离，不污染生产数据。
+- **框架**：vitest，覆盖菜谱匹配与结构化过敏原、完整设备硬约束、配置诊断、Agent 流事件/重试/fallback/队列、会话 LRU/TTL、版本化迁移、工具身份隔离/空数据/重复写入/数据库锁、UUID 并发写入、RAG、用户导入（跨用户隔离/提示注入/隐私清除/writeOnce 栅栏）等核心逻辑；用 `:memory:` SQLite 隔离，不污染生产数据。
 - **CI**：GitHub Actions 在 Ubuntu/Windows、Node 22/24 矩阵上运行生产依赖审计、`typecheck`、构建、构建产物冒烟、`npm pack` 临时安装与 CLI 冒烟以及覆盖率测试；覆盖率产物作为 artifact 上传。覆盖率门槛为 Statements 75%、Branches 60%、Functions 75%、Lines 78%。
 - **当前覆盖率**：运行 `npm run test:coverage` 查看最新数值。覆盖率统计核心业务逻辑；Web/doctor 进程入口和评估场景静态数据由运行时与构建检查验证。
 
@@ -360,6 +362,7 @@ npm run test:package   # npm pack 后临时安装并执行 CLI 冒烟测试
 npm run doctor         # 检查模型供应商、模型名和认证状态（不输出 Key）
 npm run validate:recipes # 校验菜谱 Schema、ID、范围、电器步骤和过敏原标签
 npm run eval           # 离线运行确定性工具流程评估，不调用模型
+npm run eval:import     # 用户导入评测（10 份文本真实抽取，需 DEEPSEEK_API_KEY）
 npm run eval:agent     # 使用已配置模型运行 Agent 黑盒行为评估，会产生模型 API 请求
 ```
 
