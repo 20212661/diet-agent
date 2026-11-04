@@ -43,6 +43,8 @@ export interface TaskArtifactIds {
   weeklyPlanWeekStartDate?: string;
   recipeIds?: string[];
   mealLogIds?: string[];
+  /** 上一轮工具结果推荐过的菜（否决捕获的规则层输入；满 30 截尾）。 */
+  suggestedRecipeIds?: string[];
 }
 
 export interface TaskState {

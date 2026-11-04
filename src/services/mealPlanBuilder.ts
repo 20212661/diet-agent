@@ -1,7 +1,7 @@
 import * as store from "../store/index.js";
 import { todayDate } from "../store/shared.js";
 import { computeIngredientReadiness, matchRecipes, type MatchRecipeResult } from "../recipes/recipeMatcher.js";
-import { noteMealPlanToolCall, rejectedRecipeIdsForUser } from "../tasks/taskStateService.js";
+import { noteMealPlanToolCall, noteSuggestedRecipes, rejectedRecipeIdsForUser } from "../tasks/taskStateService.js";
 import { assessFoodSafety } from "../recipes/foodSafety.js";
 import { normalizeIngredientId } from "../recipes/ingredientTaxonomy.js";
 import { executionBlockReason, recipeBlockReason, type ExecutableMeal } from "../recipes/executionConstraints.js";
@@ -253,6 +253,8 @@ export function buildAndSaveMealPlan(params: MealPlanRequest) {
     goal,
     constraints: { temporaryAvoidFoods, timeLimitMinutes, energyLevel, preferredStyles: params.preferredStyles ?? [] },
   });
+  // 结构化任务状态：记录计划里实际排入的菜（规则层否决捕获的输入）
+  noteSuggestedRecipes(params.userId, plan.days.flatMap((day) => day.meals.flatMap((meal) => (meal.source === "recipe" && meal.recipeId ? [meal.recipeId] : []))));
   const lines = [`## 饮食计划（${daysCount} 天，${startDate} 起）`];
   if (goal) lines.push(`目标：${goal === "custom" && savedProfile?.customGoal ? savedProfile.customGoal : GOAL_LABELS[goal]}`);
   if (params.target) lines.push(`补充要求：${params.target}`);
