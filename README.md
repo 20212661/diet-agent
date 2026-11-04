@@ -341,6 +341,8 @@ Agent 单轮会话有四道独立限制兜底：单轮总截止时间、空闲�
 
 - **结构化压缩三臂评测**（`npm run eval:compact`，live）：长排菜对话（目标/否决/日期/注入样本）在统一触发点压缩（manual `compact()` 同样经过 `session_before_compact`）——A 无注入+默认压缩、B 有注入+默认压缩、C 有注入+结构化压缩；探针问题按关键词判分，注入样本同时检查**代码层过滤**（被否决菜仍在 `rejectedRecipeIds` 且 matchRecipes 排除）与**回复文本**两层。对话脚本与期望答案为 LLM 起草（GLM），回复原文落报告供人工复核。语义提取的成本在 bench 中**单独口径**报告（调用次数/input+output token/累计耗时，不计入 trace 主指标）。
 
+- **否决捕获三臂评测**（`npm run eval:rejection [-- --live]`，10 段对话；期望集 LLM 标注）：规则层（上轮推荐菜名+否认词，强词任意位置/弱词需与菜名紧邻——"白灼虾不要放辣"不否决）**75% 捕获 / 0 误捕**（按设计漏掉特征否决）；LLM 层负责特征否决（"太油的都不要"→从推荐集挑），prompt 收紧"只否决推荐集内的菜"后 **100% / 0 误捕**（收紧前首跑曾在推荐集外的随口评论上误捕）；规则+LLM 联合 **100% / 0 误捕**。规则层在轮次开始时确定性执行（本轮推荐实时生效），LLM 层轮后异步兜底。
+
 评测调用真实模型，每个场景/画像用独立合成用户重复多次（默认 3，`--repeat` 可调 1–10），结果写入 `data/eval-results/` 并带模型名、git commit、日期与重复次数，保证可复现。评测脚本对未知参数一律报错退出。按 `MODEL_PROVIDER=deepseek` / `MODEL_PROVIDER=zai` 分别跑 DeepSeek 与 GLM。
 
 - **A 组 · 参数修复中间件**：`npm run eval:agent -- --repair-compare` 同进程先后跑「修复开 → 修复关」两阶段，输出工具调用成功率、轮次通过率与参数问题率（X% 的工具调用存在数组/布尔/数字/缺字段类格式问题）的对比。单独跑对照阶段用环境变量 `DIET_TOOL_REPAIR=off npm run eval:agent`（userId/幂等注入不受开关影响）。两阶段固定先开后关，第二阶段可能受益于 provider 预热缓存，**只比较成功率与问题率，延迟/成本不可跨阶段比较**。
@@ -366,6 +368,7 @@ npm run validate:recipes # 校验菜谱 Schema、ID、范围、电器步骤和�
 npm run eval           # 离线运行确定性工具流程评估，不调用模型
 npm run eval:import     # 用户导入评测（10 份文本真实抽取，需 DEEPSEEK_API_KEY）
 npm run eval:compact    # 结构化压缩三臂评测（长对话强制压缩+探针，需模型与 DEEPSEEK_API_KEY）
+npm run eval:rejection  # 否决捕获三臂评测（默认仅规则臂离线；--live 跑 LLM 两臂）
 npm run eval:agent     # 使用已配置模型运行 Agent 黑盒行为评估，会产生模型 API 请求
 ```
 

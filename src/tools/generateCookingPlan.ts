@@ -4,7 +4,7 @@ import type { ToolDefinition, ExtensionContext } from "@earendil-works/pi-coding
 import { defineTool } from "@earendil-works/pi-coding-agent";
 import * as store from "../store/index.js";
 import { matchRecipesDetailed, type MatchRecipeResult } from "../recipes/recipeMatcher.js";
-import { rejectedRecipeIdsForUser } from "../tasks/taskStateService.js";
+import { noteSuggestedRecipes, rejectedRecipeIdsForUser } from "../tasks/taskStateService.js";
 import { isAvailable, type IngredientItem, type RecipeRecord } from "../types/diet.js";
 import { recipeBlockReason } from "../recipes/executionConstraints.js";
 import { mealFitsTimeLimits } from "../recipes/mealTiming.js";
@@ -95,6 +95,8 @@ export const generateCookingPlanTool: ToolDefinition<typeof Params> = defineTool
       desiredStyle: params.desiredStyle,
     });
     const matches = matchOutcome.matches.filter(({ recipe }) => !recipeBlockReason(recipe, kitchen, dietProfile, timeLimit));
+    // 结构化任务状态：记录本轮候选（规则层否决捕获的输入）
+    noteSuggestedRecipes(params.userId, matches.slice(0, 8).map(({ recipe }) => recipe.id));
 
     // 选择主菜：最高分
     let mainResult: MatchRecipeResult | undefined;

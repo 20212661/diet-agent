@@ -5,7 +5,7 @@ import { defineTool } from "@earendil-works/pi-coding-agent";
 import * as store from "../store/index.js";
 import { recipeBlockReason } from "../recipes/executionConstraints.js";
 import { matchRecipes } from "../recipes/recipeMatcher.js";
-import { rejectedRecipeIdsForUser } from "../tasks/taskStateService.js";
+import { noteSuggestedRecipes, rejectedRecipeIdsForUser } from "../tasks/taskStateService.js";
 import { getRetriever } from "../rag/index.js";
 import { isAvailable, type EnergyLevel, type IngredientItem } from "../types/diet.js";
 
@@ -76,9 +76,10 @@ export const searchRecipesTool: ToolDefinition<typeof Params> = defineTool({
       ...toItems(params.ingredients),
     ];
 
+    const rejectedIds = rejectedRecipeIdsForUser(params.userId);
     const matches = matchRecipes({
       recipes,
-      rejectedRecipeIds: rejectedRecipeIdsForUser(params.userId),
+      rejectedRecipeIds: rejectedIds,
       availableIngredients,
       shoppingList: inventory.shoppingList,
       kitchenProfile: kitchen,
@@ -89,6 +90,8 @@ export const searchRecipesTool: ToolDefinition<typeof Params> = defineTool({
       desiredStyle: params.query,
     }).filter((match) => !recipeBlockReason(match.recipe, kitchen, userProfile, params.timeLimitMinutes))
       .slice(0, Math.min(Math.max(params.limit ?? 5, 1), 10));
+    // 结构化任务状态：记录本轮推荐过的菜（规则层否决捕获的输入）
+    noteSuggestedRecipes(params.userId, matches.map((match) => match.recipe.id));
 
     const lines: string[] = [];
     if (matches.length === 0) {

@@ -43,7 +43,7 @@ import { setActiveUserMessage, detectUnsavedMealClaim, MEAL_CLAIM_UNSAVED_NOTICE
 import { waitForPendingExtraction, enqueueExtraction } from "../tasks/extractionQueue.js";
 import { extractAndApplyTaskPatch } from "../tasks/taskStateExtractor.js";
 import { buildTaskStateInjection } from "../tasks/taskStateInjection.js";
-import { getInjectableTask, hasActiveTask } from "../tasks/taskStateService.js";
+import { captureRuleRejections, getInjectableTask, hasActiveTask } from "../tasks/taskStateService.js";
 import { structuredCompactionExtension } from "../tasks/structuredCompaction.js";
 import * as store from "../store/index.js";
 import { generateCookingPlanTool } from "../tools/generateCookingPlan.js";
@@ -323,6 +323,13 @@ export function createDietAgentDispatcher(
     const drained = await waitForPendingExtraction(userId, 2_000);
     if (!drained) {
       tracer.mark("fallback", "task_state_extraction_timeout", "stale_state_used");
+    }
+    // 规则层否决捕获（确定性，先于 LLM）：提到上一轮推荐过的菜 + 否认词 → 立即否决，
+    // 本轮推荐/排菜实时生效；按特征否决（"太油的都不要"）由轮后语义提取兜底
+    try {
+      captureRuleRejections(userId, message);
+    } catch {
+      // 规则捕获失败不影响主流程
     }
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {

@@ -4,7 +4,7 @@ import type { AgentToolResult, ToolDefinition, ExtensionContext } from "@earendi
 import { defineTool } from "@earendil-works/pi-coding-agent";
 import * as store from "../store/index.js";
 import { computeIngredientReadiness, matchRecipes, type MatchRecipeResult } from "../recipes/recipeMatcher.js";
-import { noteMealPlanToolCall, rejectedRecipeIdsForUser } from "../tasks/taskStateService.js";
+import { noteMealPlanToolCall, noteSuggestedRecipes, rejectedRecipeIdsForUser } from "../tasks/taskStateService.js";
 import { assessFoodSafety } from "../recipes/foodSafety.js";
 import { isAvailableOn, type IngredientItem, type EnergyLevel, type WeeklyDayPlan } from "../types/diet.js";
 import { formatNutritionCalories } from "../nutrition/nutritionEstimate.js";
@@ -252,6 +252,10 @@ export const generateWeeklyPlanTool: ToolDefinition<typeof Params> = defineTool(
       weeklyPlanWeekStartDate: monday,
       styles: params.preferredStyles,
     });
+    noteSuggestedRecipes(params.userId, days.flatMap((day) => [
+      day.mainRecipe.id,
+      ...(day.sideRecipe ? [day.sideRecipe.id] : []),
+    ]));
 
     // 生成可读文本
     const avoidFoods = [...(dietProfile?.avoidFoods ?? []), ...(dietProfile?.allergies ?? [])];

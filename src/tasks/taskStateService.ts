@@ -127,6 +127,58 @@ export function rejectRecipes(userId: string, names: readonly string[], now: num
   return [...task.rejected, ...appended];
 }
 
+/**
+ * 否认词表（规则层）。强词：消息里出现即算（前提：同时提到推荐过的菜名）；
+ * 弱词（不要/别吃/别做/别安排）要求与菜名**紧邻**（"不要白灼虾"✓、"白灼虾不要放辣"✗——
+ * 不要的对象是辣不是菜）。
+ */
+export const REJECTION_STRONG_WORDS = ["不想吃", "换掉", "换一个", "换一道", "换别的", "算了", "吃腻", "去掉", "剔除", "排除", "不选", "退掉", "别吃了", "别做了"] as const;
+export const REJECTION_ADJACENT_PREFIXES = ["不要", "别吃", "别做", "别安排"] as const;
+
+/** 排菜工具成功后记录本轮推荐过的菜（规则层否决捕获的输入）。 */
+export function noteSuggestedRecipes(userId: string, recipeIds: readonly string[]): void {
+  const task = getInjectableTask(userId);
+  if (!task || recipeIds.length === 0) return;
+  const suggested = [...new Set([...(task.artifactIds.suggestedRecipeIds ?? []), ...recipeIds])].slice(-30);
+  updateTaskState(userId, task.taskId, { artifactIds: { ...task.artifactIds, suggestedRecipeIds: suggested } });
+}
+
+/**
+ * 规则层否决捕获（确定性，轮次开始时执行）：用户消息提到**上一轮推荐过**的菜名
+ * 且带否认词 → 记为被否决并从推荐集移除。规则只管"具体菜名+否认"；按特征否决
+ * （"太油的都不要"）交给 LLM 层。返回本轮捕获项（测试/评测用）。
+ */
+export function captureRuleRejections(userId: string, message: string): TaskRejectedItem[] {
+  const task = getInjectableTask(userId);
+  const suggestedIds = task?.artifactIds.suggestedRecipeIds ?? [];
+  if (!task || suggestedIds.length === 0) return [];
+  const normalized = message.replace(/\s+/g, "");
+  const book = getRecipeBookForUser(userId);
+  const hitNames: string[] = [];
+  const hitIds: string[] = [];
+  for (const id of suggestedIds) {
+    const recipe = book.find((item) => item.id === id);
+    if (!recipe) continue;
+    const name = recipe.name.replace(/\s+/g, "");
+    if (!normalized.includes(name)) continue;
+    const strong = REJECTION_STRONG_WORDS.some((word) => normalized.includes(word));
+    const adjacent = REJECTION_ADJACENT_PREFIXES.some((prefix) => normalized.includes(prefix + name));
+    if (strong || adjacent) {
+      hitNames.push(recipe.name);
+      hitIds.push(id);
+    }
+  }
+  if (hitIds.length === 0) return [];
+  const captured = rejectRecipes(userId, hitNames);
+  // 已捕获的从推荐集移除，避免下一轮重复触发
+  const refreshed = getInjectableTask(userId);
+  if (refreshed) {
+    const remaining = (refreshed.artifactIds.suggestedRecipeIds ?? []).filter((id) => !hitIds.includes(id));
+    updateTaskState(userId, refreshed.taskId, { artifactIds: { ...refreshed.artifactIds, suggestedRecipeIds: remaining } });
+  }
+  return captured;
+}
+
 /** 排菜路径的硬过滤 ID 集：active 任务存在时才有过滤（任务结束即失效）。 */
 export function rejectedRecipeIdsForUser(userId: string): string[] {
   const task = getInjectableTask(userId);

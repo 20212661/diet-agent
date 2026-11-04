@@ -11,6 +11,7 @@
  *  - patch 过白名单 schema + 限长清洗；提取失败静默（不更新优于错更新）。
  */
 import { chatJson } from "../import/howtocook/llmClient.js";
+import { getRecipeBookForUser } from "../store/repositories/userRecipeRepository.js";
 import {
   endTask,
   ensureMealPlanTask,
@@ -45,7 +46,7 @@ const SYSTEM_PROMPT = `你是饮食助手对话的任务状态提取器。输入
 - intent：用户在表达排菜/安排饮食的意图 → "plan"；在确认已完成（"好，就这样""可以了""谢谢，按这个来"）或明显转换话题（开始聊记录饮食、问别的）且当前有排菜任务 → "end"；其他 → "other"。
 - goalPatch：用户本轮表达或修正的排菜目标（如"这周吃清淡点""减脂餐"），没有变化则省略。
 - decisionsAppend：本轮新确定的决策（用户拍板的选项），数组，每项一句话；没有则空数组。
-- rejectedDishNames：用户明确否决/不想吃的**具体菜名**（"不要白灼虾""换掉番茄炒蛋"），原文名；没有则空数组。
+- rejectedDishNames：用户否决/不想吃的**具体菜名**，且**只允许从"上轮推荐过的菜"或当前已排计划里挑**。两层来源：用户点名否决推荐集内的菜（规则层通常已实时捕获，已否决的不要再输出）；用户**按特征否决**（"太油的都不要""带骨头的不要"）时，从推荐集里挑出符合特征的菜名。用户提到推荐集**之外**的菜（如"红烧肉不错，不过今天不想吃"这类随口评论）**不要输出**——那不是对当前排菜的否决。没有则空数组。
 - openQuestions：当前还需要用户确认的问题（整组替换）；没有则空数组。
 输出严格 JSON：{"intent":"plan|end|other","goalPatch":"…可省略","decisionsAppend":[],"rejectedDishNames":[],"openQuestions":[]}`;
 
@@ -105,8 +106,12 @@ export async function extractAndApplyTaskPatch(
   const startedAt = Date.now();
   extractionUsage = { ...extractionUsage, calls: extractionUsage.calls + 1 };
   try {
+    const suggestedNames = (current.artifactIds.suggestedRecipeIds ?? [])
+      .map((id) => getRecipeBookForUser(userId).find((recipe) => recipe.id === id)?.name)
+      .filter((name): name is string => name !== undefined);
     const userPrompt = [
       `当前任务状态：${JSON.stringify({ goal: current.goal, stage: current.stage, rejected: current.rejected.map((r) => r.name), openQuestions: current.openQuestions })}`,
+      `上轮推荐过的菜（特征否决从这里挑，点名否决优先）：${suggestedNames.join("、") || "无"}`,
       `用户消息：${userMessage.slice(0, 2000)}`,
       `助手回复（截断）：${assistantReply.slice(0, 1500)}`,
     ].join("\n\n");
