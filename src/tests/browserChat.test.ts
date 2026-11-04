@@ -60,7 +60,7 @@ describe("浏览器聊天恢复生命周期", () => {
     expect(controller.statusLabel()).toBe("已就绪");
   });
 
-  it("工作台入口可加载拆分模块并渲染七个页面", async () => {
+  it("工作台入口可加载拆分模块并渲染八个页面", async () => {
     const nodes = new Map<string, any>();
     const node = (key: string) => {
       if (!nodes.has(key)) nodes.set(key, { ...new Element(), style: {}, dataset: {}, innerHTML: "",
@@ -80,6 +80,7 @@ describe("浏览器聊天恢复生命周期", () => {
         "cartExperimentView",
         "shoppingView",
       "diaryView",
+      "recipeImportView",
       "profileKitchenViews",
       "planAgentViews",
       "chatController",
@@ -97,7 +98,7 @@ describe("浏览器聊天恢复生命周期", () => {
       console, setTimeout: vi.fn(), clearTimeout: vi.fn(), TextDecoder,
     });
     await app.refreshData();
-    for (const page of ["overview", "profile", "kitchen", "inventory", "diary", "plan", "agent"]) {
+    for (const page of ["overview", "profile", "kitchen", "inventory", "diary", "plan", "recipes", "agent"]) {
       expect(() => app.navigate(page)).not.toThrow();
       expect(node("#page-content").innerHTML).not.toContain("暂时无法读取工作区");
       expect(node("#page-title").textContent).toBeTruthy();

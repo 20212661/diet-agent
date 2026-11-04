@@ -17,3 +17,17 @@ button,input,textarea{font-family:inherit}
 .shopping-handoff img { max-width: 100%; height: auto; }
 .shopping-handoff > div { flex: 1; min-width: 180px; }
 .shopping-receive-row { border: 1px solid var(--border, #e5e5e5); border-radius: 12px; padding: 16px; margin: 14px 0; }
+/* P5 我的菜谱导入 */
+.import-section{display:grid;gap:8px;margin:14px 0;padding-top:12px;border-top:1px solid var(--line,#edf0eb)}
+.import-section h3{margin:0;font-size:11px;color:#5d6f5b}
+.import-finding{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 11px;border:1px solid #e7ebe4;border-radius:8px;background:#fff}
+.import-finding .finding-main{display:grid;gap:3px;min-width:0}
+.import-finding .finding-main strong{font-size:11px}
+.import-finding .finding-main small{color:#879187;font-size:9px;line-height:1.5;word-break:break-all}
+.import-finding .finding-tags{color:#8a6d3b;font-size:9px}
+.import-finding .finding-actions{display:flex;flex-shrink:0;gap:4px}
+.import-finding .text-button{padding:6px 8px;border:1px solid #e4e9e1;border-radius:6px;background:#fff;font-size:9px}
+.import-finding .text-button:hover{background:#f3f6f0}
+.finding-red{border-color:#e6c9c3;background:#fdf7f5}
+.finding-red .finding-main strong{color:#a4483a}
+.finding-warn{border-color:#e8dcbd;background:#fdfaf1}

@@ -6,6 +6,7 @@ import { renderProfilePage, renderKitchenPage } from "./profileKitchenViews.js";
 import { renderInventoryPage, parseIngredientLines, parseReceiptText, receiptPreviewHtml } from "./inventoryView.js";
 import { renderDiaryPage, mealEditorForm } from "./diaryView.js";
 import { modelStatusLabel, renderOverviewPage, renderPlanPage, renderAgentPage } from "./planAgentViews.js";
+import { createRecipeImportController } from "./recipeImportView.js";
 
 const pages = [
   { id: "overview", title: "今日总览", icon: "◫", description: "今天的饮食节奏、食材和计划都在这里。" },
@@ -14,6 +15,7 @@ const pages = [
   { id: "inventory", title: "食材库存", icon: "▤", description: "查看现有食材和待采购清单。" },
   { id: "diary", title: "饮食记录", icon: "◷", description: "回顾今天记录的三餐和热量信息。" },
   { id: "plan", title: "每周计划", icon: "▦", description: "按一周菜单查看每日安排与完成进度。" },
+  { id: "recipes", title: "我的菜谱", icon: "◈", description: "粘贴菜谱文本，导入成只属于你的菜谱。" },
   { id: "agent", title: "智能体信息", icon: "✳", description: "查看模型、工具和本次对话可用的个人上下文。" },
 ];
 
@@ -23,6 +25,7 @@ const slashCommands = [
   { command: "/inventory", label: "查看食材库存", page: "inventory" },
   { command: "/today", label: "打开今日饮食记录", page: "diary" },
   { command: "/plan", label: "查看每周计划", page: "plan" },
+  { command: "/recipes", label: "导入我的菜谱", page: "recipes" },
   { command: "/agent", label: "查看智能体信息", page: "agent" },
   { command: "/help", label: "显示快捷命令", page: "help" },
 ];
@@ -51,6 +54,7 @@ const { sendChat, bindRecoveryUser, getPendingWrite, statusLabel: chatStatusLabe
 
 const { openPlanDay } = createPlanDialog({ getData: () => data, esc, list, toast, getPendingWrite, refreshData, renderPage, navigate });
 const shoppingController = createShoppingController({root: pageContent, getData: () => data, refreshData, getPendingWrite, toast});
+const recipeImportController = createRecipeImportController({root: pageContent, getData: () => data, refreshData, getPendingWrite, toast});
 
 function toast(message) {
   toastNode.textContent = message;
@@ -82,6 +86,8 @@ function renderPage() {
     pageContent.innerHTML = renderDiaryPage(data, selected.description, selectedDiaryDate, diaryState, editingMealId);
   } else if (currentPage === "plan") {
     pageContent.innerHTML = renderPlanPage(data, selected.description);
+  } else if (currentPage === "recipes") {
+    pageContent.innerHTML = recipeImportController.render();
   } else {
     pageContent.innerHTML = renderAgentPage(data, selected.description);
   }
@@ -112,6 +118,7 @@ function navigate(pageId) {
   currentPage = pages.some((page) => page.id === pageId) ? pageId : "overview";
   renderPage();
   if (currentPage === "diary") loadDiary(selectedDiaryDate ?? data?.date);
+  if (currentPage === "recipes") recipeImportController.loadMine().then(() => renderPage());
   closePalette();
 }
 
@@ -549,7 +556,7 @@ document.addEventListener("keydown", (event) => {
   const modifier = event.ctrlKey || event.metaKey;
   if (modifier && event.key.toLowerCase() === "k") { event.preventDefault(); openPalette(); return; }
   if (modifier && event.key.toLowerCase() === "j") { event.preventDefault(); chatInput.focus(); return; }
-  if (modifier && /^[1-7]$/.test(event.key)) {
+  if (modifier && /^[1-8]$/.test(event.key)) {
     event.preventDefault();
     navigate(pages[Number(event.key) - 1].id);
   }

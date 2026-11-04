@@ -20,6 +20,7 @@ import { getShoppingProviders } from "../shopping/providers.js";
 import { listCartExperiments } from "../shopping/cartExperiment.js";
 import { handleMealRoutes } from "./routes/meals.js";
 import { handleProfileRoutes } from "./routes/profile.js";
+import { handleRecipeImportRoutes } from "./routes/recipes.js";
 import { handleWeeklyPlanRoutes } from "./routes/weeklyPlan.js";
 import { executeWebWriteOnce as persistWebWriteOnce } from "./writeOnce.js";
 
@@ -93,6 +94,8 @@ export function createWebServer(options: CreateWebServerOptions): Server {
 
   const routes: RouteHandler[] = [
     handleDashboardRoutes,
+    // 用户菜谱路由先于 weeklyPlan 注册：/api/recipes/mine 等需在其 /api/recipes/:id 兜底前认领
+    handleRecipeImportRoutes,
     handleWeeklyPlanRoutes,
     handleMealRoutes,
     handleProfileRoutes,
