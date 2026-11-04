@@ -4,6 +4,7 @@ import type { Static } from "typebox";
 import type { ToolDefinition, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { defineTool } from "@earendil-works/pi-coding-agent";
 import { buildAndSaveMealPlan } from "../services/mealPlanBuilder.js";
+import { noteMealPlanToolCall } from "../tasks/taskStateService.js";
 const Params = Type.Object({
   userId: Type.String({ description: "用户 ID" }),
   days: Type.Optional(Type.Number({ minimum: 1, maximum: 7, description: "规划天数（1-7），默认 1 天" } as const)),
@@ -30,6 +31,15 @@ export const generateMealPlanTool: ToolDefinition<typeof Params> = defineTool({
     "如果存在 medicalNotes，提醒用户该计划不是医疗饮食方案。",
   ],
   async execute(_toolCallId: string, params: ParamsType, _signal?: AbortSignal, _onUpdate?: unknown, _ctx?: ExtensionContext) {
-    return buildAndSaveMealPlan(params);
+    const result = await buildAndSaveMealPlan(params);
+    // 结构化任务状态（确定性写入）：调用即排菜意图；成功即已保存（mealPlanId=开始日期）
+    noteMealPlanToolCall(params.userId, "generate_meal_plan", {
+      ok: result.details.days.some((day) => day.meals.some((meal) => meal.source !== "unavailable")),
+      mealPlanStartDate: result.details.startDate,
+      timeLimitMinutes: params.timeLimitMinutes,
+      energyLevel: params.energyLevel,
+      styles: params.preferredStyles,
+    });
+    return result;
   },
 });

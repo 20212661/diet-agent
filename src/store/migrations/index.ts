@@ -3,7 +3,7 @@ import { copyFileSync, existsSync, readdirSync, statSync, unlinkSync } from "nod
 import { dirname, extname, basename, join } from "node:path";
 import { deriveRecipeIngredientMetadata } from "../../recipes/ingredientTaxonomy.js";
 
-export const CURRENT_SCHEMA_VERSION = 23;
+export const CURRENT_SCHEMA_VERSION = 24;
 
 interface Migration {
   version: number;
@@ -435,6 +435,7 @@ const migrations: readonly Migration[] = [
       recomputeAllergenTags(db);
     },
   },
+
   {
     version: 23,
     description: "P5 用户自助导入菜谱：user_recipes 表（列布局与 recipe_book 一致 + user_id，按用户隔离）",
@@ -476,6 +477,32 @@ const migrations: readonly Migration[] = [
           updated_at TEXT NOT NULL,
           PRIMARY KEY (user_id, id)
         );
+      `);
+    },
+  },
+  {
+    version: 24,
+    description: "长对话结构化任务状态：task_states 表（按 userId+taskId 持久化，排菜计划工作流）",
+    up(db) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS task_states (
+          user_id TEXT NOT NULL,
+          task_id TEXT NOT NULL,
+          workflow TEXT NOT NULL,
+          status TEXT NOT NULL CHECK(status IN ('active','completed','abandoned')),
+          goal TEXT NOT NULL DEFAULT '',
+          stage TEXT NOT NULL DEFAULT '',
+          constraints_json TEXT NOT NULL DEFAULT '{}',
+          decisions_json TEXT NOT NULL DEFAULT '[]',
+          rejected_json TEXT NOT NULL DEFAULT '[]',
+          artifact_ids_json TEXT NOT NULL DEFAULT '{}',
+          open_questions_json TEXT NOT NULL DEFAULT '[]',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          ended_at TEXT,
+          PRIMARY KEY (user_id, task_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_task_states_user_active ON task_states(user_id, status, updated_at);
       `);
     },
   },

@@ -5,6 +5,7 @@ import { defineTool } from "@earendil-works/pi-coding-agent";
 import * as store from "../store/index.js";
 import { recipeBlockReason } from "../recipes/executionConstraints.js";
 import { matchRecipes } from "../recipes/recipeMatcher.js";
+import { rejectedRecipeIdsForUser } from "../tasks/taskStateService.js";
 import { getRetriever } from "../rag/index.js";
 import { isAvailable, type EnergyLevel, type IngredientItem } from "../types/diet.js";
 
@@ -77,6 +78,7 @@ export const searchRecipesTool: ToolDefinition<typeof Params> = defineTool({
 
     const matches = matchRecipes({
       recipes,
+      rejectedRecipeIds: rejectedRecipeIdsForUser(params.userId),
       availableIngredients,
       shoppingList: inventory.shoppingList,
       kitchenProfile: kitchen,

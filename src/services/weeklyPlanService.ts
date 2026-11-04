@@ -1,5 +1,6 @@
 import * as store from "../store/index.js";
 import { matchRecipes, computeIngredientReadiness, type MatchRecipeResult } from "../recipes/recipeMatcher.js";
+import { rejectedRecipeIdsForUser } from "../tasks/taskStateService.js";
 import { assessFoodSafety } from "../recipes/foodSafety.js";
 import { recipeBlockReason } from "../recipes/executionConstraints.js";
 import { mealFitsTimeLimits } from "../recipes/mealTiming.js";
@@ -91,6 +92,7 @@ function getSafeMatches(
   const usedIds = new Set(days.filter((item) => item.date !== day.date).map((item) => item.mainRecipe.id));
   return matchRecipes({
     recipes: store.getRecipeBookForUser(userId),
+    rejectedRecipeIds: rejectedRecipeIdsForUser(userId),
     date: day.date,
     availableIngredients: ownedItems,
     shoppingList: shoppingItems,

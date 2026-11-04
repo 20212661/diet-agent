@@ -45,3 +45,10 @@ export {
 } from "./repositories/weeklyPlanRepository.js";
 export { getMealPlan, getMealPlanByStartDate, upsertMealPlan } from "./repositories/mealPlanRepository.js";
 export { clearUserData } from "./repositories/userDataRepository.js";
+export {
+  getTaskState,
+  insertTaskState,
+  listActiveTaskStates,
+  listTaskStates,
+  updateTaskState,
+} from "./repositories/taskStateRepository.js";
