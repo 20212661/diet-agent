@@ -5,6 +5,7 @@ import {
   deriveRecipeIngredientMetadata,
   normalizeIngredientId,
   resolveAllergenIds,
+  resolvePossibleAllergenIds,
 } from "../recipes/ingredientTaxonomy.js";
 import { validateRecipeSeed } from "../recipes/recipeSchema.js";
 import { assessFoodSafety } from "../recipes/foodSafety.js";
@@ -209,5 +210,31 @@ describe("菜谱 Schema 与过敏原元数据", () => {
 
     recipe.allergenTags = ["peanut"];
     expect(validateRecipeSeed([recipe]).some((error) => error.includes("allergenTags"))).toBe(true);
+  });
+});
+
+describe("分类表记忆化（行为不变）", () => {
+  it("重复解析结果一致：ingredient 哨兵、两种 mode 的过敏原解析", () => {
+    const names = ["番茄", "蚝油", "鸡精", "冷冻葱油饼", "未知星球食材", "虾"];
+    const firstIds = names.map(normalizeIngredientId);
+    const firstAllergens = names.map((n) => resolveAllergenIds([n], "ingredient"));
+    const firstLoose = names.map((n) => resolveAllergenIds([n]));
+    const firstPossible = names.map((n) => resolvePossibleAllergenIds([n], "ingredient"));
+    expect(names.map(normalizeIngredientId)).toEqual(firstIds);
+    expect(names.map((n) => resolveAllergenIds([n], "ingredient"))).toEqual(firstAllergens);
+    expect(names.map((n) => resolveAllergenIds([n]))).toEqual(firstLoose);
+    expect(names.map((n) => resolvePossibleAllergenIds([n], "ingredient"))).toEqual(firstPossible);
+    // 已知语义抽查：蚝油带贝类；ingredient 模式禁反向子串——单字"葱"不得因
+    // 别名"冷冻葱油饼"（面食，本身含小麦）被误报小麦（#29 修的正是这个方向）
+    expect(firstAllergens[names.indexOf("蚝油")]).toContain("shellfish");
+    expect(resolveAllergenIds(["葱"], "ingredient")).not.toContain("wheat");
+    expect(resolveAllergenIds(["冷冻葱油饼"], "ingredient")).toContain("wheat");
+  });
+
+  it("缓存超过上限整体清空后仍然正确", () => {
+    const expected = normalizeIngredientId("料酒");
+    for (let i = 0; i < 5000; i++) normalizeIngredientId(`压测食材#${i}`);
+    expect(normalizeIngredientId("料酒")).toBe(expected);
+    expect(resolveAllergenIds(["蚝油"], "ingredient")).toContain("shellfish");
   });
 });
