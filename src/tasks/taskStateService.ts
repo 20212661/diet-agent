@@ -34,10 +34,34 @@ export function endStaleTasks(userId: string, now: number = Date.now()): number 
   return ended;
 }
 
+/** 是否存在 active 任务（轮后提取的轻量门槛：无任务不排队提取）。 */
+export function hasActiveTask(userId: string): boolean {
+  return getInjectableTask(userId) !== undefined;
+}
+
 /** 注入用任务：先惰性结束超时任务，再取最近活跃的 active（单注入源）。 */
 export function getInjectableTask(userId: string, now: number = Date.now()): TaskState | undefined {
   endStaleTasks(userId, now);
   return listActiveTaskStates(userId)[0];
+}
+
+/** 无 active 任务时创建（工具触发与语义意图共用）；有则返回现有。 */
+export function ensureMealPlanTask(userId: string): TaskState {
+  const active = getInjectableTask(userId);
+  if (active) return active;
+  return insertTaskState({
+    userId,
+    taskId: `task_${randomUUID().slice(0, 8)}`,
+    workflow: "meal_plan",
+    status: "active",
+    goal: "",
+    stage: "plan_requested",
+    constraints: {},
+    decisions: [],
+    rejected: [],
+    artifactIds: {},
+    openQuestions: [],
+  });
 }
 
 /** 排菜工具触发：无 active 则创建，有则复用（含阶段与确定性约束/产物写入）。 */
@@ -46,22 +70,7 @@ export function noteMealPlanToolCall(
   toolName: "generate_meal_plan" | "generate_weekly_plan",
   outcome: { ok: boolean; mealPlanStartDate?: string; weeklyPlanWeekStartDate?: string; timeLimitMinutes?: number; energyLevel?: "low" | "normal"; styles?: string[] }
 ): TaskState {
-  const active = getInjectableTask(userId);
-  const task =
-    active ??
-    insertTaskState({
-      userId,
-      taskId: `task_${randomUUID().slice(0, 8)}`,
-      workflow: "meal_plan",
-      status: "active",
-      goal: "",
-      stage: "plan_requested",
-      constraints: {},
-      decisions: [],
-      rejected: [],
-      artifactIds: {},
-      openQuestions: [],
-    });
+  const task = ensureMealPlanTask(userId);
   // 约束在调用即记录（即使 no_match，本轮的时间/精力/风格要求仍是任务事实）
   if (outcome.timeLimitMinutes !== undefined || outcome.energyLevel !== undefined || outcome.styles !== undefined) {
     const withConstraints = updateTaskState(userId, task.taskId, {
