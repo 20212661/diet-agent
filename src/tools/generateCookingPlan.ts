@@ -4,6 +4,7 @@ import type { ToolDefinition, ExtensionContext } from "@earendil-works/pi-coding
 import { defineTool } from "@earendil-works/pi-coding-agent";
 import * as store from "../store/index.js";
 import { matchRecipesDetailed, type MatchRecipeResult } from "../recipes/recipeMatcher.js";
+import { rejectedRecipeIdsForUser } from "../tasks/taskStateService.js";
 import { isAvailable, type IngredientItem, type RecipeRecord } from "../types/diet.js";
 import { recipeBlockReason } from "../recipes/executionConstraints.js";
 import { mealFitsTimeLimits } from "../recipes/mealTiming.js";
@@ -83,6 +84,7 @@ export const generateCookingPlanTool: ToolDefinition<typeof Params> = defineTool
     // 使用 matcher 评分
     const matchOutcome = matchRecipesDetailed({
       recipes,
+      rejectedRecipeIds: rejectedRecipeIdsForUser(params.userId),
       availableIngredients: availableItems,
       shoppingList: inventory.shoppingList,
       kitchenProfile: kitchen,

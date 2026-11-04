@@ -34,6 +34,8 @@ export interface MatchRecipeInput {
   date?: string;
   /** 食材匹配函数（可注入，评测用旧版做对照；默认用当前修复版） */
   ingredientMatcher?: (ingredient: string, available: string[]) => boolean;
+  /** 被否决的菜谱 ID（结构化任务状态）：代码层直接排除，不依赖提示词自觉。 */
+  rejectedRecipeIds?: readonly string[];
 }
 
 export interface MatchRecipeResult {
@@ -112,6 +114,7 @@ export function computeIngredientReadiness(
 export function matchRecipesDetailed(input: MatchRecipeInput): MatchRecipeOutcome {
   const {
     recipes,
+    rejectedRecipeIds,
     availableIngredients,
     shoppingList,
     kitchenProfile,
@@ -123,6 +126,9 @@ export function matchRecipesDetailed(input: MatchRecipeInput): MatchRecipeOutcom
     ingredientMatcher = ingredientMatched,
   } = input;
 
+  // 被否决的菜在评分前直接排除（任务结束/无任务时为空集，不过滤）
+  const rejected = new Set(rejectedRecipeIds ?? []);
+  const candidateRecipes = rejected.size > 0 ? recipes.filter((recipe) => !rejected.has(recipe.id)) : recipes;
   // 库存中实际拥有的食材名称
   const activeIngredients = availableIngredients.filter((item) => input.date ? isAvailableOn(item, input.date) : isAvailable(item));
   const ownedNames = activeIngredients.map((i) => i.name);
@@ -142,7 +148,7 @@ export function matchRecipesDetailed(input: MatchRecipeInput): MatchRecipeOutcom
   const results: MatchRecipeResult[] = [];
   const blockers = new Set<string>();
 
-  for (const recipe of recipes) {
+  for (const recipe of candidateRecipes) {
     let score = 0;
     const reasons: string[] = [];
     const ingredientReadiness = computeIngredientReadiness(recipe.ingredients, activeIngredients, shoppingList, input.date);

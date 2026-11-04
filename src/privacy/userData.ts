@@ -74,7 +74,7 @@ function tableExists(db: Database.Database, table: string): boolean {
 }
 
 function clearDatabaseRows(db: Database.Database, userId: string): void {
-  const tables = ["user_profiles", "kitchen_profiles", "ingredient_inventory", "meal_logs", "meal_operations", "web_write_operations", "chat_operations", "weekly_plan_day_status", "cooking_feedback", "weekly_plans", "meal_plans", "user_recipes"];
+  const tables = ["user_profiles", "kitchen_profiles", "ingredient_inventory", "meal_logs", "meal_operations", "web_write_operations", "chat_operations", "weekly_plan_day_status", "cooking_feedback", "weekly_plans", "meal_plans", "user_recipes", "task_states"];
   const clear = db.transaction(() => {
     for (const table of [...SHOPPING_TABLES, ...tables]) {
       if (tableExists(db, table)) db.prepare(`DELETE FROM ${table} WHERE user_id = ?`).run(userId);
@@ -110,6 +110,7 @@ export function getUserDataOverview(userId: string): UserDataOverview {
       shoppingTasks: count("shopping_tasks"), shoppingReceipts: count("shopping_receipts"), shoppingEvents: count("shopping_events"), shoppingProviderSettings: count("shopping_provider_settings"), shoppingCandidates: count("shopping_candidates"), shoppingProviderChecks: count("shopping_provider_checks"), cartExperiments:count("shopping_cart_experiments"),
       meals: count("meal_logs"), mealOperations: count("meal_operations"), webWriteOperations: count("web_write_operations"), chatOperations: count("chat_operations"), feedback: count("cooking_feedback"), weeklyPlans: count("weekly_plans"), mealPlans: count("meal_plans"),
       userRecipes: count("user_recipes"),
+      taskStates: count("task_states"),
       agentTraces: tableExists(db, "agent_traces") ? count("agent_traces") : 0,
     },
     sessionFiles: countFiles(sessionDir),
@@ -151,6 +152,7 @@ export function exportUserData(userId: string, transcript: readonly Conversation
       agentTraceSpans,
       cookingFeedback: store.getCookingFeedback(userId),
       userRecipes: store.getUserRecipes(userId),
+      taskStates: store.listTaskStates(userId),
       weeklyPlans,
       mealPlans,
       shopping: Object.fromEntries(SHOPPING_TABLES.map(table => [table, db.prepare(`SELECT * FROM ${table} WHERE user_id = ?`).all(userId)])),

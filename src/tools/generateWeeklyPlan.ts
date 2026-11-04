@@ -4,6 +4,7 @@ import type { AgentToolResult, ToolDefinition, ExtensionContext } from "@earendi
 import { defineTool } from "@earendil-works/pi-coding-agent";
 import * as store from "../store/index.js";
 import { computeIngredientReadiness, matchRecipes, type MatchRecipeResult } from "../recipes/recipeMatcher.js";
+import { noteMealPlanToolCall, rejectedRecipeIdsForUser } from "../tasks/taskStateService.js";
 import { assessFoodSafety } from "../recipes/foodSafety.js";
 import { isAvailableOn, type IngredientItem, type EnergyLevel, type WeeklyDayPlan } from "../types/diet.js";
 import { formatNutritionCalories } from "../nutrition/nutritionEstimate.js";
@@ -125,6 +126,7 @@ export const generateWeeklyPlanTool: ToolDefinition<typeof Params> = defineTool(
 
       const matches = matchRecipes({
         recipes,
+        rejectedRecipeIds: rejectedRecipeIdsForUser(params.userId),
         date,
         availableIngredients: availableItems,
         shoppingList: inventory.shoppingList,
@@ -229,16 +231,27 @@ export const generateWeeklyPlanTool: ToolDefinition<typeof Params> = defineTool(
     }
 
     if (days.length === 0) {
-      return {
+      const noMatchResult = {
         content: [{ type: "text" as const, text: weekDays.length === 0
           ? "这一周的七天都被跳过，没有生成或覆盖周计划。"
           : "当前厨房设备、过敏忌口和时间上限下没有可执行菜谱；没有覆盖已有周计划。请调整可变条件后重试。" }],
-        details: { userId: params.userId, weekStartDate: monday, days: [], recipeCount: 0, status: "no_match" },
+        details: { userId: params.userId, weekStartDate: monday, days: [], recipeCount: 0, status: "no_match" as const },
       };
+      noteMealPlanToolCall(params.userId, "generate_weekly_plan", {
+        ok: false,
+        styles: params.preferredStyles,
+      });
+      return noMatchResult;
     }
 
     // 持久化
     const plan = store.upsertWeeklyPlan(params.userId, monday, days);
+    // 结构化任务状态（确定性写入）：成功即已保存（weeklyPlanWeekStartDate=周一起始）
+    noteMealPlanToolCall(params.userId, "generate_weekly_plan", {
+      ok: true,
+      weeklyPlanWeekStartDate: monday,
+      styles: params.preferredStyles,
+    });
 
     // 生成可读文本
     const avoidFoods = [...(dietProfile?.avoidFoods ?? []), ...(dietProfile?.allergies ?? [])];

@@ -1,6 +1,7 @@
 import * as store from "../store/index.js";
 import { todayDate } from "../store/shared.js";
 import { computeIngredientReadiness, matchRecipes, type MatchRecipeResult } from "../recipes/recipeMatcher.js";
+import { noteMealPlanToolCall, rejectedRecipeIdsForUser } from "../tasks/taskStateService.js";
 import { assessFoodSafety } from "../recipes/foodSafety.js";
 import { normalizeIngredientId } from "../recipes/ingredientTaxonomy.js";
 import { executionBlockReason, recipeBlockReason, type ExecutableMeal } from "../recipes/executionConstraints.js";
@@ -191,6 +192,7 @@ export function buildAndSaveMealPlan(params: MealPlanRequest) {
     const usedToday = new Set<string>();
     const matches = matchRecipes({
       recipes,
+      rejectedRecipeIds: rejectedRecipeIdsForUser(params.userId),
       date: dateText,
       availableIngredients: activeItems,
       shoppingList: inventory.shoppingList,
