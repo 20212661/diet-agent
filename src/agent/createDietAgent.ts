@@ -44,6 +44,7 @@ import { waitForPendingExtraction, enqueueExtraction } from "../tasks/extraction
 import { extractAndApplyTaskPatch } from "../tasks/taskStateExtractor.js";
 import { buildTaskStateInjection } from "../tasks/taskStateInjection.js";
 import { getInjectableTask, hasActiveTask } from "../tasks/taskStateService.js";
+import { structuredCompactionExtension } from "../tasks/structuredCompaction.js";
 import * as store from "../store/index.js";
 import { generateCookingPlanTool } from "../tools/generateCookingPlan.js";
 import { generateMealPlanTool } from "../tools/generateMealPlan.js";
@@ -157,6 +158,8 @@ async function getOrCreateSession(userId: string, candidate: ModelCandidate) {
     cwd,
     agentDir,
     settingsManager,
+    // 结构化压缩处理器（session_before_compact）：inline 工厂不受 noExtensions 影响
+    extensionFactories: [structuredCompactionExtension(userId)],
     noExtensions: true,
     noSkills: true,
     noPromptTemplates: true,

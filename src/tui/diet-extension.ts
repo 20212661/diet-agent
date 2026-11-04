@@ -9,6 +9,7 @@ import {
 } from "../privacy/userData.js";
 import { flushPendingRequestLogs } from "../utils/requestLogger.js";
 import { setActiveUserMessage } from "../utils/userTurnContext.js";
+import { structuredCompactionHandler } from "../tasks/structuredCompaction.js";
 
 /** Pi 原生交互应用中的饮食命令扩展。 */
 export function createDietExtension(userId: string): InlineExtension {
@@ -24,6 +25,10 @@ export function createDietExtension(userId: string): InlineExtension {
       clearActiveMessage?.();
       clearActiveMessage = undefined;
     });
+    // 结构化压缩（session_before_compact）：任务状态+最近对话替换默认摘要；
+    // 无 active 任务/异常时处理器自己返回 undefined 走 SDK 默认压缩
+    const compactHandler = structuredCompactionHandler(userId);
+    pi.on("session_before_compact", (event) => compactHandler(event));
     pi.on("session_shutdown", async () => {
       clearActiveMessage?.();
       clearActiveMessage = undefined;
