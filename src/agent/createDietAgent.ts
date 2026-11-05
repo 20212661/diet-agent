@@ -431,8 +431,9 @@ export function createDietAgentDispatcher(
   };
 }
 
-/** 默认轮后钩子：串行排队语义提取（每用户；仅 active 任务存在时）。 */
+/** 默认轮后钩子：串行排队语义提取（每用户；仅 active 任务存在时）。DIET_TASK_EXTRACTION=off 关闭（评测真实基线臂用）。 */
 function defaultOnTurnSuccess(userId: string, message: string, reply: string): void {
+  if (process.env.DIET_TASK_EXTRACTION === "off") return;
   if (!hasActiveTask(userId)) return;
   void enqueueExtraction(userId, () => extractAndApplyTaskPatch(userId, message, reply));
 }

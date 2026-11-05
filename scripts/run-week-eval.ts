@@ -25,7 +25,7 @@ if (!live) {
   process.exit(0);
 }
 const runsWanted = Number(process.argv.find((arg, i) => process.argv[i - 1] === "--runs") ?? 3);
-const armFilter = (process.argv.find((arg, i) => process.argv[i - 1] === "--arms") ?? "A,B,C").split(",");
+const armFilter = (process.argv.find((arg, i) => process.argv[i - 1] === "--arms") ?? "A,B,C,D").split(",");
 
 // 临时 cwd + 小压缩阈值（keepRecent 20000→1500；reserve 8000：默认摘要器在 ~19k 上下文下不撞 token 上限）
 const evalCwd = mkdtempSync(join(tmpdir(), "diet-week-eval-"));
@@ -67,11 +67,13 @@ async function safeTurn(userId: string, text: string): Promise<string> {
   return "";
 }
 
-interface Arm { id: string; label: string; injected: boolean; structured: boolean }
+interface Arm { id: string; label: string; injected: boolean; structured: boolean; extraction: boolean }
 const ARMS: Arm[] = [
-  { id: "A", label: "无注入+默认压缩", injected: false, structured: false },
-  { id: "B", label: "有注入+默认压缩", injected: true, structured: false },
-  { id: "C", label: "有注入+结构化压缩", injected: true, structured: true },
+  { id: "A", label: "无注入+默认压缩", injected: false, structured: false, extraction: true },
+  { id: "B", label: "有注入+默认压缩", injected: true, structured: false, extraction: true },
+  { id: "C", label: "有注入+结构化压缩", injected: true, structured: true, extraction: true },
+  // 真实基线：关语义提取 + 默认压缩（A/B/C 都带语义提取，不能当"无状态系统"的成本基线）
+  { id: "D", label: "无语义提取+默认压缩（真实基线）", injected: true, structured: false, extraction: false },
 ].filter((arm) => armFilter.includes(arm.id));
 
 const REJECTED_DISH = "白灼虾";
@@ -178,6 +180,9 @@ async function codeFilterCheckpoint(userId: string, afterCompaction: number): Pr
 async function runOnce(arm: Arm, run: number): Promise<RunResult> {
   const userId = `week_${arm.id}_${run}_${stamp.slice(-8)}`;
   process.env.DIET_STRUCTURED_COMPACT = arm.structured ? "" : "off";
+  process.env.DIET_TASK_EXTRACTION = arm.extraction ? "" : "off";
+  // 等上一臂尾随的 fire-and-forget 提取落账再重置，避免跨 run 串账（全局累计器伪影）
+  await new Promise((resolve) => setTimeout(resolve, 5_000));
   resetExtractionUsage();
   turnErrors = 0;
   const script = weekScript(arm.injected);
