@@ -42,7 +42,7 @@ export function createRecipeImportController({ root, getData, getPendingWrite, t
     };
     return {
       ...preview.draft,
-      name: ($("ri-name")?.value ?? preview.draft.name).trim(),
+      name: ($("#ri-name")?.value ?? preview.draft.name).trim(),
       ingredients: filterFace("ingredients", lines("ri-ingredients")),
       optionalIngredients: filterFace("optionalIngredients", lines("ri-optional")),
       vegetables: filterFace("vegetables", lines("ri-vegetables")),
@@ -186,7 +186,7 @@ export function createRecipeImportController({ root, getData, getPendingWrite, t
   }
 
   async function requestPreview() {
-    const text = ($("ri-text")?.value ?? "").trim();
+    const text = ($("#ri-text")?.value ?? "").trim();
     if (text.length < 30) { toast("菜谱文本太短（至少 30 字）。"); return; }
     state.loadingPreview = true;
     const button = root.querySelector("[data-recipe-import-form] button[type=submit]");
@@ -273,7 +273,7 @@ export function createRecipeImportController({ root, getData, getPendingWrite, t
   }
 
   function addOmissionIngredient(definitionId, alias) {
-    const textarea = $("ri-ingredients");
+    const textarea = $("#ri-ingredients");
     if (textarea) {
       textarea.value = textarea.value ? `${textarea.value.replace(/\s+$/, "")}\n${alias}` : alias;
     }
