@@ -39,6 +39,50 @@ export function hasActiveTask(userId: string): boolean {
   return getInjectableTask(userId) !== undefined;
 }
 
+/**
+ * 约束类信号词（触发语义提取的第二条件之一；启发式词表，命中任一即算）：
+ * 时间/精力、人数份量、口味与做法约束、周期范围。用户举例：时间、人数、少油少盐、本周。
+ */
+export const EXTRACTION_CONSTRAINT_WORDS = [
+  "时间", "分钟", "半小时", "小时", "快手", "来不及", "提前",
+  "人份", "个人", "几个人", "一家",
+  "少油", "少盐", "少油烟", "清淡", "油腻", "重口", "口味", "辣", "甜", "咸",
+  "预算", "本周", "这周", "这星期", "这几天", "下周", "明天", "后天", "周末", "几天", "每天",
+] as const;
+
+export interface ExtractionSignal {
+  /** 是否应调用语义提取（active 任务由调用方先判）。 */
+  extract: boolean;
+  reason: "negation_unmatched" | "constraint_words" | "none";
+  /** 消息含否认词但规则层未匹配到推荐集菜名（疑似按特征否决，规则处理不了）。 */
+  negationUnmatched: boolean;
+  constraintWordHit: string | undefined;
+}
+
+/**
+ * 语义提取的信号门（用户口径：只有"规则未处理的信号"才值得花一次 LLM）：
+ * ① 含否认词但没匹配到推荐集里的菜名（如"太油的都不要"）→ 提取；
+ * ② 含约束类词语（时间/人数/口味/周期）→ 提取；
+ * 其余（普通记餐、已由规则层确定性处理的点名否决、无信号闲聊）→ 跳过，trace 记 skipped。
+ */
+export function extractionSignalCheck(userId: string, message: string): ExtractionSignal {
+  const normalized = message.replace(/\s+/g, "");
+  const task = getInjectableTask(userId);
+  const suggested = task?.artifactIds.suggestedRecipeIds ?? [];
+  const book = suggested.length > 0 ? getRecipeBookForUser(userId) : [];
+  const matchedAnySuggested = suggested.some((id) => {
+    const recipe = book.find((item) => item.id === id);
+    return recipe ? normalized.includes(recipe.name.replace(/\s+/g, "")) : false;
+  });
+  const negationPresent = REJECTION_STRONG_WORDS.some((word) => normalized.includes(word))
+    || REJECTION_ADJACENT_PREFIXES.some((prefix) => normalized.includes(prefix));
+  const negationUnmatched = negationPresent && !matchedAnySuggested;
+  const constraintWordHit = EXTRACTION_CONSTRAINT_WORDS.find((word) => normalized.includes(word));
+  if (negationUnmatched) return { extract: true, reason: "negation_unmatched", negationUnmatched, constraintWordHit };
+  if (constraintWordHit) return { extract: true, reason: "constraint_words", negationUnmatched, constraintWordHit };
+  return { extract: false, reason: "none", negationUnmatched, constraintWordHit: undefined };
+}
+
 /** 注入用任务：先惰性结束超时任务，再取最近活跃的 active（单注入源）。 */
 export function getInjectableTask(userId: string, now: number = Date.now()): TaskState | undefined {
   endStaleTasks(userId, now);
