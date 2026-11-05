@@ -3,7 +3,7 @@ import { copyFileSync, existsSync, readdirSync, statSync, unlinkSync } from "nod
 import { dirname, extname, basename, join } from "node:path";
 import { deriveRecipeIngredientMetadata } from "../../recipes/ingredientTaxonomy.js";
 
-export const CURRENT_SCHEMA_VERSION = 24;
+export const CURRENT_SCHEMA_VERSION = 25;
 
 interface Migration {
   version: number;
@@ -506,7 +506,69 @@ const migrations: readonly Migration[] = [
       `);
     },
   },
+  {
+    version: 25,
+    description: "家庭多人模式：household_members 表 + 计划/任务状态记录用餐成员 + dismissed 过敏警告回填 dismiss 人",
+    up(db) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS household_members (
+          user_id TEXT NOT NULL,
+          member_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          allergies_json TEXT NOT NULL DEFAULT '[]',
+          avoid_foods_json TEXT NOT NULL DEFAULT '[]',
+          preferences_json TEXT NOT NULL DEFAULT '[]',
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          PRIMARY KEY (user_id, member_id)
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_household_members_name ON household_members(user_id, name);
+      `);
+      // NULL = 仅"我"（与单人时代行为一致）；排菜重校验按保存时的成员集重放并集。
+      addColumnIfMissing(db, "meal_plans", "dining_members_json TEXT", "dining_members_json");
+      addColumnIfMissing(db, "weekly_plans", "dining_members_json TEXT", "dining_members_json");
+      addColumnIfMissing(db, "task_states", "dining_members_json TEXT", "dining_members_json");
+      // 早期开发期建的 user_recipes 缺这一列（v23 的 IF NOT EXISTS 不会补列），先补齐再回填。
+      addColumnIfMissing(db, "user_recipes", "dismissed_allergen_warnings_json TEXT", "dismissed_allergen_warnings_json");
+      backfillConfirmedByMemberIds(db);
+    },
+  },
 ];
+
+/**
+ * v25：存量 dismissed_allergen_warnings_json 逐条补 confirmedByMemberIds=["self"]
+ * （历史数据全部由主账号本人操作产生，确认人即"我"）。已带字段的行保持不动。
+ */
+function backfillConfirmedByMemberIds(db: Database.Database): void {
+  const rows = db.prepare(`
+    SELECT user_id, id, dismissed_allergen_warnings_json FROM user_recipes
+    WHERE dismissed_allergen_warnings_json IS NOT NULL
+      AND dismissed_allergen_warnings_json != '[]'
+  `).all() as Array<{ user_id: string; id: string; dismissed_allergen_warnings_json: string }>;
+  if (rows.length === 0) return;
+  const update = db.prepare(
+    "UPDATE user_recipes SET dismissed_allergen_warnings_json = ? WHERE user_id = ? AND id = ?"
+  );
+  for (const row of rows) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(row.dismissed_allergen_warnings_json);
+    } catch {
+      continue; // 损坏的 JSON 不在迁移里修，保持原样
+    }
+    if (!Array.isArray(parsed)) continue;
+    let changed = false;
+    const patched = parsed.map((item) => {
+      if (item && typeof item === "object" && !("confirmedByMemberIds" in item)) {
+        changed = true;
+        return { ...(item as Record<string, unknown>), confirmedByMemberIds: ["self"] };
+      }
+      return item;
+    });
+    if (changed) update.run(JSON.stringify(patched), row.user_id, row.id);
+  }
+}
 
 /** 按当前分类表重算全部菜谱的 allergen_tags_json（v18 起 v19 复用）。 */
 function recomputeAllergenTags(db: Database.Database): void {

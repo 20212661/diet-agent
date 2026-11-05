@@ -19,6 +19,30 @@ function createLegacyRecipeBook(db: Database.Database): void {
   )`);
 }
 
+/** v8+ 形态的 meal_plans 与 v1 形态的 weekly_plans（真实旧库都有；v25 起对其加 dining_members_json）。 */
+function createLegacyPlanTables(db: Database.Database): void {
+  db.exec(`CREATE TABLE meal_plans (
+    user_id TEXT NOT NULL,
+    start_date TEXT NOT NULL,
+    days_json TEXT NOT NULL DEFAULT '[]',
+    target TEXT,
+    goal TEXT,
+    constraints_json TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (user_id, start_date)
+  )`);
+  db.exec(`CREATE TABLE weekly_plans (
+    user_id TEXT NOT NULL,
+    week_start_date TEXT NOT NULL,
+    days_json TEXT NOT NULL DEFAULT '[]',
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (user_id, week_start_date)
+  )`);
+}
+
 /** v17 形态的 agent_traces（真实 v17+ 库都有；v20 会重建它放宽 entry CHECK）。 */
 function createLegacyAgentTraces(db: Database.Database, checkEntries = "'web','tui','eval'"): void {
   db.exec(`CREATE TABLE agent_traces (
@@ -111,6 +135,7 @@ describe("SQLite 版本化迁移", { timeout: 15_000 }, () => {
     const db = new Database(":memory:");
     db.pragma("user_version = 17");
     createLegacyAgentTraces(db);
+    createLegacyPlanTables(db);
     // 手工建 v17 形态的 recipe_book 并插入一条带旧规则误报（葱→小麦、糖→牛奶）的记录
     db.exec(`CREATE TABLE recipe_book (
       id TEXT PRIMARY KEY, name TEXT NOT NULL, mode TEXT NOT NULL,
@@ -137,6 +162,7 @@ describe("SQLite 版本化迁移", { timeout: 15_000 }, () => {
     const db = new Database(":memory:");
     db.pragma("user_version = 18");
     createLegacyAgentTraces(db);
+    createLegacyPlanTables(db);
     // 手工建 v18 形态的 recipe_book 并插入一条含咖喱块的记录（v18 时解析不出过敏原）
     db.exec(`CREATE TABLE recipe_book (
       id TEXT PRIMARY KEY, name TEXT NOT NULL, mode TEXT NOT NULL,
@@ -165,6 +191,7 @@ describe("SQLite 版本化迁移", { timeout: 15_000 }, () => {
     createLegacyRecipeBook(db);
     // 手工建 v17/v19 形态的 agent_traces（旧 CHECK 只有 web/tui/eval）并插入一条既有记录
     createLegacyAgentTraces(db);
+    createLegacyPlanTables(db);
     db.prepare(`INSERT INTO agent_traces (trace_id, user_id, entry, status, started_at, attempts)
       VALUES ('t1', 'u1', 'web', 'ok', 123, 1)`).run();
     // 旧 CHECK 下 bench 会被拒绝——迁移要放开的就是这条约束
@@ -188,6 +215,7 @@ describe("SQLite 版本化迁移", { timeout: 15_000 }, () => {
     db.pragma("user_version = 20");
     createLegacyRecipeBook(db);
     createLegacyAgentTraces(db);
+    createLegacyPlanTables(db);
     db.prepare(`INSERT INTO agent_traces (trace_id, user_id, entry, status, started_at, attempts)
       VALUES ('t1', 'u1', 'web', 'ok', 123, 1)`).run();
     db.prepare(`INSERT INTO agent_trace_spans (trace_id, attempt, kind, name, started_at)
@@ -202,6 +230,47 @@ describe("SQLite 版本化迁移", { timeout: 15_000 }, () => {
     db.prepare(`INSERT INTO agent_trace_spans (trace_id, attempt, kind, name, started_at)
       VALUES ('t1', 1, 'claimed_unsaved', 'log_meal', 126)`).run();
     expect(db.prepare("SELECT COUNT(*) AS count FROM agent_trace_spans").get()).toEqual({ count: 2 });
+    db.close();
+  });
+
+  it("v25 家庭多人模式：建 household_members、计划/任务状态加用餐成员列、dismissed 警告回填 dismiss 人", () => {
+    const db = new Database(":memory:");
+    runMigrations(db, ":memory:");
+    // 回退到 v24 再造旧数据（dismissed 警告没有 dismissedByMemberId 字段），随后只跑 v25
+    db.pragma("user_version = 24");
+    db.prepare(`INSERT INTO user_recipes (user_id, id, name, mode, ingredients_json, cookware_json,
+      active_minutes, total_minutes, steps_json, dismissed_allergen_warnings_json, created_at, updated_at)
+      VALUES ('u1', 'r1', '家常虾滑', 'quick', '["虾滑"]', '[]', 10, 20, '[]',
+        '[{"ingredient":"虾","definitionId":"def_x","allergens":["shellfish"],"possibleAllergens":[],"dismissedAt":"2026-01-01T00:00:00.000Z"}]',
+        'x', 'x')`).run();
+    db.prepare(`INSERT INTO user_recipes (user_id, id, name, mode, ingredients_json, cookware_json,
+      active_minutes, total_minutes, steps_json, dismissed_allergen_warnings_json, created_at, updated_at)
+      VALUES ('u1', 'r2', '无警告菜', 'quick', '["鸡蛋"]', '[]', 5, 10, '[]', '[]', 'x', 'x')`).run();
+
+    const result = runMigrations(db, ":memory:");
+    expect(result).toMatchObject({ from: 24, to: CURRENT_SCHEMA_VERSION });
+    // household_members 表 + 同账号成员名唯一约束
+    expect((db.pragma("table_info(household_members)") as { name: string }[]).map((c) => c.name))
+      .toEqual(expect.arrayContaining(["user_id", "member_id", "name", "allergies_json",
+        "avoid_foods_json", "preferences_json", "notes", "created_at", "updated_at"]));
+    db.prepare("INSERT INTO household_members (user_id, member_id, name, created_at, updated_at) VALUES ('u1', 'm1', '小明', 'x', 'x')").run();
+    expect(() => db.prepare("INSERT INTO household_members (user_id, member_id, name, created_at, updated_at) VALUES ('u1', 'm2', '小明', 'x', 'x')").run()).toThrow();
+    db.prepare("INSERT INTO household_members (user_id, member_id, name, created_at, updated_at) VALUES ('u2', 'm3', '小明', 'x', 'x')").run(); // 跨用户不受限
+    // 用餐成员列（NULL=仅"我"）
+    for (const table of ["meal_plans", "weekly_plans", "task_states"]) {
+      expect((db.pragma(`table_info(${table})`) as { name: string }[]).map((c) => c.name)).toContain("dining_members_json");
+    }
+    // 旧 dismissed 警告回填 dismissedByMemberId=self；无警告行不受影响
+    const row = db.prepare("SELECT dismissed_allergen_warnings_json FROM user_recipes WHERE id = 'r1'").get() as { dismissed_allergen_warnings_json: string };
+    expect(JSON.parse(row.dismissed_allergen_warnings_json)).toEqual([{
+      ingredient: "虾", definitionId: "def_x", allergens: ["shellfish"], possibleAllergens: [],
+      confirmedByMemberIds: ["self"], dismissedAt: "2026-01-01T00:00:00.000Z",
+    }]);
+    // 幂等：重复跑 v25 不重复加字段
+    db.pragma("user_version = 24");
+    runMigrations(db, ":memory:");
+    const again = db.prepare("SELECT dismissed_allergen_warnings_json FROM user_recipes WHERE id = 'r1'").get() as { dismissed_allergen_warnings_json: string };
+    expect(JSON.parse(again.dismissed_allergen_warnings_json)).toHaveLength(1);
     db.close();
   });
 

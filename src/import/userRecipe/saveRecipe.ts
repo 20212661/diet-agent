@@ -58,6 +58,8 @@ export function buildDismissedAllergenWarnings(
       definitionId: finding.definitionId,
       allergens: finding.allergens,
       possibleAllergens: finding.possibleAllergens,
+      // 当前导入入口（web 表单）的操作者恒为主账号"我"；家人经手时再引入成员维度。
+      confirmedByMemberIds: ["self"],
       dismissedAt: nowISO(),
     }));
 }
