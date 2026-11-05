@@ -647,6 +647,16 @@ export function runMigrations(db: Database.Database, databasePath: string): { fr
   return { from, to: CURRENT_SCHEMA_VERSION, backupPath };
 }
 
+/**
+ * 备份文件名里的时间戳（形如 2026-11-05T14-16-52-585Z，定长数字串，
+ * 字典序即时间序）。copyFileSync 保留源文件 mtime——所有备份的 mtime 都等于
+ * 原库最后写入时间，按 mtime 排序等于随机保留，必须按文件名排序。
+ */
+function backupNameStamp(path: string): string {
+  const match = basename(path).match(/\.v\d+-to-v\d+\.([^.]*)\.bak/);
+  return match ? match[1] : "";
+}
+
 /** Keep at most three migration snapshots and never retain one beyond 30 days. */
 function pruneMigrationBackups(databasePath: string, now = Date.now()): void {
   if (databasePath === ":memory:") return;
@@ -658,7 +668,7 @@ function pruneMigrationBackups(databasePath: string, now = Date.now()): void {
   const backups = readdirSync(directory, { withFileTypes: true })
     .filter((entry) => entry.isFile() && entry.name.startsWith(prefix) && entry.name.includes(`.bak${extension}`))
     .map((entry) => join(directory, entry.name))
-    .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
+    .sort((a, b) => backupNameStamp(b).localeCompare(backupNameStamp(a)));
   const expiresBefore = now - 30 * 24 * 60 * 60 * 1000;
   backups.forEach((path, index) => {
     if (index >= 3 || statSync(path).mtimeMs < expiresBefore) unlinkSync(path);
