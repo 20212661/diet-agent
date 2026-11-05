@@ -43,7 +43,7 @@ import { setActiveUserMessage, detectUnsavedMealClaim, MEAL_CLAIM_UNSAVED_NOTICE
 import { waitForPendingExtraction, enqueueExtraction } from "../tasks/extractionQueue.js";
 import { extractAndApplyTaskPatch } from "../tasks/taskStateExtractor.js";
 import { buildTaskStateInjection } from "../tasks/taskStateInjection.js";
-import { captureRuleRejections, getInjectableTask, hasActiveTask } from "../tasks/taskStateService.js";
+import { captureRuleRejections, extractionSignalCheck, getInjectableTask, hasActiveTask } from "../tasks/taskStateService.js";
 import { structuredCompactionExtension } from "../tasks/structuredCompaction.js";
 import * as store from "../store/index.js";
 import { generateCookingPlanTool } from "../tools/generateCookingPlan.js";
@@ -266,8 +266,8 @@ export interface DietAgentDispatcherDeps {
   createTracer?: (context: { userId: string; operationId?: string; entry: TraceEntry }) => TraceRecorder;
   loadTurnLimits?: () => TurnLimits;
   loadRequestDeadlineMs?: () => number;
-  /** 成功轮次结束后调用（默认：串行排队语义提取；测试/评测可替换）。 */
-  onTurnSuccess?: (userId: string, message: string, reply: string) => void;
+  /** 成功轮次结束后调用（默认：串行排队语义提取；测试/评测可替换）。extractionPlanned=信号门结论（轮前算好并记 trace）。 */
+  onTurnSuccess?: (userId: string, message: string, reply: string, options?: { extractionPlanned?: boolean }) => void;
 }
 
 export class WriteNeedsVerificationError extends Error {
@@ -326,10 +326,21 @@ export function createDietAgentDispatcher(
     }
     // 规则层否决捕获（确定性，先于 LLM）：提到上一轮推荐过的菜 + 否认词 → 立即否决，
     // 本轮推荐/排菜实时生效；按特征否决（"太油的都不要"）由轮后语义提取兜底
+    let extractionPlanned = false;
     try {
       captureRuleRejections(userId, message);
+      // 语义提取信号门（轮前算好，轮后按此排队）：存在 active 任务且消息含
+      // "规则未处理的信号"（否认词未匹配推荐集菜名 / 约束类词语）才提取；
+      // 其余跳过并记 trace（fallback span，name=task_state_extraction_skipped）
+      if (process.env.DIET_TASK_EXTRACTION !== "off" && hasActiveTask(userId)) {
+        extractionPlanned = extractionSignalCheck(userId, message).extract;
+        lastExtractionPlanned.set(userId, extractionPlanned);
+        if (!extractionPlanned) {
+          tracer.mark("fallback", "task_state_extraction_skipped", "signal_gate");
+        }
+      }
     } catch {
-      // 规则捕获失败不影响主流程
+      // 规则捕获/信号门失败不影响主流程
     }
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -415,7 +426,9 @@ export function createDietAgentDispatcher(
     // （deps.onTurnSuccess 可注入替换——测试与评测不发起真实提取调用）
     current.then((result) => {
       try {
-        deps.onTurnSuccess?.(userId, message, result.reply);
+        const planned = lastExtractionPlanned.get(userId) ?? true;
+        lastExtractionPlanned.delete(userId);
+        deps.onTurnSuccess?.(userId, message, result.reply, { extractionPlanned: planned });
       } catch {
         // 提取排队失败不影响主流程
       }
@@ -431,12 +444,16 @@ export function createDietAgentDispatcher(
   };
 }
 
-/** 默认轮后钩子：串行排队语义提取（每用户；仅 active 任务存在时）。DIET_TASK_EXTRACTION=off 关闭（评测真实基线臂用）。 */
-function defaultOnTurnSuccess(userId: string, message: string, reply: string): void {
+/** 默认轮后钩子：串行排队语义提取（每用户；仅 active 任务 + 信号门通过）。DIET_TASK_EXTRACTION=off 关闭（评测真实基线臂用）。 */
+function defaultOnTurnSuccess(userId: string, message: string, reply: string, options?: { extractionPlanned?: boolean }): void {
   if (process.env.DIET_TASK_EXTRACTION === "off") return;
   if (!hasActiveTask(userId)) return;
+  if (options?.extractionPlanned === false) return; // 信号门：无规则未处理的信号，跳过
   void enqueueExtraction(userId, () => extractAndApplyTaskPatch(userId, message, reply));
 }
+
+/** 信号门结果的跨层传递（sendWithFallback 有 tracer 作用域 → 外层轮后钩子取用；同用户轮次串行）。 */
+const lastExtractionPlanned = new Map<string, boolean>();
 
 export const sendDietAgentMessage = createDietAgentDispatcher();
 
