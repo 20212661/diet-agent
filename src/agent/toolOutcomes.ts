@@ -9,6 +9,7 @@ export const WRITE_TOOLS = new Set([
   "log_meal", "edit_meal_log", "undo_meal_log", "update_user_profile", "update_kitchen_profile",
   "update_ingredient_inventory", "mark_ingredient_used", "generate_meal_plan", "generate_weekly_plan",
   "log_cooking_feedback", "generate_cooking_plan",
+  "upsert_household_member", "remove_household_member",
 ]);
 
 /**

@@ -183,4 +183,57 @@ describe("Web 服务 HTTP 边界与拆分路由", () => {
     expect((await request("/api/model/check", {})).body.modelCheck.code).toBe("network_error");
     expect(check).toHaveBeenCalledTimes(2);
   });
+
+  it("家庭成员 CRUD：dashboard 含\"我\"投影；新增/更新/删除/幂等/保留字拒绝", async () => {
+    // 空账号：dashboard 的 householdMembers 只有"我"（从画像投影）
+    store.upsertUserProfile(userId, { allergies: ["牛奶"] });
+    const initial = await request("/api/dashboard");
+    expect(initial.body.householdMembers).toEqual([
+      expect.objectContaining({ memberId: "self", name: "我", isSelf: true, allergies: ["牛奶"] }),
+    ]);
+
+    // 新增成员
+    const createPayload = { name: "小明", allergies: ["虾"], preferences: ["辣"], notes: "" };
+    const createOperation = operation(createPayload);
+    const created = await request("/api/household/members", createOperation);
+    expect(created.status).toBe(200);
+    const memberId = created.body.member.memberId as string;
+    expect(created.body.data.householdMembers).toHaveLength(2);
+    expect(created.body.data.householdMembers[1]).toMatchObject({ memberId, name: "小明", allergies: ["虾"] });
+
+    // 同 operationId 重放返回同一成员（幂等，不重复建）
+    const replay = await request("/api/household/members", createOperation);
+    expect(replay.status).toBe(200);
+    expect(replay.body.member.memberId).toBe(memberId);
+    expect((await request("/api/dashboard")).body.householdMembers).toHaveLength(2);
+
+    // 更新成员（memberId + 整体替换数组）
+    const updated = await request("/api/household/members", operation({ memberId, name: "小明", allergies: ["虾", "花生"], avoidFoods: [], preferences: ["辣"], notes: "小孩" }));
+    expect(updated.body.member.allergies).toEqual(["虾", "花生"]);
+    expect(updated.body.member.notes).toBe("小孩");
+
+    // 重名与保留字被拒绝（写事务回滚，不产生成员）
+    expect((await request("/api/household/members", operation({ name: "小明" }))).status).toBe(400);
+    expect((await request("/api/household/members", operation({ name: "我" }))).status).toBe(400);
+
+    // 删除：operationId 走 query；重复删除（新 operationId）报不存在
+    const deletePath = `/api/household/members/${encodeURIComponent(memberId)}`;
+    const removed = await fetch(base + deletePath + `?operationId=${operation().operationId}`, {
+      method: "DELETE",
+      headers: { "X-Diet-User-Id": encodeURIComponent(userId) },
+      signal: AbortSignal.timeout(5000),
+    });
+    expect(removed.status).toBe(200);
+    expect((await request("/api/dashboard")).body.householdMembers).toHaveLength(1);
+
+    // 虚拟成员"我"不可删除
+    const removeSelf = await fetch(base + `/api/household/members/self?operationId=${operation().operationId}`, {
+      method: "DELETE",
+      headers: { "X-Diet-User-Id": encodeURIComponent(userId) },
+      signal: AbortSignal.timeout(5000),
+    });
+    expect(removeSelf.status).toBe(400);
+    const selfBody = await removeSelf.json() as { error: string };
+    expect(selfBody.error).toContain("保留成员 ID");
+  });
 });

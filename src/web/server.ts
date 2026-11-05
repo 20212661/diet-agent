@@ -6,6 +6,7 @@ import type { ModelCheckResult } from "../agent/configDoctor.js";
 import { dietAgentTools } from "../agent/createDietAgent.js";
 import * as store from "../store/index.js";
 import { todayDate } from "../store/shared.js";
+import { listDiningMembers } from "../services/household.js";
 import { createChatOperationHandler } from "./chatStream.js";
 import type { RouteContext, RouteHandler, WebContext } from "./context.js";
 import { sendJson } from "./helpers/http.js";
@@ -19,6 +20,7 @@ import { listShoppingTasks } from "../shopping/shoppingService.js";
 import { getShoppingProviders } from "../shopping/providers.js";
 import { listCartExperiments } from "../shopping/cartExperiment.js";
 import { handleMealRoutes } from "./routes/meals.js";
+import { handleHouseholdRoutes } from "./routes/household.js";
 import { handleProfileRoutes } from "./routes/profile.js";
 import { handleRecipeImportRoutes } from "./routes/recipes.js";
 import { handleWeeklyPlanRoutes } from "./routes/weeklyPlan.js";
@@ -46,6 +48,7 @@ export function createWebServer(options: CreateWebServerOptions): Server {
     const inventory = store.getIngredientInventory(userId);
     const today = store.getTodaySummary(userId, date);
     const weeklyPlan = store.getWeeklyPlan(userId);
+    const householdMembers = listDiningMembers(userId);
     const candidates = resolveModelCandidates();
     const configured = resolveModelRequests().length > 0;
     const modelStatus = !configured
@@ -60,6 +63,7 @@ export function createWebServer(options: CreateWebServerOptions): Server {
       date,
       profile,
       kitchen,
+      householdMembers,
       inventory,
       shopping: { tasks: listShoppingTasks(userId), providers: getShoppingProviders(userId), cartExperiments:listCartExperiments(userId) },
       today,
@@ -98,6 +102,7 @@ export function createWebServer(options: CreateWebServerOptions): Server {
     handleRecipeImportRoutes,
     handleWeeklyPlanRoutes,
     handleMealRoutes,
+    handleHouseholdRoutes,
     handleProfileRoutes,
     handleInventoryRoutes,
     handleShoppingRoutes,

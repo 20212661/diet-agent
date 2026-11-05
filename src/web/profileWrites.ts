@@ -67,3 +67,15 @@ export function saveInventory(userId: string, payload: Record<string, unknown>):
   }
 }
 
+/** 家庭成员保存（新增/更新）：memberId 缺省=新增；数组字段缺省=不动、传入=整体替换。 */
+export function saveHouseholdMember(userId: string, payload: Record<string, unknown>) {
+  const memberId = optionalText(payload.memberId, "成员 ID"); // 缺省/null/空串 → 新增
+  return store.upsertHouseholdMember(userId, memberId, {
+    ...(payload.name !== undefined ? { name: optionalText(payload.name, "成员名") ?? "" } : {}),
+    ...(payload.allergies !== undefined ? { allergies: stringList(payload.allergies, "过敏信息") } : {}),
+    ...(payload.avoidFoods !== undefined ? { avoidFoods: stringList(payload.avoidFoods, "忌口") } : {}),
+    ...(payload.preferences !== undefined ? { preferences: stringList(payload.preferences, "口味偏好") } : {}),
+    ...(payload.notes !== undefined ? { notes: clearable(payload.notes, optionalText(payload.notes, "备注")) } : {}),
+  });
+}
+

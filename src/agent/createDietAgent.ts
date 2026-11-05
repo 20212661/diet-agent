@@ -55,6 +55,9 @@ import { getIngredientInventoryTool } from "../tools/getIngredientInventory.js";
 import { getKitchenProfileTool } from "../tools/getKitchenProfile.js";
 import { getTodaySummaryTool } from "../tools/getTodaySummary.js";
 import { getUserProfileTool } from "../tools/getUserProfile.js";
+import { getHouseholdMembersTool } from "../tools/getHouseholdMembers.js";
+import { upsertHouseholdMemberTool } from "../tools/upsertHouseholdMember.js";
+import { removeHouseholdMemberTool } from "../tools/removeHouseholdMember.js";
 import { logCookingFeedbackTool } from "../tools/logCookingFeedback.js";
 import { logMealTool } from "../tools/logMeal.js";
 import { estimateFoodCaloriesTool } from "../tools/estimateFoodCalories.js";
@@ -80,6 +83,9 @@ export const dietAgentTools = [
   getTodaySummaryTool,
   updateUserProfileTool,
   getUserProfileTool,
+  getHouseholdMembersTool,
+  upsertHouseholdMemberTool,
+  removeHouseholdMemberTool,
   generateMealPlanTool,
   getMealPlanTool,
   generateWeeklyPlanTool,

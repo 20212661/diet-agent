@@ -19,6 +19,7 @@ export function clearUserData(userId: string): void {
     db.prepare("DELETE FROM meal_plans WHERE user_id = ?").run(userId);
     db.prepare("DELETE FROM user_recipes WHERE user_id = ?").run(userId);
     db.prepare("DELETE FROM task_states WHERE user_id = ?").run(userId);
+    db.prepare("DELETE FROM household_members WHERE user_id = ?").run(userId);
     deleteAgentTracesForUser(db, userId);
   })();
 }
