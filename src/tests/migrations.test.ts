@@ -1,5 +1,5 @@
 import Database from "better-sqlite3";
-import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -271,6 +271,29 @@ describe("SQLite 版本化迁移", { timeout: 15_000 }, () => {
     runMigrations(db, ":memory:");
     const again = db.prepare("SELECT dismissed_allergen_warnings_json FROM user_recipes WHERE id = 'r1'").get() as { dismissed_allergen_warnings_json: string };
     expect(JSON.parse(again.dismissed_allergen_warnings_json)).toHaveLength(1);
+    db.close();
+  });
+
+  it("备份保留按文件名时间戳排序，不按 mtime（copyFileSync 保留源 mtime，mtime 全相同）", () => {
+    const directory = mkdtempSync(join(tmpdir(), "diet-agent-prune-"));
+    temporaryDirectories.push(directory);
+    const path = join(directory, "diet.sqlite");
+    // 4 份假备份：文件名时间戳 01→04 递增，mtime 故意完全反序（名字最老的 mtime 最新）
+    const stamps = ["2026-01-01T01-00-00-000Z", "2026-02-02T02-00-00-000Z", "2026-03-03T03-00-00-000Z", "2026-04-04T04-00-00-000Z"];
+    stamps.forEach((stamp, index) => {
+      const backup = join(directory, `diet.v24-to-v25.${stamp}.bak.sqlite`);
+      writeFileSync(backup, "x");
+      utimesSync(backup, new Date(2026, 11, 31 - index), new Date(2026, 11, 31 - index));
+    });
+    const db = new Database(path);
+    runMigrations(db, path); // 空库：无应用表不生成新备份，但 prune 会执行
+
+    const remaining = readdirSync(directory).filter((name) => name.includes(".bak"));
+    expect(remaining).toHaveLength(3); // 保留文件名最新的 3 份
+    expect(remaining.some((name) => name.includes(stamps[0]))).toBe(false); // 名字最老的（mtime 却最新）被清理
+    for (const kept of stamps.slice(1)) {
+      expect(remaining.some((name) => name.includes(kept))).toBe(true);
+    }
     db.close();
   });
 
