@@ -3,6 +3,10 @@ import { bigramize } from "../rag/tokenizer.js";
 import { FtsStore } from "../rag/ftsStore.js";
 import Database from "better-sqlite3";
 
+// 隔离真实库：recipeRetriever 的依赖链会加载 database.ts（顶层 getDatabase）。
+process.env.DIET_AGENT_DB_PATH = ":memory:";
+process.env.EMBEDDING_PROVIDER ||= "off";
+
 describe("bigramize", () => {
   it("中文连续段切双字；含空格/标点的段独立处理", () => {
     expect(bigramize("番茄炒蛋")).toBe("番茄 茄炒 炒蛋");

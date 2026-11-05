@@ -44,6 +44,14 @@ export {
   upsertWeeklyPlan,
 } from "./repositories/weeklyPlanRepository.js";
 export { getMealPlan, getMealPlanByStartDate, upsertMealPlan } from "./repositories/mealPlanRepository.js";
+export {
+  HOUSEHOLD_MEMBER_LIMIT,
+  SELF_MEMBER_ID,
+  getHouseholdMember,
+  listHouseholdMembers,
+  removeHouseholdMember,
+  upsertHouseholdMember,
+} from "./repositories/householdMemberRepository.js";
 export { clearUserData } from "./repositories/userDataRepository.js";
 export {
   getTaskState,

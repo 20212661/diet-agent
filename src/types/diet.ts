@@ -98,6 +98,36 @@ export interface UpdateUserProfileInput {
   medicalNotes?: string[];
 }
 
+/**
+ * 家庭成员（家庭多人模式）：归属单账号的其他用餐人（"我"不建物理行，
+ * 运行时从 UserProfile 投影为虚拟成员，见 services/household.ts）。
+ * 各自带过敏/忌口/口味，排菜时按"今晚谁吃"取并集做安全过滤。
+ */
+export interface HouseholdMember {
+  userId: string;
+  /** 稳定成员 ID（"m_" 前缀）；任务状态与计划里只存它，不存过敏内容。 */
+  memberId: string;
+  /** 显示名；同账号内唯一（重名会让"谁吃"解析产生歧义）。 */
+  name: string;
+  allergies: string[];
+  avoidFoods: string[];
+  /** 口味偏好（排菜时按成员等权加权）。 */
+  preferences: string[];
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 新增家庭成员的输入参数 */
+export interface AddHouseholdMemberInput {
+  userId: string;
+  name: string;
+  allergies?: string[];
+  avoidFoods?: string[];
+  preferences?: string[];
+  notes?: string;
+}
+
 /** 添加饮食记录的输入参数 */
 export interface AddMealLogInput {
   userId: string;
@@ -323,6 +353,12 @@ export interface DismissedAllergenWarning {
   definitionId: string;
   allergens: AllergenId[];
   possibleAllergens: AllergenId[];
+  /**
+   * 已确认"与菜无关"的成员（含最初关闭人；"self"=主账号）。确认只对本人负责：
+   * 警告命中的过敏原若涉及未确认的用餐成员，推荐场景按 needs_verification
+   * 拦截、查看场景重新提示，直到该成员也被确认。
+   */
+  confirmedByMemberIds: string[];
   dismissedAt: string;
 }
 

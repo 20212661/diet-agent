@@ -6,10 +6,16 @@
  * 期望食材标注来源：LLM 标注（见 importScenarios.ts 头注），此处只测检查器责任。
  */
 import { describe, expect, it } from "vitest";
-import { IMPORT_SCENARIOS } from "../eval/importScenarios.js";
-import { evaluateImportScenario } from "../eval/importEvalCore.js";
-import { omissionCheck } from "../import/userRecipe/checks.js";
-import { INGREDIENT_DEFINITIONS, normalizeIngredientId } from "../recipes/ingredientTaxonomy.js";
+
+// 隔离真实库：importEvalCore 的依赖链会加载 database.ts（顶层 getDatabase），
+// 不设 :memory: 会迁移并连上 data/ 下的真实库，测试结果随之漂移。
+process.env.DIET_AGENT_DB_PATH = ":memory:";
+process.env.EMBEDDING_PROVIDER = "off";
+
+const { IMPORT_SCENARIOS } = await import("../eval/importScenarios.js");
+const { evaluateImportScenario } = await import("../eval/importEvalCore.js");
+const { omissionCheck } = await import("../import/userRecipe/checks.js");
+const { INGREDIENT_DEFINITIONS, normalizeIngredientId } = await import("../recipes/ingredientTaxonomy.js");
 import type { UserRecipeDraft } from "../import/userRecipe/types.js";
 
 function draftFromIngredients(name: string, ingredients: string[]): UserRecipeDraft {
