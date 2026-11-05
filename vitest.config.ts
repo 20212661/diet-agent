@@ -12,6 +12,8 @@ export default defineConfig({
     environment: "node",
     include: ["src/tests/**/*.test.ts"],
     pool: "forks",
+    // 全局兜底：所有测试默认内存库 + database.ts 侧真实库守卫（见 src/tests/setup/dbIsolation.ts）
+    setupFiles: ["src/tests/setup/dbIsolation.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "lcov"],
