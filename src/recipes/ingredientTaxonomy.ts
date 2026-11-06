@@ -23,9 +23,9 @@ export const BASE_INGREDIENT_DEFINITIONS: readonly IngredientDefinition[] = [
   { id: "allergen_soy", aliases: ["大豆", "豆制品"], allergens: ["soy"] },
   { id: "allergen_milk", aliases: ["奶制品类过敏", "乳糖", "乳糖不耐受"], allergens: ["milk"] },
   { id: "allergen_egg", aliases: ["蛋类", "鸡蛋过敏"], allergens: ["egg"] },
-  { id: "peanut", aliases: ["花生", "花生油", "花生酱", "花生碎"], allergens: ["peanut"] },
+  { id: "peanut", aliases: ["花生", "花生碎"], allergens: ["peanut"] },
   { id: "tree_nut", aliases: ["核桃", "杏仁", "腰果", "榛子"], allergens: ["tree_nut"] },
-  { id: "egg", aliases: ["鸡蛋", "蛋液", "蛋黄酱", "沙拉酱", "蛋丝", "皮蛋", "蛋", "蛋清", "蛋黄"], allergens: ["egg"] },
+  { id: "egg", aliases: ["鸡蛋", "蛋液", "沙拉酱", "蛋丝", "皮蛋", "蛋", "蛋清", "蛋黄"], allergens: ["egg"] },
   { id: "milk", aliases: ["牛奶", "乳制品", "奶油", "黄油", "芝士", "奶酪"], allergens: ["milk"] },
   { id: "tofu", aliases: ["内酯豆腐", "豆腐"], allergens: ["soy"] },
   { id: "fermented_tofu", aliases: ["红腐乳", "腐乳"], allergens: ["soy"] },
@@ -54,7 +54,7 @@ export const BASE_INGREDIENT_DEFINITIONS: readonly IngredientDefinition[] = [
   { id: "dried_shrimp", aliases: ["虾皮"], allergens: ["shellfish"] },
   { id: "clam", aliases: ["花蛤"], allergens: ["shellfish"] },
   { id: "squid", aliases: ["鱿鱼"], allergens: ["shellfish"] },
-  { id: "sesame", aliases: ["白芝麻", "芝麻", "芝麻酱", "香油"], allergens: ["sesame"] },
+  { id: "sesame", aliases: ["白芝麻", "芝麻"], allergens: ["sesame"] },
   { id: "tomato", aliases: ["小番茄", "西红柿", "番茄"] },
   { id: "rice", aliases: ["糙米饭", "米饭", "杂粮饭", "糙米", "大米"] },
   { id: "oats", aliases: ["燕麦粥", "燕麦"] },
@@ -91,8 +91,8 @@ export const BASE_INGREDIENT_DEFINITIONS: readonly IngredientDefinition[] = [
   { id: "carrot", aliases: ["胡萝卜", "红萝卜"] },
   { id: "mushroom", aliases: ["蘑菇"] },
   { id: "asparagus", aliases: ["芦笋"] },
-  { id: "garlic", aliases: ["蒜", "大蒜", "蒜瓣"] },
-  { id: "bell_pepper", aliases: ["青椒", "红椒", "甜椒"] },
+  { id: "garlic", aliases: ["蒜", "大蒜", "蒜瓣", "蒜粉", "蒜蓉酱/蒜粉"] },
+  { id: "bell_pepper", aliases: ["青椒", "红椒", "甜椒", "甜椒粉"] },
   { id: "scallion", aliases: ["葱", "大葱", "小葱", "葱花"] },
   { id: "seaweed", aliases: ["海苔", "紫菜"] },
   { id: "dumpling_wrapper", aliases: ["饺子皮", "馄饨皮"], allergens: ["wheat", "gluten"] },
@@ -125,9 +125,35 @@ export const BASE_INGREDIENT_DEFINITIONS: readonly IngredientDefinition[] = [
   { id: "pork_lard", aliases: ["猪油"] },
   { id: "pumpkin", aliases: ["南瓜"] },
   { id: "millet", aliases: ["小米"] },
-  { id: "flour", aliases: ["面粉"], allergens: ["wheat", "gluten"] },
+  { id: "flour", aliases: ["面粉", "小麦粉"], allergens: ["wheat", "gluten"] },
   { id: "curry_roux", aliases: ["咖喱块"], allergens: ["wheat", "gluten"] },
   { id: "chicken_essence", aliases: ["鸡精", "鸡粉"], allergens: ["wheat", "gluten"], possibleAllergens: ["egg"] },
+  // ---- 加工品独立条目（2026-11-06 人工确认过敏原口径）----
+  // 背景：别名子串匹配曾把"X酱/X油/X粉"劫持到原料 ID（番茄酱→tomato），
+  // 匹配侧"库存有 X → X 酱判已有"跨形态误判（bench 实测 21 次/番茄酱类）；
+  // 安全侧靠并集"碰对"但漏加工品额外过敏原。条目拆分 + normalizeIngredientId
+  // 的后缀护栏（见下方）共同修复。
+  // 过敏原确认记录：蛋黄酱=egg 确定、soy 不标（与食用油规则一致）；蒜蓉酱可能含 soy；
+  // 番茄酱不标；牛肉酱 soy+wheat 确定；沙茶酱 shellfish/fish/peanut 确定、可能含 sesame；
+  // 海鲜酱（hoisin）soy+wheat 确定、可能含 sesame，不标 shellfish/fish（以大豆面粉为主料）；
+  // 花生制品（油/酱）继续标 peanut（安全宁可多拦）。
+  { id: "peanut_oil", aliases: ["花生油"], allergens: ["peanut"] },
+  { id: "peanut_butter", aliases: ["花生酱"], allergens: ["peanut"] },
+  { id: "mayonnaise", aliases: ["蛋黄酱"], allergens: ["egg"] },
+  { id: "tomato_paste", aliases: ["番茄酱", "蕃茄酱", "番茄酱/茄汁", "茄汁"], allergens: [] },
+  { id: "chili_powder", aliases: ["辣椒粉", "干辣椒粉"], allergens: [] },
+  { id: "guilin_chili_sauce", aliases: ["桂林辣椒酱"], allergens: [] },
+  { id: "garlic_sauce", aliases: ["蒜蓉酱"], allergens: [], possibleAllergens: ["soy"] },
+  { id: "sesame_oil", aliases: ["芝麻油", "芝麻香油", "香油"], allergens: ["sesame"] },
+  { id: "sesame_paste", aliases: ["芝麻酱"], allergens: ["sesame"] },
+  { id: "corn_oil", aliases: ["玉米油"], allergens: [] },
+  { id: "corn_starch", aliases: ["玉米淀粉"], allergens: [] },
+  { id: "potato_starch", aliases: ["土豆淀粉"], allergens: [] },
+  { id: "pea_starch", aliases: ["豌豆淀粉"], allergens: [] },
+  { id: "lemon_juice", aliases: ["柠檬汁"], allergens: [] },
+  { id: "beef_sauce", aliases: ["牛肉酱"], allergens: ["soy", "wheat"] },
+  // 海鲜酱（hoisin）口径在 HTC 表 seafood_sauce：soy/wheat 确定、sesame 可能，不标 shellfish/fish
+  { id: "satay_sauce", aliases: ["沙茶酱"], allergens: ["shellfish", "fish", "peanut"], possibleAllergens: ["sesame"] },
 ] as const;
 
 // 挂靠现有条目的导入别名（生成器保证过敏原集合与现有条目兼容）
@@ -178,10 +204,24 @@ const idCache = new Map<string, string>();
 const allergenCache = new Map<string, AllergenId[]>();
 const possibleAllergenCache = new Map<string, AllergenId[]>();
 
+/**
+ * 加工后缀词表：normalized = 别名 + 后缀（如 番茄+酱、土豆+淀粉）时，
+ * 该 includes 命中视为"加工品词形被原料别名劫持"，跳过——由加工品独立条目
+ * （精确别名）接管。只挡前缀形态（X酱=X+后缀），"朗姆酒或啤酒"这类加工词
+ * 在前的连写不受影响。安全侧（resolveAllergenIdsForName）不加护栏：宁可多拦。
+ */
+const PROCESSED_SUFFIXES = ["酱", "油", "粉", "糖", "盐", "汁", "膏", "醋", "酒", "淀粉"] as const;
+
+function processedVariantOf(normalized: string, alias: string): boolean {
+  if (normalized === alias || !normalized.startsWith(alias)) return false;
+  return (PROCESSED_SUFFIXES as readonly string[]).includes(normalized.slice(alias.length));
+}
+
 export function normalizeIngredientId(name: string): string {
   return memoized(idCache, name, () => {
     const normalized = normalizedText(name);
-    const matched = aliasEntries.find(({ alias }) => normalized === alias || normalized.includes(alias));
+    const matched = aliasEntries.find(({ alias }) =>
+      normalized === alias || (normalized.includes(alias) && !processedVariantOf(normalized, alias)));
     return matched?.definition.id ?? `ingredient:${normalized}`;
   });
 }

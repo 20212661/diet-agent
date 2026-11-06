@@ -297,6 +297,29 @@ describe("SQLite 版本化迁移", { timeout: 15_000 }, () => {
     db.close();
   });
 
+  it("v26 重算存量菜谱（含用户菜谱）的派生字段：加工品词形换到独立条目", () => {
+    const db = new Database(":memory:");
+    runMigrations(db, ":memory:");
+    db.pragma("user_version = 25");
+    // v25 形态的存量：番茄酱菜在旧分类表下派生 ingredientIds 含 tomato
+    db.prepare(`INSERT INTO recipe_book (id, name, mode, ingredients_json, optional_ingredients_json, cookware_json,
+      active_minutes, total_minutes, steps_json, ingredient_ids_json, allergen_tags_json, updated_at)
+      VALUES ('r_ketchup', '茄汁鸡', 'quick', '["鸡肉","番茄酱"]', '[]', '[]', 10, 20, '[]', '["chicken","tomato"]', '[]', 'x')`).run();
+    db.prepare(`INSERT INTO user_recipes (user_id, id, name, mode, ingredients_json, cookware_json,
+      active_minutes, total_minutes, steps_json, ingredient_ids_json, allergen_tags_json, created_at, updated_at)
+      VALUES ('u1', 'r_mine', '家常沙茶牛肉', 'quick', '["牛肉","沙茶酱"]', '[]', 10, 20, '[]', '[]', '[]', 'x', 'x')`).run();
+
+    const result = runMigrations(db, ":memory:");
+    expect(result).toMatchObject({ from: 25, to: CURRENT_SCHEMA_VERSION });
+    const book = db.prepare("SELECT ingredient_ids_json, allergen_tags_json FROM recipe_book WHERE id = 'r_ketchup'").get() as Record<string, string>;
+    // 番茄酱 → 独立条目 tomato_paste；沙茶酱 → shellfish/fish/peanut
+    expect(JSON.parse(book.ingredient_ids_json)).toContain("tomato_paste");
+    expect(JSON.parse(book.ingredient_ids_json)).not.toContain("tomato");
+    const mine = db.prepare("SELECT allergen_tags_json FROM user_recipes WHERE user_id = 'u1' AND id = 'r_mine'").get() as Record<string, string>;
+    expect(JSON.parse(mine.allergen_tags_json)).toEqual(expect.arrayContaining(["shellfish", "fish", "peanut"]));
+    db.close();
+  });
+
   it("拒绝打开比应用更新的数据库", () => {
     const db = new Database(":memory:");
     db.pragma(`user_version = ${CURRENT_SCHEMA_VERSION + 1}`);
