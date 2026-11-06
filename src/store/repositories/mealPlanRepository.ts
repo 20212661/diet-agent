@@ -108,5 +108,5 @@ function validate(plan: MealPlan): MealPlan {
     plan.diningMembers,
   ).members;
   return revalidateMealPlan(plan, { recipes: getRecipeBookForUser(plan.userId), kitchen: getKitchenProfile(plan.userId),
-    inventory: getIngredientInventory(plan.userId), profile: mergeDiningProfile(base, dining) });
+    inventory: getIngredientInventory(plan.userId), profile: mergeDiningProfile(base, dining), diningMembers: dining });
 }

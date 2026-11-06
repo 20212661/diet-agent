@@ -4,8 +4,8 @@
  * 查看场景 mine 列表提示条 + "已为某成员确认"端点写回。
  */
 import { randomUUID } from "node:crypto";
-import { describe, expect, it } from "vitest";
-import type { DismissedAllergenWarning, RecipeRecord } from "../types/diet.js";
+import { beforeAll, describe, expect, it } from "vitest";
+import type { DismissedAllergenWarning, MealPlanDay, RecipeRecord, WeeklyDayPlan } from "../types/diet.js";
 
 process.env.DIET_AGENT_DB_PATH = ":memory:";
 
@@ -104,9 +104,14 @@ describe("推荐场景 needs_verification 拦截", () => {
 });
 
 describe("查看场景：mine 提示条与按成员确认（web 端点）", () => {
-  // 全量运行时首次加载 web 依赖链（含 agent 全家桶）较慢，放宽超时（照 ragFtsFix 模式）
-  it("mine 列表返回 resurfacedWarnings；确认后写回并消失", { timeout: 30_000 }, async () => {
-    const { createWebServer } = await import("../web/server.js");
+  // 预先加载 web 依赖链（含 agent 全家桶），测试体内不再有首次 import 开销（it 保持默认超时）；
+  // 全量运行时这次加载本身可能超 beforeAll 默认 10s，单独放宽
+  let createWebServer: typeof import("../web/server.js")["createWebServer"];
+  beforeAll(async () => {
+    ({ createWebServer } = await import("../web/server.js"));
+  }, 30_000);
+
+  it("mine 列表返回 resurfacedWarnings；确认后写回并消失", async () => {
     const userId = `resurface_${randomUUID().slice(0, 8)}`;
     store.upsertUserProfile(userId, { allergies: ["牛奶"] });
     const xiaoming = store.upsertHouseholdMember(userId, undefined, { name: "小明", allergies: ["虾"] });
@@ -148,5 +153,80 @@ describe("查看场景：mine 提示条与按成员确认（web 端点）", () =
     } finally {
       await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     }
+  });
+});
+
+describe("已保存计划的重校验：成员后来加上被关闭过的过敏原", () => {
+  // 场景口径：导入时原文出现"虾"（如虾粉调味）被用户判定与菜无关——不在食材面
+  // （assessFoodSafety 对它是 clear 的），只留在 dismissed 警告里
+  const shrimpRecipe = (id: string) => recipeWith({
+    id, name: "家常鸡肉丸", ingredients: ["鸡肉"],
+    dismissedAllergenWarnings: [warning()],
+  });
+
+  it("日计划：保存时成员无过敏可入计划；之后加上过敏，读回标记需确认并写明成员", () => {
+    const userId = `revalidate_mp_${randomUUID().slice(0, 8)}`;
+    store.upsertUserProfile(userId, {});
+    const xiaoming = store.upsertHouseholdMember(userId, undefined, { name: "小明" }); // 保存时无过敏
+    const recipe = shrimpRecipe("usr_reval01");
+    store.upsertUserRecipe(userId, recipe);
+
+    const day: MealPlanDay = {
+      date: "2030-04-08",
+      meals: [{
+        mealType: "dinner", source: "recipe", name: recipe.name, recipeId: recipe.id,
+        ingredients: recipe.ingredients, activeMinutes: recipe.activeMinutes, totalMinutes: recipe.totalMinutes,
+        appliances: recipe.appliances, cookware: recipe.cookware, missingIngredients: [], reasons: [],
+      }],
+    };
+    store.upsertMealPlan(userId, "2030-04-08", [day], { diningMembers: ["self", xiaoming.memberId] });
+    expect(store.getMealPlan(userId, "2030-04-08")?.days[0]?.meals[0]?.executionBlockedReason).toBeUndefined();
+
+    // 之后给小明加上"虾"过敏：读回重校验 → 标记需确认，理由写明小明
+    store.upsertHouseholdMember(userId, xiaoming.memberId, { allergies: ["虾"] });
+    const blocked = store.getMealPlan(userId, "2030-04-08")?.days[0]?.meals[0];
+    expect(blocked?.source).toBe("unavailable");
+    expect(blocked?.executionBlockedReason).toContain("涉及 小明 的过敏且未确认");
+  });
+
+  it("周计划：同样标记需确认；换菜与备选菜列表也拦截该菜", async () => {
+    const userId = `revalidate_wp_${randomUUID().slice(0, 8)}`;
+    store.upsertUserProfile(userId, {});
+    const xiaoming = store.upsertHouseholdMember(userId, undefined, { name: "小红" });
+    const shrimp = shrimpRecipe("usr_reval02");
+    const safe = recipeWith({ id: "usr_safe002", name: "清炒时蔬", ingredients: ["青菜"], dismissedAllergenWarnings: undefined });
+    store.upsertUserRecipe(userId, shrimp);
+    store.upsertUserRecipe(userId, safe);
+
+    const dayPlan: WeeklyDayPlan = {
+      dayOfWeek: 1, date: "2030-04-08",
+      mainRecipe: { id: shrimp.id, name: shrimp.name, activeMinutes: shrimp.activeMinutes, totalMinutes: shrimp.totalMinutes },
+      staplesSuggestion: "米饭", reasons: [], missingIngredients: [], ingredientReadiness: [], completed: false,
+    };
+    store.upsertWeeklyPlan(userId, "2030-04-08", [dayPlan], ["self", xiaoming.memberId]);
+    expect(store.getWeeklyPlan(userId, "2030-04-08")?.days[0]?.executionBlockedReason).toBeUndefined();
+
+    // 之后成员加上"虾"过敏：读回标记需确认并写明成员
+    store.upsertHouseholdMember(userId, xiaoming.memberId, { allergies: ["虾"] });
+    const blockedDay = store.getWeeklyPlan(userId, "2030-04-08")?.days[0];
+    expect(blockedDay?.executionBlockedReason).toContain("涉及 小红 的过敏且未确认");
+    expect(blockedDay?.mainRecipe.name).toBe("需重新安排");
+
+    // 换菜/备选（走 matchRecipes 的拦截块）：被拦的菜不出现在备选里，也不允许换成它
+    const { getWeeklyPlanAlternatives, replacePlanDayRecipe } = await import("../services/weeklyPlanService.js");
+    const alternatives = getWeeklyPlanAlternatives(userId, "2030-04-08", "2030-04-08");
+    expect(alternatives.status).toBe("ok");
+    const candidateIds = alternatives.status === "ok" ? alternatives.alternatives.map((item) => item.recipe.id) : [];
+    expect(candidateIds).not.toContain(shrimp.id); // 拦截：不出现在备选里
+    expect(candidateIds.length).toBeGreaterThan(0);
+
+    const plan = store.getWeeklyPlan(userId, "2030-04-08")!;
+    const replace = replacePlanDayRecipe(userId, "2030-04-08", "2030-04-08", plan.updatedAt, shrimp.id);
+    expect(replace).toMatchObject({ status: "invalid_recipe" }); // 拦截：不能换成涉及未确认成员过敏原的菜
+    // 阳性对照：换成备选列表里的首项菜仍然可以
+    const planAfterReject = store.getWeeklyPlan(userId, "2030-04-08")!;
+    const okReplace = replacePlanDayRecipe(userId, "2030-04-08", "2030-04-08", planAfterReject.updatedAt, candidateIds[0]!);
+    expect(okReplace).not.toMatchObject({ status: "invalid_recipe" });
+    void safe;
   });
 });

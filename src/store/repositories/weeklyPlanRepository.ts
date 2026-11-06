@@ -11,6 +11,7 @@ import { nowISO, parseJsonArray, stringifyJson } from "../shared.js";
 import { getMealLogsByDate } from "./mealRepository.js";
 import { listHouseholdMembers } from "./householdMemberRepository.js";
 import { mergeDiningProfile, resolveDiningRefs, selfMemberFromProfile, toDiningMember } from "../../services/diningMembers.js";
+import { resurfaceDismissedWarnings, resurfaceReason } from "../../recipes/allergenResurface.js";
 import { isTraceableNutrition } from "../../nutrition/nutritionEstimate.js";
 import { mealFitsTimeLimits } from "../../recipes/mealTiming.js";
 
@@ -67,7 +68,15 @@ export function getWeeklyPlan(userId: string, weekStartDate?: string): WeeklyPla
     parseJsonArray<string>(row.dining_members_json as string | null),
   ).members;
   const profile = mergeDiningProfile(savedProfile, savedDining);
-  const safeRecipeIds = new Set(recipeBook.filter((recipe) => !recipeBlockReason(recipe, kitchen, profile)).map((recipe) => recipe.id));
+  // 被忽略的过敏原警告命中未确认的用餐成员：与过敏冲突同样拦截（理由写明成员）
+  const blockedReasonById = new Map(recipeBook.flatMap((recipe) => {
+    if (!recipe.dismissedAllergenWarnings?.length) return [];
+    const resurfaced = resurfaceDismissedWarnings(recipe.dismissedAllergenWarnings, savedDining);
+    return resurfaced.length > 0 ? [[recipe.id, resurfaced.map((warning) => resurfaceReason(warning)).join(" ")]] : [];
+  }));
+  const safeRecipeIds = new Set(recipeBook
+    .filter((recipe) => !blockedReasonById.has(recipe.id))
+    .filter((recipe) => !recipeBlockReason(recipe, kitchen, profile)).map((recipe) => recipe.id));
   const days = parseJsonArray<WeeklyDayPlan>(row.days_json as string).map((day) => {
     const completion = getDatabase().prepare(`
       SELECT completed_at FROM weekly_plan_day_status
@@ -106,7 +115,10 @@ export function getWeeklyPlan(userId: string, weekStartDate?: string): WeeklyPla
         activeMinutes: currentSide.activeMinutes, totalMinutes: currentSide.totalMinutes } : undefined,
       staplesSuggestion: day.staplesSuggestion.split(/[或、，,]/).filter((staple) =>
         assessFoodSafety([staple], profile).status === "clear").join("或") || "主食建议待核实",
-      executionBlockedReason: mainSafe ? undefined : "当前过敏、忌口、厨房设备或时间条件与计划生成时不同，请选择符合条件的候选或重新生成计划。",
+      executionBlockedReason: mainSafe
+        ? undefined
+        : blockedReasonById.get(day.mainRecipe.id)
+          ?? "当前过敏、忌口、厨房设备或时间条件与计划生成时不同，请选择符合条件的候选或重新生成计划。",
       ingredientReadiness: readiness,
       missingIngredients: readiness.filter((item) => item.status !== "owned").map((item) => item.ingredient),
       completed: mainSafe && Boolean(completion),
@@ -192,7 +204,8 @@ export function setWeeklyPlanDayCompleted(
       ).members;
       const profile = mergeDiningProfile(baseProfile, dining);
       const recipe = getRecipeBookForUser(userId).find((r) => r.id === recipeId);
-      if (!recipe || recipeBlockReason(recipe, kitchen, profile)) {
+      if (!recipe || recipeBlockReason(recipe, kitchen, profile)
+        || resurfaceDismissedWarnings(recipe.dismissedAllergenWarnings, dining).length > 0) {
         return { status: "conflict" } as const;
       }
       db.prepare(`INSERT INTO weekly_plan_day_status (user_id, week_start_date, date, recipe_id, completed_at)
