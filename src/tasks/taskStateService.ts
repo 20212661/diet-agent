@@ -112,7 +112,7 @@ export function ensureMealPlanTask(userId: string): TaskState {
 export function noteMealPlanToolCall(
   userId: string,
   toolName: "generate_meal_plan" | "generate_weekly_plan",
-  outcome: { ok: boolean; mealPlanStartDate?: string; weeklyPlanWeekStartDate?: string; timeLimitMinutes?: number; energyLevel?: "low" | "normal"; styles?: string[] }
+  outcome: { ok: boolean; mealPlanStartDate?: string; weeklyPlanWeekStartDate?: string; timeLimitMinutes?: number; energyLevel?: "low" | "normal"; styles?: string[]; diningMembers?: string[] }
 ): TaskState {
   const task = ensureMealPlanTask(userId);
   // 约束在调用即记录（即使 no_match，本轮的时间/精力/风格要求仍是任务事实）
@@ -124,9 +124,13 @@ export function noteMealPlanToolCall(
         ...(outcome.energyLevel !== undefined ? { energyLevel: outcome.energyLevel } : {}),
         ...(outcome.styles !== undefined ? { styles: outcome.styles } : {}),
       },
+      ...(outcome.diningMembers !== undefined ? { diningMembers: outcome.diningMembers } : {}),
     });
     if (!outcome.ok) return withConstraints ?? task;
   } else if (!outcome.ok) {
+    if (outcome.diningMembers !== undefined) {
+      return updateTaskState(userId, task.taskId, { diningMembers: outcome.diningMembers }) ?? task;
+    }
     return task;
   }
 
@@ -142,6 +146,7 @@ export function noteMealPlanToolCall(
       ...(outcome.energyLevel !== undefined ? { energyLevel: outcome.energyLevel } : {}),
       ...(outcome.styles !== undefined ? { styles: outcome.styles } : {}),
     },
+    ...(outcome.diningMembers !== undefined ? { diningMembers: outcome.diningMembers } : {}),
     artifactIds: artifactPatch,
   }) ?? task;
 }

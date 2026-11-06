@@ -25,6 +25,7 @@ interface TaskStateRow {
   decisions_json: string;
   rejected_json: string;
   artifact_ids_json: string;
+  dining_members_json: string | null;
   open_questions_json: string;
   created_at: string;
   updated_at: string;
@@ -43,6 +44,7 @@ function rowToState(row: TaskStateRow): TaskState {
     decisions: parseJsonField<TaskDecision[]>(row.decisions_json, []),
     rejected: parseJsonField<TaskRejectedItem[]>(row.rejected_json, []),
     artifactIds: parseJsonField<TaskArtifactIds>(row.artifact_ids_json, {}),
+    ...(row.dining_members_json ? { diningMembers: parseJsonField<string[]>(row.dining_members_json, []) } : {}),
     openQuestions: parseJsonField<string[]>(row.open_questions_json, []),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -56,14 +58,15 @@ export function insertTaskState(state: Omit<TaskState, "createdAt" | "updatedAt"
   db.prepare(`
     INSERT INTO task_states (
       user_id, task_id, workflow, status, goal, stage,
-      constraints_json, decisions_json, rejected_json, artifact_ids_json, open_questions_json,
+      constraints_json, decisions_json, rejected_json, artifact_ids_json, dining_members_json, open_questions_json,
       created_at, updated_at, ended_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
     ON CONFLICT(user_id, task_id) DO NOTHING
   `).run(
     state.userId, state.taskId, state.workflow, state.status, state.goal, state.stage,
     JSON.stringify(state.constraints), JSON.stringify(state.decisions), JSON.stringify(state.rejected),
-    JSON.stringify(state.artifactIds), JSON.stringify(state.openQuestions), now, now
+    JSON.stringify(state.artifactIds), state.diningMembers ? JSON.stringify(state.diningMembers) : null,
+    JSON.stringify(state.openQuestions), now, now
   );
   return getTaskState(state.userId, state.taskId)!;
 }
@@ -72,7 +75,7 @@ export function insertTaskState(state: Omit<TaskState, "createdAt" | "updatedAt"
 export function updateTaskState(
   userId: string,
   taskId: string,
-  patch: Partial<Pick<TaskState, "status" | "goal" | "stage" | "constraints" | "decisions" | "rejected" | "artifactIds" | "openQuestions">>
+  patch: Partial<Pick<TaskState, "status" | "goal" | "stage" | "constraints" | "diningMembers" | "decisions" | "rejected" | "artifactIds" | "openQuestions">>
 ): TaskState | undefined {
   const db = getDatabase();
   const existing = getTaskState(userId, taskId);
@@ -81,7 +84,7 @@ export function updateTaskState(
     UPDATE task_states SET
       status = ?, goal = ?, stage = ?,
       constraints_json = ?, decisions_json = ?, rejected_json = ?,
-      artifact_ids_json = ?, open_questions_json = ?, updated_at = ?, ended_at = ?
+      artifact_ids_json = ?, dining_members_json = ?, open_questions_json = ?, updated_at = ?, ended_at = ?
     WHERE user_id = ? AND task_id = ?
   `).run(
     patch.status ?? existing.status,
@@ -91,6 +94,9 @@ export function updateTaskState(
     JSON.stringify(patch.decisions ?? existing.decisions),
     JSON.stringify(patch.rejected ?? existing.rejected),
     JSON.stringify(patch.artifactIds ?? existing.artifactIds),
+    (patch.diningMembers !== undefined ? patch.diningMembers : existing.diningMembers) === undefined
+      ? null
+      : JSON.stringify((patch.diningMembers !== undefined ? patch.diningMembers : existing.diningMembers)),
     JSON.stringify(patch.openQuestions ?? existing.openQuestions),
     nowISO(),
     patch.status && patch.status !== "active" ? nowISO() : existing.endedAt ?? null,

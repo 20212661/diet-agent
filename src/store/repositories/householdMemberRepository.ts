@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { SELF_MEMBER_ID } from "../../services/diningMembers.js";
+export { SELF_MEMBER_ID };
 import type { HouseholdMember } from "../../types/diet.js";
 import { getDatabase } from "../database.js";
 import { nowISO, nextUpdatedAt, parseJsonArray, stringifyJson } from "../shared.js";
@@ -21,11 +23,7 @@ function assertMemberListValid(values: string[], label: string): void {
   }
 }
 
-/**
- * 保留成员 ID："我"是主账号的虚拟成员投影（UserProfile），不落本表。
- * 成员名与 memberId 都不得占用，否则 resolveDiningMembers 的"谁吃"解析会产生歧义。
- */
-export const SELF_MEMBER_ID = "self";
+/** "我"是主账号的虚拟成员投影（UserProfile），不落本表；保留名与保留 ID 见 diningMembers.ts。 */
 const RESERVED_MEMBER_NAMES = new Set(["我", "self"]);
 
 function assertNotReservedMemberId(memberId: string): void {

@@ -55,6 +55,12 @@ export interface TaskState {
   goal: string;
   stage: string;
   constraints: TaskConstraints;
+  /**
+   * 本轮排菜的用餐成员 ID（"self" + 物理 memberId；undefined=未指定=全部成员）。
+   * 确定性字段：由排菜工具参数经 noteMealPlanToolCall 代码写入，语义提取器不可改。
+   * 只存 ID 不存过敏内容——成员过敏并集在过滤时从画像/成员数据实时合成。
+   */
+  diningMembers?: string[];
   decisions: TaskDecision[];
   rejected: TaskRejectedItem[];
   artifactIds: TaskArtifactIds;

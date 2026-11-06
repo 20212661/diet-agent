@@ -5,6 +5,7 @@ import { assessFoodSafety } from "../recipes/foodSafety.js";
 import { recipeBlockReason } from "../recipes/executionConstraints.js";
 import { mealFitsTimeLimits } from "../recipes/mealTiming.js";
 import type { IngredientItem, WeeklyDayPlan } from "../types/diet.js";
+import { diningProfileForMatching, resolveDiningMembers } from "./household.js";
 
 /** 按 userId 查菜谱：自己的导入 + 全局库（跨用户隔离）。 */
 export function findRecipe(userId: string, recipeId: string) {
@@ -17,7 +18,7 @@ export function getWeeklyPlanAlternatives(userId: string, weekStartDate: string,
   if (!plan || !day) return { status: "not_found" as const };
   const kitchen = store.getKitchenProfile(userId);
   const inventory = store.getIngredientInventory(userId);
-  const matches = getSafeMatches(userId, day, plan.days, inventory.availableIngredients, inventory.shoppingList);
+  const matches = getSafeMatches(userId, day, plan.days, inventory.availableIngredients, inventory.shoppingList, plan.diningMembers);
   return {
     status: "ok" as const,
     updatedAt: plan.updatedAt,
@@ -44,7 +45,7 @@ export function replacePlanDayRecipe(
   const day = plan.days.find((item) => item.date === date);
   if (!day) return { status: "not_found" as const };
   const inventory = store.getIngredientInventory(userId);
-  const matches = getSafeMatches(userId, day, plan.days, inventory.availableIngredients, inventory.shoppingList);
+  const matches = getSafeMatches(userId, day, plan.days, inventory.availableIngredients, inventory.shoppingList, plan.diningMembers);
   const candidate = matches.find((match) => match.recipe.id === recipeId);
   if (!candidate || recipeId === day.mainRecipe.id) return { status: "invalid_recipe" as const };
   const sideRecipe = day.sideRecipe
@@ -58,11 +59,12 @@ export function replacePlanDayRecipe(
     inventory.shoppingList,
     date,
   );
+  const replaceProfile = diningProfileForMatching(userId, resolveDiningMembers(userId, plan.diningMembers));
   const safeStaples = (candidate.recipe.staples ?? []).filter((staple) =>
-    assessFoodSafety([staple], store.getUserProfile(userId)).status === "clear"
+    assessFoodSafety([staple], replaceProfile).status === "clear"
   );
   const safeDefaultStaples = ["米饭", "面条", "馒头"].filter((staple) =>
-    assessFoodSafety([staple], store.getUserProfile(userId)).status === "clear"
+    assessFoodSafety([staple], replaceProfile).status === "clear"
   );
   const patch: Pick<WeeklyDayPlan, "mainRecipe" | "sideRecipe" | "staplesSuggestion" | "reasons" | "missingIngredients" | "ingredientReadiness"> = {
     mainRecipe: {
@@ -87,9 +89,13 @@ function getSafeMatches(
   days: WeeklyDayPlan[],
   ownedItems: IngredientItem[],
   shoppingItems: IngredientItem[],
+  diningMemberRefs?: string[],
 ): MatchRecipeResult[] {
   const kitchen = store.getKitchenProfile(userId);
   const usedIds = new Set(days.filter((item) => item.date !== day.date).map((item) => item.mainRecipe.id));
+  // 换菜/备选按计划保存时的用餐成员重放并集（ignore：成员已删除则跳过，不抛错）
+  const dining = resolveDiningMembers(userId, diningMemberRefs);
+  const profile = diningProfileForMatching(userId, dining);
   return matchRecipes({
     recipes: store.getRecipeBookForUser(userId),
     rejectedRecipeIds: rejectedRecipeIdsForUser(userId),
@@ -97,9 +103,10 @@ function getSafeMatches(
     availableIngredients: ownedItems,
     shoppingList: shoppingItems,
     kitchenProfile: kitchen,
-    userProfile: store.getUserProfile(userId),
+    userProfile: profile,
+    diningMembers: dining,
     feedback: store.getCookingFeedback(userId),
     timeLimitMinutes: kitchen.maxActiveMinutes,
   }).filter((match) => !usedIds.has(match.recipe.id)
-    && !recipeBlockReason(match.recipe, kitchen, store.getUserProfile(userId)));
+    && !recipeBlockReason(match.recipe, kitchen, profile));
 }

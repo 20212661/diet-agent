@@ -5,6 +5,7 @@ import { noteMealPlanToolCall, noteSuggestedRecipes, rejectedRecipeIdsForUser } 
 import { assessFoodSafety } from "../recipes/foodSafety.js";
 import { normalizeIngredientId } from "../recipes/ingredientTaxonomy.js";
 import { executionBlockReason, recipeBlockReason, type ExecutableMeal } from "../recipes/executionConstraints.js";
+import { diningProfileForMatching, resolveDiningMembers } from "./household.js";
 import type { KitchenProfile } from "../types/diet.js";
 import { isAvailableOn, type EnergyLevel, type IngredientItem, type MealPlanDay, type MealType, type PlannedMeal, type UserGoal, type UserProfile } from "../types/diet.js";
 
@@ -12,6 +13,8 @@ import { isAvailableOn, type EnergyLevel, type IngredientItem, type MealPlanDay,
 export interface MealPlanRequest {
   userId: string; days?: number; startDate?: string; target?: string; timeLimitMinutes?: number;
   energyLevel?: EnergyLevel; preferredStyles?: string[]; temporaryAvoidFoods?: string[];
+  /** 用餐成员（"self"/成员名/memberId；解析失败抛错让工具层修正；已解析的 ID 数组也直接可传）。 */
+  diningMembers?: string[];
 }
 
 type PlannedMealType = Exclude<MealType, "unknown">;
@@ -169,10 +172,14 @@ export function buildAndSaveMealPlan(params: MealPlanRequest) {
   const recipes = store.getRecipeBookForUser(params.userId);
   const goal = inferGoal(params.target) ?? savedProfile?.goal;
   const temporaryAvoidFoods = (params.temporaryAvoidFoods ?? []).map((food) => food.trim()).filter(Boolean);
+  // 家庭多人模式：解析"谁吃"（不传=全部成员），过敏/忌口取并集，"我"的健康字段保持单人语义
+  const dining = resolveDiningMembers(params.userId, params.diningMembers, { onUnresolved: "strict" });
+  const diningMemberIds = dining.map((member) => member.memberId);
+  const diningProfile = diningProfileForMatching(params.userId, dining);
   const userProfile = {
-    ...(savedProfile ?? { userId: params.userId, createdAt: "", updatedAt: "" }),
+    ...diningProfile,
     ...(goal ? { goal } : {}),
-    avoidFoods: [...new Set([...(savedProfile?.avoidFoods ?? []), ...temporaryAvoidFoods])],
+    avoidFoods: [...new Set([...(diningProfile.avoidFoods ?? []), ...temporaryAvoidFoods])],
   } as UserProfile;
   const profileForTemplates = userProfile;
   const timeLimitMinutes = Math.max(1, Math.min(240, kitchen.maxActiveMinutes, Math.floor(params.timeLimitMinutes ?? inferTimeLimit(params.target) ?? kitchen.maxActiveMinutes)));
@@ -198,6 +205,7 @@ export function buildAndSaveMealPlan(params: MealPlanRequest) {
       shoppingList: inventory.shoppingList,
       kitchenProfile: kitchen,
       userProfile,
+      diningMembers: dining,
       feedback,
       timeLimitMinutes,
       energyLevel,
@@ -252,6 +260,7 @@ export function buildAndSaveMealPlan(params: MealPlanRequest) {
     target: params.target,
     goal,
     constraints: { temporaryAvoidFoods, timeLimitMinutes, energyLevel, preferredStyles: params.preferredStyles ?? [] },
+    diningMembers: diningMemberIds,
   });
   // 结构化任务状态：记录计划里实际排入的菜（规则层否决捕获的输入）
   noteSuggestedRecipes(params.userId, plan.days.flatMap((day) => day.meals.flatMap((meal) => (meal.source === "recipe" && meal.recipeId ? [meal.recipeId] : []))));

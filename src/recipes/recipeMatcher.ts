@@ -18,6 +18,7 @@ import { isAvailable, isAvailableOn } from "../types/diet.js";
 import { getVerifiedCalories } from "../nutrition/nutritionEstimate.js";
 import { normalizeIngredientId } from "./ingredientTaxonomy.js";
 import { assessFoodSafety } from "./foodSafety.js";
+import type { DiningMember } from "../services/diningMembers.js";
 
 // ---- 输入输出类型 ----
 
@@ -36,6 +37,11 @@ export interface MatchRecipeInput {
   ingredientMatcher?: (ingredient: string, available: string[]) => boolean;
   /** 被否决的菜谱 ID（结构化任务状态）：代码层直接排除，不依赖提示词自觉。 */
   rejectedRecipeIds?: readonly string[];
+  /**
+   * 用餐成员（家庭多人模式）：物理成员的口味按"填了口味偏好的成员数"归一加权；
+   * 不传或无物理成员填口味 → 沿用厨房画像单一口味列表（单人行为不变）。
+   */
+  diningMembers?: readonly DiningMember[];
 }
 
 export interface MatchRecipeResult {
@@ -320,13 +326,33 @@ export function matchRecipesDetailed(input: MatchRecipeInput): MatchRecipeOutcom
       reasons.push("适合烤箱优先偏好");
     }
 
-    // 口味偏好命中
+    // 口味偏好（成员等权）："我"的口味取自厨房画像，作为普通成员参与——
+    // 只有"我"在本次用餐成员里时才计入；每个填了口味的用餐成员只看命中与否
+    // （任一偏好命中即一次，多项命中不叠加）；得分 = 4 × 命中成员数 ÷ 填了口味的
+    // 用餐成员数（上限 4）。不传 diningMembers = 单人旧行为，逐字节保持。
     const matchedTaste = (recipe.tasteTags ?? []).filter((tag) =>
       tastePrefs.some((tp) => norm(tp).includes(norm(tag)) || norm(tag).includes(norm(tp)))
     );
-    if (matchedTaste.length > 0) {
-      score += 4;
-      reasons.push(`符合口味偏好：${matchedTaste.join("、")}`);
+    if (input.diningMembers === undefined) {
+      if (matchedTaste.length > 0) {
+        score += 4;
+        reasons.push(`符合口味偏好：${matchedTaste.join("、")}`);
+      }
+    } else {
+      const voters = input.diningMembers
+        .map((member) => ({ member, prefs: member.isSelf ? tastePrefs : member.preferences }))
+        .filter((entry) => entry.prefs.length > 0);
+      if (voters.length > 0) {
+        const hitNames = voters
+          .filter(({ prefs }) => (recipe.tasteTags ?? []).some((tag) =>
+            prefs.some((tp) => norm(tp).includes(norm(tag)) || norm(tag).includes(norm(tp)))
+          ))
+          .map(({ member }) => member.name);
+        if (hitNames.length > 0) {
+          score += Math.min(4, (4 * hitNames.length) / voters.length);
+          reasons.push(`符合${hitNames.join("、")}的口味偏好`);
+        }
+      }
     }
 
     // desiredStyle 命中

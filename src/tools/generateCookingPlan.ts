@@ -9,6 +9,7 @@ import { isAvailable, type IngredientItem, type RecipeRecord } from "../types/di
 import { recipeBlockReason } from "../recipes/executionConstraints.js";
 import { mealFitsTimeLimits } from "../recipes/mealTiming.js";
 import { assessFoodSafety } from "../recipes/foodSafety.js";
+import { diningProfileForMatching, resolveDiningMembers } from "../services/household.js";
 import { safeCookingAdvice } from "../recipes/cookingAdvice.js";
 
 const Params = Type.Object({
@@ -20,6 +21,7 @@ const Params = Type.Object({
     Type.Union([Type.Literal("low"), Type.Literal("normal")], { description: "精力状态" } as const)
   ),
   desiredStyle: Type.Optional(Type.String({ description: "想吃的风格或限制，如清淡、减脂、少油烟" } as const)),
+  diningMembers: Type.Optional(Type.Array(Type.String(), { description: "一起吃饭的成员（成员名或 memberId，来自 get_household_members）；不传=全部成员" } as const)),
 });
 
 type ParamsType = Static<typeof Params>;
@@ -58,7 +60,8 @@ export const generateCookingPlanTool: ToolDefinition<typeof Params> = defineTool
 
     const kitchen = store.getKitchenProfile(params.userId);
     const inventory = store.getIngredientInventory(params.userId);
-    const dietProfile = store.getUserProfile(params.userId);
+    const dining = resolveDiningMembers(params.userId, params.diningMembers, { onUnresolved: "strict" });
+    const dietProfile = diningProfileForMatching(params.userId, dining);
     const feedback = store.getCookingFeedback(params.userId);
     const recipes = store.getRecipeBookForUser(params.userId);
 
@@ -89,6 +92,7 @@ export const generateCookingPlanTool: ToolDefinition<typeof Params> = defineTool
       shoppingList: inventory.shoppingList,
       kitchenProfile: kitchen,
       userProfile: dietProfile,
+      diningMembers: dining,
       feedback,
       timeLimitMinutes: timeLimit,
       energyLevel: params.energyLevel,
