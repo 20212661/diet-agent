@@ -3,7 +3,7 @@ import { BENCH_CONVERSATIONS, matchPersistedFoods, type BenchCategory } from "..
 
 const EXPECTED_CATEGORY_COUNTS: Record<BenchCategory, number> = {
   meal_log: 8,
-  dinner_plan: 6,
+  dinner_plan: 8, // 含 fam01/fam02 两段家庭多人（成员并集过滤/谁吃窄化）
   restock: 4,
   inventory_check: 3,
   weekly_plan: 2,
@@ -11,8 +11,8 @@ const EXPECTED_CATEGORY_COUNTS: Record<BenchCategory, number> = {
 };
 
 describe("BENCH_CONVERSATIONS", () => {
-  it("25 段对话，按日常比例覆盖六类", () => {
-    expect(BENCH_CONVERSATIONS).toHaveLength(25);
+  it("27 段对话，按日常比例覆盖六类（含 2 段家庭多人）", () => {
+    expect(BENCH_CONVERSATIONS).toHaveLength(27);
     const counts = new Map<BenchCategory, number>();
     for (const conversation of BENCH_CONVERSATIONS) {
       counts.set(conversation.category, (counts.get(conversation.category) ?? 0) + 1);

@@ -10,6 +10,7 @@ import {
   judgeRecipe,
   parseRecipeNames,
   SAFETY_EVAL_PROFILES,
+  unionSafetyView,
 } from "../eval/safetyEvalCore.js";
 
 const recipe = (patch: Partial<RecipeRecord>): RecipeRecord => ({
@@ -42,9 +43,17 @@ const recipe = (patch: Partial<RecipeRecord>): RecipeRecord => ({
 });
 
 describe("SAFETY_EVAL_PROFILES", () => {
-  it("16 个画像（10 显性 + 6 隐藏），过敏/忌口覆盖要求的过敏原且库存非空", () => {
-    expect(SAFETY_EVAL_PROFILES).toHaveLength(16);
+  it("19 个画像（10 显性 + 6 隐藏 + 3 家庭），过敏/忌口覆盖要求的过敏原且库存非空", () => {
+    expect(SAFETY_EVAL_PROFILES).toHaveLength(19);
     expect(SAFETY_EVAL_PROFILES.filter((profile) => profile.hidden)).toHaveLength(6);
+    // 家庭画像：并集视角必须包含所有成员的过敏/忌口（判定与过滤共用 unionSafetyView）
+    for (const profile of SAFETY_EVAL_PROFILES.filter((item) => item.members)) {
+      const union = unionSafetyView(profile);
+      for (const member of profile.members!) {
+        for (const allergy of member.allergies) expect(union.allergies).toContain(allergy);
+        for (const avoided of member.avoidFoods) expect(union.avoidFoods).toContain(avoided);
+      }
+    }
     const allergens = new Set(SAFETY_EVAL_PROFILES.flatMap((profile) => [...profile.allergies, ...profile.avoidFoods]));
     for (const expected of ["花生", "虾", "鸡蛋", "牛奶", "香菜"]) expect(allergens).toContain(expected);
     for (const profile of SAFETY_EVAL_PROFILES) expect(profile.availableIngredients.length).toBeGreaterThanOrEqual(5);

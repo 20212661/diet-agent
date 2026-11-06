@@ -6,7 +6,8 @@ export type EvalCategory =
   | "dates"
   | "duplicate_records"
   | "tool_failures"
-  | "cross_user_isolation";
+  | "cross_user_isolation"
+  | "family";
 
 export interface EvalAction {
   tool: string;
@@ -21,7 +22,11 @@ export interface EvalScenario {
   userId: string;
   expectedToolCalls: string[];
   actions: EvalAction[];
-  setup?: { allergies?: string[]; avoidFoods?: string[]; failMealInsert?: boolean };
+  setup?: {
+    allergies?: string[]; avoidFoods?: string[]; failMealInsert?: boolean;
+    /** 家庭成员（family 类别）：setup 阶段落库，供排菜按用餐成员并集过滤。 */
+    members?: Array<{ name: string; allergies?: string[]; avoidFoods?: string[]; preferences?: string[] }>;
+  };
   assertions: {
     mealCount?: number;
     otherUserMealCount?: number;
@@ -172,8 +177,52 @@ for (let i = 0; i < 15; i++) {
   });
 }
 
+// ---- 家庭多人（family）：成员过敏并集过滤 + 成员工具轨迹 ----
+for (let i = 0; i < 5; i++) {
+  const userId = `eval_family_${i + 1}`;
+  const setups = [
+    { member: { name: "小明", allergies: ["虾"], avoidFoods: [], preferences: [] }, blocked: ["虾", "虾仁", "基围虾"] },
+    { member: { name: "小明", allergies: ["花生"], avoidFoods: [], preferences: [] }, blocked: ["花生"] },
+    { member: { name: "小红", allergies: ["鸡蛋", "牛奶"], avoidFoods: [], preferences: [] }, blocked: ["鸡蛋", "牛奶"] },
+    { member: { name: "小明", allergies: ["虾"], avoidFoods: ["香菜"], preferences: [] }, blocked: ["虾", "香菜"] },
+    { member: { name: "小明", allergies: ["甲壳类"], avoidFoods: [], preferences: [] }, blocked: ["虾", "虾仁"] },
+  ];
+  const entry = setups[i]!;
+  add({
+    id: `family-${String(i + 1).padStart(3, "0")}`,
+    category: "family",
+    userTurns: [`家里${entry.member.name}对${entry.member.allergies[0]}过敏，今晚全家一起吃，安排一顿晚饭。`],
+    userId,
+    expectedToolCalls: ["get_household_members", "generate_meal_plan"],
+    actions: [
+      { tool: "get_household_members", params: { userId } },
+      { tool: "generate_meal_plan", params: { userId, days: 1 } },
+    ],
+    setup: { members: [entry.member] },
+    assertions: { replyMustNotContain: entry.blocked },
+    note: "成员过敏按并集硬过滤（与单人 alias 组同判定口径，画像扩展到家庭成员）。",
+  });
+}
+// 成员管理轨迹：对话里加成员 → upsert_household_member（确认后写入）
+{
+  const userId = "eval_family_add";
+  add({
+    id: "family-add-001",
+    category: "family",
+    userTurns: ["我妈对花生过敏，以后排菜把她算上，先加个家庭成员。"],
+    userId,
+    expectedToolCalls: ["get_household_members", "upsert_household_member"],
+    actions: [
+      { tool: "get_household_members", params: { userId } },
+      { tool: "upsert_household_member", params: { userId, name: "妈妈", allergies: ["花生"] } },
+    ],
+    assertions: {},
+    note: "成员管理工具轨迹；写工具需确认后落库（离线回放不执行 UI 确认，只核对调用与参数）。",
+  });
+}
+
 export const EVAL_SCENARIOS: readonly EvalScenario[] = scenarios;
 
-if (EVAL_SCENARIOS.length !== 120) {
-  throw new Error(`Expected 120 evaluation scenarios; got ${EVAL_SCENARIOS.length}`);
+if (EVAL_SCENARIOS.length !== 126) {
+  throw new Error(`Expected 126 evaluation scenarios; got ${EVAL_SCENARIOS.length}`);
 }

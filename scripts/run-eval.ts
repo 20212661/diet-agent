@@ -12,6 +12,8 @@ const [{ EVAL_SCENARIOS }, store, database, tools] = await Promise.all([
     import("../src/tools/generateMealPlan.js"),
     import("../src/tools/generateWeeklyPlan.js"),
     import("../src/tools/getUserProfile.js"),
+    import("../src/tools/getHouseholdMembers.js"),
+    import("../src/tools/upsertHouseholdMember.js"),
   ]),
 ]);
 
@@ -21,11 +23,15 @@ const toolByName: Record<string, any> = {
   generate_meal_plan: tools[2].generateMealPlanTool,
   generate_weekly_plan: tools[3].generateWeeklyPlanTool,
   get_user_profile: tools[4].getUserProfileTool,
+  get_household_members: tools[5].getHouseholdMembersTool,
+  // 离线回放跳过确认框：fixture 直接给 confirm=true 的上下文（与画像写工具同模式）
+  upsert_household_member: tools[6].upsertHouseholdMemberTool,
 };
-const context = {} as any;
+// fixture 上下文：写工具（如 upsert_household_member）的确认框按"已确认"回放
+const context = { hasUI: true, ui: { confirm: async () => true } } as any;
 const categories: EvalCategory[] = [
   "single_turn", "multi_turn", "ingredient_aliases", "temporary_avoidance",
-  "dates", "duplicate_records", "tool_failures", "cross_user_isolation",
+  "dates", "duplicate_records", "tool_failures", "cross_user_isolation", "family",
 ];
 
 interface ScenarioResult {
@@ -59,12 +65,21 @@ async function runScenario(scenario: EvalScenario): Promise<ScenarioResult> {
   let expectedToolErrors = 0;
   const actualTrace: string[] = [];
   const outputs: string[] = [];
+  const recommendationOutputs: string[] = [];
   const db = database.getDatabase();
 
   if (scenario.setup?.allergies || scenario.setup?.avoidFoods) {
     store.upsertUserProfile(scenario.userId, {
       allergies: scenario.setup.allergies ?? [],
       avoidFoods: scenario.setup.avoidFoods ?? [],
+    });
+  }
+  for (const member of scenario.setup?.members ?? []) {
+    store.upsertHouseholdMember(scenario.userId, undefined, {
+      name: member.name,
+      allergies: member.allergies ?? [],
+      avoidFoods: member.avoidFoods ?? [],
+      preferences: member.preferences ?? [],
     });
   }
   if (scenario.setup?.failMealInsert) {
@@ -83,6 +98,8 @@ async function runScenario(scenario: EvalScenario): Promise<ScenarioResult> {
       try {
         const result = await tool.execute(`${scenario.id}_${actualTrace.length}`, action.params, undefined, undefined, context);
         outputs.push(textOf(result));
+        // 推荐类工具单独记录：replyMustNotContain 只判推荐文本
+        if (/^(generate_|search_)/.test(action.tool)) recommendationOutputs.push(textOf(result));
         if (action.expectError) failures.push(`expected ${action.tool} to fail, but it succeeded`);
         if (action.expectError) unexpectedToolErrors++;
       } catch (error) {
@@ -139,7 +156,8 @@ async function runScenario(scenario: EvalScenario): Promise<ScenarioResult> {
   if (assertions.replyMustNotContain?.length) {
     // The tool now reports the active restriction list after its meal entries;
     // exclude that disclosure line when checking whether blocked foods were recommended.
-    const recommendationText = outputs.join("\n").split(/(?:🚫\s*)?已按已知食材信息筛选:/)[0] ?? outputs.join("\n");
+    // get_household_members 等读工具的输出是成员数据披露（含过敏词），不算推荐文本。
+    const recommendationText = recommendationOutputs.join("\n").split(/(?:🚫\s*)?已按已知食材信息筛选:/)[0] ?? recommendationOutputs.join("\n");
     const found = assertions.replyMustNotContain.filter((term) => recommendationText.includes(term));
     if (found.length) {
       hardConstraintViolations += found.length;
