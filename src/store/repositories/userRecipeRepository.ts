@@ -144,3 +144,23 @@ export function deleteUserRecipe(userId: string, recipeId: string): boolean {
     .run(userId, recipeId);
   return result.changes > 0;
 }
+
+/** 家庭多人模式：把某成员记入一条被忽略过敏原警告的确认名单（幂等）。
+ *  追加后该成员的过敏不再触发重提示/拦截；返回更新后的警告列表。 */
+export function confirmDismissedAllergenWarning(
+  userId: string,
+  recipeId: string,
+  definitionId: string,
+  memberId: string,
+): RecipeRecord["dismissedAllergenWarnings"] {
+  const recipe = getUserRecipeById(userId, recipeId);
+  if (!recipe) throw new Error("没有找到这道菜谱（可能已删除）。");
+  const warnings = recipe.dismissedAllergenWarnings ?? [];
+  const target = warnings.find((warning) => warning.definitionId === definitionId);
+  if (!target) throw new Error("没有找到这条被忽略的过敏原警告。");
+  if (!target.confirmedByMemberIds.includes(memberId)) {
+    target.confirmedByMemberIds = [...target.confirmedByMemberIds, memberId];
+    upsertUserRecipe(userId, recipe);
+  }
+  return recipe.dismissedAllergenWarnings;
+}

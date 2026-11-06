@@ -22,6 +22,7 @@ button,input,textarea{font-family:inherit}
 .import-section{display:grid;gap:8px;margin:14px 0;padding-top:12px;border-top:1px solid var(--line,#edf0eb)}
 .import-section h3{margin:0;font-size:11px;color:#5d6f5b}
 .import-finding{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 11px;border:1px solid #e7ebe4;border-radius:8px;background:#fff}
+.import-finding.warning{border-color:#e8c8bc;background:#f7e5de}
 .import-finding .finding-main{display:grid;gap:3px;min-width:0}
 .import-finding .finding-main strong{font-size:11px}
 .import-finding .finding-main small{color:#879187;font-size:9px;line-height:1.5;word-break:break-all}
