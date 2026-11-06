@@ -32,6 +32,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { RecipeJudgement, SafetyEvalProfile } from "../src/eval/safetyEvalCore.js";
+import { resolveDiningMembers } from "../src/services/household.js";
 
 // 严格参数校验：任何未知参数直接报错。
 {
@@ -118,6 +119,12 @@ function setupProfileUser(userId: string, profile: SafetyEvalProfile): void {
   sessionUsers.push(userId);
   store.clearUserData(userId);
   store.upsertUserProfile(userId, { allergies: profile.allergies, avoidFoods: profile.avoidFoods });
+  // 家庭画像：成员落库（Agent 臂经系统提示的"家庭成员"块看到；确定性臂显式传入）
+  for (const member of profile.members ?? []) {
+    store.upsertHouseholdMember(userId, undefined, {
+      name: member.name, allergies: member.allergies, avoidFoods: member.avoidFoods,
+    });
+  }
   store.upsertIngredientInventory(userId, {
     availableIngredients: profile.availableIngredients.map((name) => ({ name, status: "available" as const })),
     replaceAvailable: true,
@@ -180,7 +187,7 @@ function judgeReply(
     repeat: repeatIndex,
     picks: names.map((name) => {
       const recipe = recipes.find((item) => item.name === name)!;
-      return safetyCore.judgeRecipe(recipe, profile);
+      return safetyCore.judgeRecipe(recipe, { ...profile, ...safetyCore.unionSafetyView(profile) });
     }),
     parsedCount: names.length,
     toolCalls,
@@ -240,6 +247,7 @@ try {
         shoppingList: inventory.shoppingList,
         kitchenProfile: store.getKitchenProfile(detUserId)!,
         userProfile: store.getUserProfile(detUserId)!,
+        diningMembers: resolveDiningMembers(detUserId),
         feedback: store.getCookingFeedback(detUserId),
       });
       const names = outcome.matches.slice(0, 3).map((match) => match.recipe.name);
@@ -247,7 +255,7 @@ try {
         arm: "deterministic",
         profileId: profile.id,
         repeat: 1,
-        picks: names.map((name) => safetyCore.judgeRecipe(recipes.find((item) => item.name === name)!, profile)),
+        picks: names.map((name) => safetyCore.judgeRecipe(recipes.find((item) => item.name === name)!, { ...profile, ...safetyCore.unionSafetyView(profile) })),
         parsedCount: names.length,
         error: outcome.status === "no_match" ? "no_match" : undefined,
       });

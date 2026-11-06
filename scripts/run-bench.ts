@@ -97,9 +97,17 @@ const runId = randomUUID().replace(/-/g, "").slice(0, 10);
 const benchStartedAt = Date.now();
 const runs: ConversationRun[] = [];
 
-function setupConversation(userId: string, setup: { allergies?: string[]; avoidFoods?: string[]; availableIngredients?: string[] }): void {
+function setupConversation(userId: string, setup: { allergies?: string[]; avoidFoods?: string[]; availableIngredients?: string[]; members?: Array<{ name: string; allergies?: string[]; avoidFoods?: string[]; preferences?: string[] }> }): void {
   store.clearUserData(userId);
   store.upsertUserProfile(userId, { allergies: setup.allergies ?? [], avoidFoods: setup.avoidFoods ?? [] });
+  for (const member of setup.members ?? []) {
+    store.upsertHouseholdMember(userId, undefined, {
+      name: member.name,
+      allergies: member.allergies ?? [],
+      avoidFoods: member.avoidFoods ?? [],
+      preferences: member.preferences ?? [],
+    });
+  }
   if (setup.availableIngredients && setup.availableIngredients.length > 0) {
     store.upsertIngredientInventory(userId, {
       availableIngredients: setup.availableIngredients.map((name) => ({ name, status: "available" as const })),

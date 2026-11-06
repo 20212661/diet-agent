@@ -289,8 +289,8 @@ export function buildAndSaveMealPlan(params: MealPlanRequest) {
   if (allMissing.length) lines.push(`### 需要准备的食材\n${allMissing.join("、")}\n`);
 
   if (temporaryAvoidFoods.length) lines.push(`本次临时避开：${temporaryAvoidFoods.join("、")}（未写入长期画像）`);
-  const savedAllergies = savedProfile?.allergies ?? [];
-  const restrictions = [...new Set([...(savedProfile?.avoidFoods ?? []), ...savedAllergies, ...temporaryAvoidFoods])];
+  // 披露行覆盖用餐成员的过敏/忌口并集（diningProfile 已合成），单人时与画像一致
+  const restrictions = [...new Set([...(userProfile.avoidFoods ?? []), ...(userProfile.allergies ?? []), ...temporaryAvoidFoods])];
   if (restrictions.length) {
     lines.push(`已按已知食材信息筛选: ${restrictions.join("、")}`);
     lines.push("过敏与忌口仅按已知食材及菜谱信息筛选；仍请核对产品标签和交叉接触风险。" );

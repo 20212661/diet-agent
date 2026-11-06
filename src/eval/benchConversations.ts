@@ -22,6 +22,8 @@ export interface BenchSetup {
   allergies?: string[];
   avoidFoods?: string[];
   availableIngredients?: string[];
+  /** 家庭成员（家庭多人模式）：setup 阶段落库；排菜按"今晚谁吃"并集过滤。 */
+  members?: Array<{ name: string; allergies?: string[]; avoidFoods?: string[]; preferences?: string[] }>;
 }
 
 export interface BenchConversation {
@@ -178,8 +180,19 @@ export const BENCH_CONVERSATIONS: readonly BenchConversation[] = [
     "上次那个蒜蓉粉丝蒸虾太麻烦了，下次别推荐了",
     "帮我记住这个反馈",
   ]),
+
+  // ---- 家庭多人（2）：覆盖"谁吃"解析、并集过滤与成员口味加权的真实延迟路径 ----
+  conversation("fam01", "dinner_plan", [
+    "小明对虾过敏，家里加个成员记一下",
+    "今晚全家一起吃，安排一顿晚饭",
+    "小明那道过敏的菜，确认一下没问题吗？",
+  ], { members: [{ name: "小明", allergies: ["虾"], preferences: ["辣"] }], availableIngredients: ["鸡腿", "土豆", "番茄", "鸡蛋", "青菜"] }),
+  conversation("fam02", "dinner_plan", [
+    "今晚小明不在家吃，就我自己，安排个晚饭",
+    "换个口味重一点的",
+  ], { members: [{ name: "小明", allergies: ["虾"] }], availableIngredients: ["鸡腿", "土豆", "番茄", "鸡蛋", "青菜"] }),
 ];
 
-if (BENCH_CONVERSATIONS.length !== 25) {
-  throw new Error(`Expected 25 bench conversations; got ${BENCH_CONVERSATIONS.length}`);
+if (BENCH_CONVERSATIONS.length !== 27) {
+  throw new Error(`Expected 27 bench conversations; got ${BENCH_CONVERSATIONS.length}`);
 }

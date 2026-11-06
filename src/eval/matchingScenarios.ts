@@ -10,8 +10,18 @@ export interface MatchingScenario {
   availableIngredients: string[];
   /** 厨房约束（匹配算法同时考虑时间/厨具/设备） */
   kitchen: { burners: number; hasOven: boolean; hasMicrowave: boolean; hasRiceCooker: boolean; cookware: string[]; maxActiveMinutes: number; maxTotalMinutes: number };
-  /** 可接受集合（5-8 道，标注时考虑库存+时间+厨具+设备；菜名须在 187 道库内） */
+  /** 可接受集合（5-8 道，标注时考虑库存+时间/厨具/设备；菜名须在 187 道库内） */
   acceptable: string[];
+  /**
+   * 家庭多人（PR E）：用餐成员与"谁吃"。"我"=画像过敏 [] + 厨房口味；
+   * 物理成员各带过敏/忌口/口味。不传 dining = 全员；显式列表 = 指定谁吃
+   * （成员名或"我"；不含"我"时厨房口味不参与）。acceptable 标注需按并集
+   * 过滤 + 成员口味加权双重口径复核（草案由 LLM 起草，人工冻结）。
+   */
+  household?: {
+    members: Array<{ name: string; allergies?: string[]; avoidFoods?: string[]; preferences?: string[] }>;
+    dining?: string[];
+  };
 }
 
 const defaultKitchen = { burners: 2, hasOven: true, hasMicrowave: true, hasRiceCooker: true, cookware: ["炒锅", "汤锅", "碗", "盘", "烤盘", "平底锅", "保鲜袋", "电饭煲"], maxActiveMinutes: 40, maxTotalMinutes: 90 };
@@ -107,5 +117,33 @@ export const MATCHING_SCENARIOS: readonly MatchingScenario[] = [
   {
     id: "sc_20", description: "金枪鱼罐头还能做什么", availableIngredients: ["金枪鱼罐头", "玉米粒", "米饭", "海苔"], kitchen: defaultKitchen,
     acceptable: ["金枪鱼玉米饭团", "蛋炒饭", "可乐炒饭", "快手白粥配小菜", "卤肉饭"],
+  },
+];
+
+// ---- 家庭多人（PR E）：并集过滤 + 口味加权（acceptable 为 LLM 起草草案，待人工复核后冻结 v0） ----
+export const FAMILY_MATCHING_SCENARIOS: readonly MatchingScenario[] = [
+  {
+    id: "fam_sc_01", description: "小明过敏虾：全员用餐，虾菜全部出局",
+    availableIngredients: ["虾仁", "鸡蛋", "番茄", "青菜", "面条", "鸡腿", "米饭"], kitchen: defaultKitchen,
+    household: { members: [{ name: "小明", allergies: ["虾"] }] },
+    acceptable: ["番茄炒蛋", "蒸蛋羹", "番茄鸡蛋面", "紫菜蛋花汤", "香菇滑鸡", "酱油鸡"],
+  },
+  {
+    id: "fam_sc_02", description: "小明过敏花生、小红忌口香菜：双重并集",
+    availableIngredients: ["鸡腿", "土豆", "西兰花", "番茄", "豆腐", "青菜", "洋葱"], kitchen: defaultKitchen,
+    household: { members: [{ name: "小明", allergies: ["花生"] }, { name: "小红", avoidFoods: ["香菜"] }] },
+    acceptable: ["咖喱鸡块", "番茄豆腐一锅炖", "蒜蓉西兰花", "烤鸡腿土豆", "豆腐青菜汤", "番茄炒蛋", "香菇滑鸡"],
+  },
+  {
+    id: "fam_sc_03", description: "小明过敏虾但今晚不在：虾菜恢复可用（过滤按在场成员）",
+    availableIngredients: ["虾仁", "鸡蛋", "番茄", "青菜", "面条", "鸡腿", "米饭"], kitchen: defaultKitchen,
+    household: { members: [{ name: "小明", allergies: ["虾"] }], dining: ["我"] },
+    acceptable: ["虾仁鸡蛋滑豆腐", "番茄炒蛋", "蒸蛋羹", "番茄鸡蛋面", "紫菜蛋花汤", "香菇滑鸡"],
+  },
+  {
+    id: "fam_sc_04", description: "小明爱辣：口味加权应把辣菜排前（不改变可接受集）",
+    availableIngredients: ["鸡腿", "土豆", "青椒", "花生", "干辣椒", "米饭", "青菜"], kitchen: defaultKitchen,
+    household: { members: [{ name: "小明", preferences: ["辣"] }] },
+    acceptable: ["宫保鸡丁", "可乐鸡翅", "青椒土豆炒肉", "农家一碗香", "香菇滑鸡", "酱油鸡"],
   },
 ];
