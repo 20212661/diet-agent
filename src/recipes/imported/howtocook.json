@@ -141,9 +141,9 @@
         "cooking_wine",
         "fish",
         "ginger",
-        "peanut",
+        "peanut_oil",
         "scallion",
-        "sesame",
+        "sesame_oil",
         "soy_sauce"
       ],
       "allergenTags": [
@@ -403,12 +403,12 @@
         "crab",
         "egg",
         "ginger",
-        "peanut",
+        "peanut_oil",
         "pork",
         "scallion",
         "soy_sauce",
         "sugar",
-        "tomato"
+        "tomato_paste"
       ],
       "allergenTags": [
         "egg",
@@ -492,12 +492,12 @@
       "ingredientIds": [
         "beer",
         "bell_pepper",
-        "chili",
         "cooking_oil",
         "cooking_wine",
         "fish",
         "garlic",
         "ginger",
+        "guilin_chili_sauce",
         "salt",
         "scallion",
         "soy_sauce",
@@ -848,7 +848,7 @@
       "optionalIngredients": [],
       "ingredientIds": [
         "cooking_oil",
-        "garlic",
+        "garlic_sauce",
         "prawn",
         "soy_sauce"
       ],
@@ -1304,7 +1304,7 @@
       "ingredientIds": [
         "egg",
         "salt",
-        "sesame"
+        "sesame_oil"
       ],
       "allergenTags": [
         "egg",
@@ -1373,7 +1373,7 @@
       "ingredientIds": [
         "egg",
         "salt",
-        "sesame",
+        "sesame_oil",
         "soy_sauce",
         "water_or_stock"
       ],
@@ -2247,7 +2247,7 @@
         "ginger",
         "millet",
         "oyster_sauce",
-        "peanut",
+        "peanut_oil",
         "pork",
         "salt",
         "soy_sauce",
@@ -2448,6 +2448,7 @@
         "bean_sprouts",
         "beef",
         "chili",
+        "chili_powder",
         "cilantro",
         "cooking_wine",
         "egg",
@@ -2659,7 +2660,7 @@
         "soy_sauce",
         "starch",
         "sugar",
-        "tomato"
+        "tomato_paste"
       ],
       "allergenTags": [
         "egg",
@@ -2741,9 +2742,9 @@
       ],
       "optionalIngredients": [],
       "ingredientIds": [
-        "black_pepper",
         "chicken_wing",
         "cooking_wine",
+        "pepper_powder",
         "salt",
         "soy_sauce"
       ],
@@ -2827,7 +2828,7 @@
       "ingredientIds": [
         "bell_pepper",
         "chicken_wing",
-        "chili",
+        "chili_powder",
         "cooking_oil",
         "garlic",
         "oyster_sauce",
@@ -3193,7 +3194,7 @@
         "egg",
         "pepper_powder",
         "pork",
-        "sesame",
+        "sesame_oil",
         "soy_sauce"
       ],
       "allergenTags": [
@@ -4603,7 +4604,7 @@
         "black_pepper",
         "chicken_thigh",
         "garlic",
-        "lemon",
+        "lemon_juice",
         "olive_oil",
         "parsley",
         "salt"
@@ -4681,7 +4682,7 @@
         "onion",
         "pork",
         "sesame",
-        "tomato"
+        "tomato_paste"
       ],
       "allergenTags": [
         "sesame"
@@ -4845,7 +4846,7 @@
       ],
       "optionalIngredients": [],
       "ingredientIds": [
-        "corn",
+        "corn_starch",
         "garlic_sprout",
         "pork_lean",
         "potato",
@@ -5179,6 +5180,7 @@
         "ginger",
         "pork",
         "potato",
+        "potato_starch",
         "salt",
         "scallion",
         "soy_sauce"
@@ -5859,7 +5861,7 @@
         "msg",
         "pepper_powder",
         "salt",
-        "sesame"
+        "sesame_oil"
       ],
       "allergenTags": [
         "sesame"
@@ -6295,11 +6297,11 @@
       "optionalIngredients": [],
       "ingredientIds": [
         "chicken_essence",
-        "chili",
+        "chili_powder",
         "cilantro",
         "garlic",
         "millet",
-        "pea",
+        "pea_starch",
         "peanut",
         "salt",
         "soy_sauce",
@@ -6493,15 +6495,15 @@
       ],
       "optionalIngredients": [],
       "ingredientIds": [
-        "black_pepper",
         "cabbage",
         "carrot",
-        "chili",
+        "chili_powder",
         "chives",
         "cooking_oil",
         "cumin_powder",
         "egg",
         "msg",
+        "pepper_powder",
         "processed_pork",
         "salt",
         "starch_noodles",
@@ -6595,7 +6597,7 @@
       "optionalIngredients": [],
       "ingredientIds": [
         "chili",
-        "corn",
+        "corn_oil",
         "garlic",
         "liangfen",
         "salt",
@@ -6926,7 +6928,7 @@
       "optionalIngredients": [],
       "ingredientIds": [
         "chicken_essence",
-        "chili",
+        "chili_oil",
         "dried_radish",
         "garlic",
         "meat_stock",
@@ -6935,7 +6937,7 @@
         "pork",
         "salt",
         "scallion",
-        "sesame",
+        "sesame_paste",
         "soy_sauce",
         "wheat_noodle"
       ],
@@ -7102,7 +7104,7 @@
         "milk",
         "onion",
         "rice",
-        "tomato",
+        "tomato_paste",
         "青豆_豌豆"
       ],
       "allergenTags": [
@@ -7186,7 +7188,7 @@
       "optionalIngredients": [],
       "ingredientIds": [
         "bamboo_shoot",
-        "chili",
+        "chili_oil",
         "luosifen",
         "peanut",
         "rice_noodle",
@@ -7275,7 +7277,7 @@
         "egg",
         "salt",
         "scallion",
-        "sesame",
+        "sesame_oil",
         "soy_sauce",
         "tomato",
         "wheat_noodle"
@@ -7782,11 +7784,11 @@
       ],
       "optionalIngredients": [],
       "ingredientIds": [
-        "allergen_wheat",
         "cooking_oil",
         "cured_pork",
         "egg",
         "eggplant",
+        "flour",
         "rice",
         "rice_noodle",
         "salt"
@@ -8014,7 +8016,7 @@
         "egg",
         "flour",
         "salt",
-        "sesame",
+        "sesame_oil",
         "shrimp_meat"
       ],
       "allergenTags": [
@@ -8093,6 +8095,8 @@
       "ingredientIds": [
         "cabbage",
         "sesame",
+        "sesame_oil",
+        "sesame_paste",
         "sugar",
         "vinegar"
       ],
@@ -8172,7 +8176,8 @@
         "lettuce",
         "oyster_sauce",
         "salt",
-        "sesame",
+        "sesame_oil",
+        "sesame_paste",
         "soy_sauce",
         "sugar",
         "vinegar"
@@ -8249,10 +8254,10 @@
       ],
       "optionalIngredients": [],
       "ingredientIds": [
-        "chili",
+        "chili_oil",
         "garlic",
         "scallion",
-        "sesame",
+        "sesame_oil",
         "soy_sauce",
         "sugar",
         "tofu",
@@ -8521,7 +8526,7 @@
         "starch",
         "sugar",
         "tofu",
-        "tomato",
+        "tomato_paste",
         "vegetable_oil",
         "wood_ear"
       ],
@@ -9030,7 +9035,7 @@
       "ingredientIds": [
         "dried_shrimp",
         "eggplant",
-        "peanut",
+        "peanut_oil",
         "pork",
         "scallion",
         "soy_sauce",
@@ -9291,7 +9296,7 @@
       ],
       "optionalIngredients": [],
       "ingredientIds": [
-        "corn",
+        "corn_starch",
         "egg",
         "oyster_sauce",
         "soy_sauce",
@@ -9376,7 +9381,7 @@
         "celery",
         "oyster_sauce",
         "salt",
-        "sesame",
+        "sesame_oil",
         "soy_sauce",
         "tea_tree_mushroom"
       ],

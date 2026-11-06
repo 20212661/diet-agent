@@ -3,7 +3,7 @@ import { copyFileSync, existsSync, readdirSync, statSync, unlinkSync } from "nod
 import { dirname, extname, basename, join } from "node:path";
 import { deriveRecipeIngredientMetadata } from "../../recipes/ingredientTaxonomy.js";
 
-export const CURRENT_SCHEMA_VERSION = 25;
+export const CURRENT_SCHEMA_VERSION = 26;
 
 interface Migration {
   version: number;
@@ -534,6 +534,16 @@ const migrations: readonly Migration[] = [
       backfillConfirmedByMemberIds(db);
     },
   },
+  {
+    version: 26,
+    description: "加工品独立条目 + 别名后缀护栏后，重算存量菜谱（含用户菜谱）的过敏原标签与食材 ID",
+    up(db) {
+      // 早期开发库可能缺列（v23 之前手工建表形态）；重算前幂等补齐
+      addColumnIfMissing(db, "recipe_book", "ingredient_ids_json TEXT NOT NULL DEFAULT '[]'", "ingredient_ids_json");
+      addColumnIfMissing(db, "user_recipes", "ingredient_ids_json TEXT NOT NULL DEFAULT '[]'", "ingredient_ids_json");
+      recomputeDerivedMetadataV26(db);
+    },
+  },
 ];
 
 /**
@@ -567,6 +577,50 @@ function backfillConfirmedByMemberIds(db: Database.Database): void {
       return item;
     });
     if (changed) update.run(JSON.stringify(patched), row.user_id, row.id);
+  }
+}
+
+/**
+ * v26：加工品独立条目 + 后缀护栏后，重算存量菜谱（recipe_book 与 user_recipes
+ * 两表）的 allergen_tags_json 与 ingredient_ids_json。不复用 recomputeAllergenTags
+ * ——那个函数在 v18/v19/v22 语境下只处理 recipe_book（当时 user_recipes 尚不存在，
+ * fresh 库跑 v18 时若 SELECT 该表会失败）。
+ */
+function recomputeDerivedMetadataV26(db: Database.Database): void {
+  const parseArray = (value: unknown): string[] => {
+    if (typeof value !== "string" || !value.trim()) return [];
+    try {
+      const parsed: unknown = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+    } catch {
+      return [];
+    }
+  };
+  for (const table of ["recipe_book", "user_recipes"]) {
+    const keyColumns = table === "recipe_book" ? "id" : "user_id, id";
+    const rows = db.prepare(`
+      SELECT ${table === "user_recipes" ? "user_id," : ""} id, ingredients_json, optional_ingredients_json,
+        vegetables_json, staples_json, primary_protein
+      FROM ${table}
+    `).all() as Array<Record<string, unknown>>;
+    const update = db.prepare(`
+      UPDATE ${table} SET allergen_tags_json = ?, ingredient_ids_json = ?
+      WHERE ${table === "recipe_book" ? "id = ?" : "user_id = ? AND id = ?"}
+    `);
+    for (const row of rows) {
+      const ingredients = [
+        ...parseArray(row.ingredients_json),
+        ...parseArray(row.optional_ingredients_json),
+        ...parseArray(row.vegetables_json),
+        ...parseArray(row.staples_json),
+        ...(typeof row.primary_protein === "string" && row.primary_protein ? [row.primary_protein] : []),
+      ];
+      const derived = deriveRecipeIngredientMetadata(ingredients);
+      const args: unknown[] = [JSON.stringify(derived.allergenTags), JSON.stringify(derived.ingredientIds)];
+      if (table === "user_recipes") args.push(row.user_id as string);
+      args.push(row.id as string);
+      update.run(...args);
+    }
   }
 }
 

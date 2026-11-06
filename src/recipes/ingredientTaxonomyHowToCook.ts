@@ -322,7 +322,8 @@ export const HTC_INGREDIENT_DEFINITIONS: ReadonlyArray<{
   {
     "id": "chili_oil",
     "aliases": [
-      "油泼辣子"
+      "油泼辣子",
+      "辣椒油"
     ],
     "allergens": [],
     "possibleAllergens": [
@@ -696,12 +697,12 @@ export const HTC_INGREDIENT_DEFINITIONS: ReadonlyArray<{
     "aliases": [
       "海鲜酱"
     ],
-    "allergens": [],
-    "possibleAllergens": [
-      "gluten",
-      "sesame",
+    "allergens": [
       "soy",
       "wheat"
+    ],
+    "possibleAllergens": [
+      "sesame"
     ]
   },
   {
@@ -1351,6 +1352,7 @@ export const HTC_INGREDIENT_DEFINITIONS: ReadonlyArray<{
     "allergens": [],
     "possibleAllergens": [
       "gluten",
+      "peanut",
       "soy",
       "wheat"
     ]
@@ -2137,11 +2139,7 @@ export const HTC_ALIAS_EXTENSIONS: Readonly<Record<string, string[]>> = {
   "pasta": [
     "通心粉"
   ],
-  "tomato": [
-    "番茄酱/茄汁",
-    "茄汁",
-    "蕃茄酱"
-  ],
+  "tomato": [],
   "tofu": [
     "豆干",
     "香干"
