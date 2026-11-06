@@ -74,7 +74,7 @@ function tableExists(db: Database.Database, table: string): boolean {
 }
 
 function clearDatabaseRows(db: Database.Database, userId: string): void {
-  const tables = ["user_profiles", "kitchen_profiles", "ingredient_inventory", "meal_logs", "meal_operations", "web_write_operations", "chat_operations", "weekly_plan_day_status", "cooking_feedback", "weekly_plans", "meal_plans", "user_recipes", "task_states"];
+  const tables = ["user_profiles", "kitchen_profiles", "ingredient_inventory", "meal_logs", "meal_operations", "web_write_operations", "chat_operations", "weekly_plan_day_status", "cooking_feedback", "weekly_plans", "meal_plans", "user_recipes", "task_states", "household_members"];
   const clear = db.transaction(() => {
     for (const table of [...SHOPPING_TABLES, ...tables]) {
       if (tableExists(db, table)) db.prepare(`DELETE FROM ${table} WHERE user_id = ?`).run(userId);
@@ -111,6 +111,7 @@ export function getUserDataOverview(userId: string): UserDataOverview {
       meals: count("meal_logs"), mealOperations: count("meal_operations"), webWriteOperations: count("web_write_operations"), chatOperations: count("chat_operations"), feedback: count("cooking_feedback"), weeklyPlans: count("weekly_plans"), mealPlans: count("meal_plans"),
       userRecipes: count("user_recipes"),
       taskStates: count("task_states"),
+      householdMembers: count("household_members"),
       agentTraces: tableExists(db, "agent_traces") ? count("agent_traces") : 0,
     },
     sessionFiles: countFiles(sessionDir),
@@ -152,6 +153,7 @@ export function exportUserData(userId: string, transcript: readonly Conversation
       agentTraceSpans,
       cookingFeedback: store.getCookingFeedback(userId),
       userRecipes: store.getUserRecipes(userId),
+      householdMembers: store.listHouseholdMembers(userId),
       taskStates: store.listTaskStates(userId),
       weeklyPlans,
       mealPlans,

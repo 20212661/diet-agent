@@ -1,5 +1,22 @@
 import { esc, list, goalLabel, activityLabel, panel, tagList, detailRows, pageIntro, formInput, formSelect, formArea } from "./viewFormatters.js";
 
+/** 单个家庭成员的编辑表单卡片（member 为空 = 新增）。 */
+export function householdMemberEditor(member) {
+  const isNew = !member;
+  const memberId = member?.memberId ?? "";
+  return `<form class="editor-form" data-save-form="household" data-member-id="${esc(memberId)}"><div class="form-grid">${formInput("成员名", "name", member?.name ?? "", "text", `placeholder="例如：小明" maxlength="24"`)}${formArea("过敏", "allergies", member?.allergies)}${formArea("忌口", "avoidFoods", member?.avoidFoods)}${formArea("口味偏好", "preferences", member?.preferences)}${formInput("备注", "notes", member?.notes ?? "", "text", `placeholder="可选，如：小孩" maxlength="200"`)}</div><div class="form-actions"><span>${isNew ? "保存后，排菜时会参与\"今晚谁吃\"的过滤。" : "memberId：" + esc(memberId)}</span>${isNew ? "" : `<button class="danger-button" type="button" data-remove-member="${esc(memberId)}" data-remove-name="${esc(member.name)}">删除成员</button>`}<button class="primary-button" type="submit">${isNew ? "添加成员" : "保存成员"}</button></div></form>`;
+}
+
+/** 家庭成员区块：\"我\"（只读摘要，编辑走上方画像表单）+ 物理成员编辑卡片。 */
+export function householdMembersSection(members) {
+  const self = members?.find((member) => member.isSelf);
+  const others = (members ?? []).filter((member) => !member.isSelf);
+  const selfSummary = panel("我（本人）", `<div class="detail-list"><div class="detail-line"><span class="detail-label">过敏</span><div class="detail-value wrap">${tagList(self?.allergies)}</div></div><div class="detail-line"><span class="detail-label">忌口</span><div class="detail-value wrap">${tagList(self?.avoidFoods)}</div></div><div class="detail-line"><span class="detail-label">口味</span><div class="detail-value wrap">${tagList(self?.preferences)}</div></div></div>`, "在上方\"编辑我的资料\"里维护");
+  const editorCards = others.map((member) => panel(`成员：${esc(member.name)}`, householdMemberEditor(member), `更新于 ${member.notes ? esc(member.notes) + " · " : ""}参与排菜过滤`)).join("");
+  const addCard = panel("添加家庭成员", householdMemberEditor(null), "排菜时按用餐成员的过敏/忌口并集过滤，口味按成员加权");
+  return `<div class="grid section-grid"><div>${selfSummary}${editorCards || `<div class="panel"><p class="support-copy">还没有其他家庭成员。排菜按你本人的画像过滤。</p></div>`}</div><div>${addCard}</div></div>`;
+}
+
 export function profileEditor(profile) {
   return `<form class="editor-form" data-save-form="profile"><div class="form-grid">${formSelect("饮食目标", "goal", profile?.goal, [["", "请选择"], ["fat_loss", "减脂"], ["muscle_gain", "增肌"], ["maintain", "维持体重"], ["healthier_eating", "更健康饮食"], ["custom", "自定义"]])}${formInput("自定义目标", "customGoal", profile?.customGoal ?? "", "text", `placeholder="例如：控制血糖波动"`)}${formInput("身高（cm）", "heightCm", profile?.heightCm ?? "", "number", `min="50" max="260" step="0.1"`)}${formInput("体重（kg）", "weightKg", profile?.weightKg ?? "", "number", `min="10" max="500" step="0.1"`)}${formInput("年龄", "age", profile?.age ?? "", "number", `min="1" max="120"`)}${formInput("性别", "gender", profile?.gender ?? "")}${formSelect("活动水平", "activityLevel", profile?.activityLevel, [["", "请选择"], ["low", "较少活动"], ["medium", "中等活动"], ["high", "高活动量"]])}${formArea("忌口", "avoidFoods", profile?.avoidFoods)}${formArea("过敏信息", "allergies", profile?.allergies)}${formArea("口味偏好", "preferences", profile?.preferences)}${formArea("健康备注", "medicalNotes", profile?.medicalNotes)}</div><div class="form-actions"><span>保存后，饮食助手会在下一条消息中读取最新资料。</span><button class="primary-button" type="submit">保存资料</button></div></form>`;
 }
@@ -9,11 +26,12 @@ export function kitchenEditor(kitchen) {
   return `<form class="editor-form" data-save-form="kitchen"><div class="form-grid">${formInput("灶台数量", "burners", kitchen?.burners ?? 2, "number", `min="0" max="20"`)}${formSelect("烤箱", "hasOven", kitchen?.hasOven, boolOptions())}${formSelect("微波炉", "hasMicrowave", kitchen?.hasMicrowave, boolOptions())}${formSelect("电饭煲", "hasRiceCooker", kitchen?.hasRiceCooker, boolOptions())}${formInput("主动操作上限（分钟）", "maxActiveMinutes", kitchen?.maxActiveMinutes ?? 20, "number", `min="1" max="480"`)}${formInput("总耗时上限（分钟）", "maxTotalMinutes", kitchen?.maxTotalMinutes ?? 35, "number", `min="1" max="720"`)}${formArea("常用厨具", "cookware", kitchen?.cookware)}${formArea("口味偏好", "tastePreferences", kitchen?.tastePreferences)}${formArea("做饭偏好", "cookingPreferences", kitchen?.cookingPreferences)}</div><div class="form-actions"><span>下一次对话会使用这些厨房条件。</span><button class="primary-button" type="submit">保存厨房设置</button></div></form>`;
 }
 
-export function renderProfilePage(profile, description) {
+export function renderProfilePage(profile, description, householdMembers) {
   const intro = pageIntro("YOUR PROFILE", "我的资料", description, `<button class="primary-button" data-chat-prompt="请通过工具更新我的饮食资料。">告诉助手来更新</button>`);
   const body = `<div class="grid section-grid"><div>${panel("身体与目标", detailRows([["饮食目标", esc(goalLabel(profile?.goal))], ["自定义目标", esc(profile?.customGoal || "—")], ["身高", profile?.heightCm ? `${esc(profile.heightCm)} cm` : "—"], ["体重", profile?.weightKg ? `${esc(profile.weightKg)} kg` : "—"], ["年龄", profile?.age ? `${esc(profile.age)} 岁` : "—"], ["性别", esc(profile?.gender || "—")], ["活动水平", esc(activityLabel(profile?.activityLevel))]]), profile ? `更新于 ${profile.updatedAt?.slice(0, 10) ?? "—"}` : "尚未建立饮食画像")}${panel("健康备注", tagList(profile?.medicalNotes), "饮食建议需要留意")}</div><div>${panel("忌口与过敏", `<div class="detail-list"><div class="detail-line"><span class="detail-label">忌口</span><div class="detail-value wrap">${tagList(profile?.avoidFoods)}</div></div><div class="detail-line"><span class="detail-label">过敏</span><div class="detail-value wrap">${tagList(profile?.allergies)}</div></div></div>`, "推荐菜谱会避开这些食物")}${panel("口味偏好", tagList(profile?.preferences), "助手会优先考虑")}${panel("给助手的提示", `<p class="support-copy">这些资料会注入智能体上下文。你可以直接在右侧聊天里说“我最近在……”“请记住我不吃……”来更新。</p>`)}</div></div>`;
   const editor = panel("编辑我的资料", profileEditor(profile), "这些长期信息会参与饮食建议；表单保存代表你确认写入本机数据");
-  return `${intro}${body}${editor}`;
+  const household = panel("家庭成员", householdMembersSection(householdMembers), "多人排菜按用餐成员的过敏/忌口并集过滤；\"我\"在上方表单维护");
+  return `${intro}${body}${editor}${household}`;
 }
 
 export function renderKitchenPage(kitchen, description) {

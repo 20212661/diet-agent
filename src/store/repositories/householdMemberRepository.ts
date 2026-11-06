@@ -9,6 +9,17 @@ export const HOUSEHOLD_MEMBER_LIMIT = 8;
 /** 成员名/备注长度上限（防滥用；与画像字段限长口径一致）。 */
 const NAME_MAX_LENGTH = 24;
 const NOTES_MAX_LENGTH = 200;
+/** 过敏/忌口/口味列表上限：成员列表要进系统提示与"谁吃"解析，逐项与总量都受限。 */
+const LIST_MAX_ITEMS = 20;
+const LIST_ITEM_MAX_LENGTH = 20;
+
+function assertMemberListValid(values: string[], label: string): void {
+  if (values.length > LIST_MAX_ITEMS) throw new Error(`${label}最多 ${LIST_MAX_ITEMS} 项。`);
+  for (const item of values) {
+    if (item.trim().length === 0) throw new Error(`${label}不能包含空项。`);
+    if (item.length > LIST_ITEM_MAX_LENGTH) throw new Error(`${label}每项不超过 ${LIST_ITEM_MAX_LENGTH} 字。`);
+  }
+}
 
 /**
  * 保留成员 ID："我"是主账号的虚拟成员投影（UserProfile），不落本表。
@@ -95,6 +106,9 @@ export function upsertHouseholdMember(
   if (patch.notes !== undefined && patch.notes !== null && patch.notes.length > NOTES_MAX_LENGTH) {
     throw new Error(`成员备注过长（≤${NOTES_MAX_LENGTH} 字）。`);
   }
+  if (patch.allergies !== undefined) assertMemberListValid(patch.allergies, "过敏");
+  if (patch.avoidFoods !== undefined) assertMemberListValid(patch.avoidFoods, "忌口");
+  if (patch.preferences !== undefined) assertMemberListValid(patch.preferences, "口味偏好");
 
   const row = memberId
     ? (db.prepare("SELECT * FROM household_members WHERE user_id = ? AND member_id = ?")

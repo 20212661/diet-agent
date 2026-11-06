@@ -61,4 +61,27 @@ describe("本地用户数据导出与删除", () => {
       rmSync(logDir, { recursive: true, force: true });
     }
   });
+
+  it("隐私三件套覆盖家庭成员：概览计数、导出包含、删除清空", () => {
+    const userId = `privacy_hh_${randomUUID()}`;
+    store.upsertUserProfile(userId, { allergies: ["牛奶"] });
+    store.upsertHouseholdMember(userId, undefined, { name: "小明", allergies: ["虾"] });
+    store.upsertHouseholdMember(userId, undefined, { name: "小红", preferences: ["甜"] });
+
+    const overview = privacy.getUserDataOverview(userId);
+    expect(overview.database.householdMembers).toBe(2);
+
+    let exportPath = "";
+    try {
+      exportPath = privacy.exportUserData(userId, []);
+      const exported = JSON.parse(readFileSync(exportPath, "utf8")) as Record<string, any>;
+      expect(exported.database.householdMembers.map((member: { name: string }) => member.name).sort()).toEqual(["小明", "小红"]);
+
+      privacy.deleteUserData(userId, () => {});
+      expect(privacy.getUserDataOverview(userId).database.householdMembers).toBe(0);
+      expect(store.listHouseholdMembers(userId)).toEqual([]);
+    } finally {
+      if (exportPath) rmSync(exportPath, { force: true });
+    }
+  });
 });

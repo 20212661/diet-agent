@@ -22,10 +22,12 @@ function listSourceFiles(root: string): string[] {
   return files;
 }
 
-const TABLE_PATTERN = /household_members/;
+/** 匹配对 household_members 表的 SQL 访问（SELECT/INSERT/UPDATE/DELETE/DDL）；
+ *  注释里提到表名不算——守卫拦的是绕过仓储直查数据，不是文档。 */
+const SQL_ACCESS_PATTERN = /\b(FROM|INTO|UPDATE|TABLE|INDEX)\s+[^\n;]*\bhousehold_members\b/i;
 
 describe("household_members 表访问守卫", () => {
-  it("除仓储与迁移外，源码不得直接引用 household_members 表", () => {
+  it("除仓储/迁移/数据清理外，源码不得对 household_members 表发 SQL", () => {
     const allowed = new Set([
       // 唯一 SQL 访问点（成员数据的事实源）
       join("store", "repositories", "householdMemberRepository.ts"),
@@ -33,14 +35,15 @@ describe("household_members 表访问守卫", () => {
       join("store", "migrations", "index.ts"),
       // 数据清理路径按表名清空各表（与 meal_plans 等同列的既有模式）
       join("privacy", "userData.ts"),
+      join("store", "repositories", "userDataRepository.ts"),
     ]);
     const offenders: string[] = [];
     for (const file of listSourceFiles(srcRoot)) {
       if (file.includes(join("src", "tests"))) continue; // 测试自身不扫
       const relative = file.slice(srcRoot.length + 1);
       if (allowed.has(relative)) continue;
-      if (TABLE_PATTERN.test(readFileSync(file, "utf-8"))) offenders.push(relative);
+      if (SQL_ACCESS_PATTERN.test(readFileSync(file, "utf-8"))) offenders.push(relative);
     }
-    expect(offenders, `这些文件直接引用了 household_members 表：${offenders.join("、")}`).toEqual([]);
+    expect(offenders, `这些文件对 household_members 表发了 SQL：${offenders.join("、")}`).toEqual([]);
   });
 });

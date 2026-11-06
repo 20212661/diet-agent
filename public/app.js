@@ -75,8 +75,8 @@ function renderPage() {
   if (currentPage === "overview") {
     pageContent.innerHTML = renderOverviewPage(data);
   } else if (currentPage === "profile") {
-    pageContent.innerHTML = renderProfilePage(data.profile, selected.description);
-    pageContent.querySelector("[data-save-form]").dataset.updatedAt = data.profile?.updatedAt ?? "";
+    pageContent.innerHTML = renderProfilePage(data.profile, selected.description, data.householdMembers);
+    pageContent.querySelector("form[data-save-form='profile']").dataset.updatedAt = data.profile?.updatedAt ?? "";
   } else if (currentPage === "kitchen") {
     pageContent.innerHTML = renderKitchenPage(data.kitchen, selected.description);
     pageContent.querySelector("[data-save-form]").dataset.updatedAt = data.kitchen?.updatedAt ?? "";
@@ -312,6 +312,26 @@ async function confirmReceiptImport() {
   }
 }
 
+async function removeHouseholdMember(memberId, name) {
+  if (!confirm(`确定删除家庭成员“${name}”吗？已保存的历史计划不受影响，之后排菜不再计入该成员。`)) return;
+  const endpoint = `/api/household/members/${encodeURIComponent(memberId)}`;
+  const pending = getPendingWrite(endpoint, { memberId });
+  try {
+    const response = await fetch(`${endpoint}?operationId=${encodeURIComponent(pending.operationId)}`, {
+      method: "DELETE",
+      headers: { "X-Diet-User-Id": encodeURIComponent(pending.userId) },
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "删除失败。");
+    localStorage.removeItem(pending.key);
+    data = result.data;
+    renderPage();
+    toast(`已删除家庭成员：${name}`);
+  } catch (error) {
+    toast(error instanceof Error ? error.message : "删除失败，请重试。");
+  }
+}
+
 async function saveEditorForm(form) {
   const fields = new FormData(form);
   let endpoint;
@@ -335,6 +355,14 @@ async function saveEditorForm(form) {
       maxActiveMinutes: fields.get("maxActiveMinutes"), maxTotalMinutes: fields.get("maxTotalMinutes"),
       cookware: splitField(fields.get("cookware")), tastePreferences: splitField(fields.get("tastePreferences")),
       cookingPreferences: splitField(fields.get("cookingPreferences")),
+    };
+  } else if (form.dataset.saveForm === "household") {
+    endpoint = "/api/household/members";
+    payload = {
+      memberId: form.dataset.memberId || undefined,
+      name: fields.get("name"),
+      allergies: splitField(fields.get("allergies")), avoidFoods: splitField(fields.get("avoidFoods")),
+      preferences: splitField(fields.get("preferences")), notes: fields.get("notes") || undefined,
     };
   } else {
     endpoint = "/api/inventory";
@@ -458,6 +486,8 @@ pageContent.addEventListener("change", (event) => {
 pageContent.addEventListener("click", (event) => {
   if (event.target.closest("#receipt-recognize")) recognizeReceipt();
   if (event.target.closest("#receipt-confirm")) confirmReceiptImport();
+  const removeMemberButton = event.target.closest("[data-remove-member]");
+  if (removeMemberButton) removeHouseholdMember(removeMemberButton.dataset.removeMember, removeMemberButton.dataset.removeName);
   const editButton = event.target.closest("[data-edit-item]");
   if (editButton) {
     editingInventoryItemId = editButton.dataset.editItem;

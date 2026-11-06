@@ -84,6 +84,19 @@ describe("家庭成员仓储", () => {
     expect(store.removeHouseholdMember(userId, "m_missing")).toBe(false);
   });
 
+  it("过敏/忌口/口味列表限长：每项 ≤20 字、每列表 ≤20 项、不含空项", () => {
+    const userId = "hh_list_limit_1";
+    expect(() => store.upsertHouseholdMember(userId, undefined, { name: "小明", allergies: ["花".repeat(21)] })).toThrow("每项不超过");
+    expect(() => store.upsertHouseholdMember(userId, undefined, { name: "小明", avoidFoods: [" "] })).toThrow("空项");
+    expect(() => store.upsertHouseholdMember(userId, undefined, { name: "小明", preferences: Array.from({ length: 21 }, (_, i) => `口味${i}`) })).toThrow("最多 20 项");
+    // 恰好在限内可以通过
+    const created = store.upsertHouseholdMember(userId, undefined, {
+      name: "小明",
+      allergies: Array.from({ length: 20 }, (_, i) => `过敏${i}`),
+    });
+    expect(created.allergies).toHaveLength(20);
+  });
+
   it("保留字守卫：名字不得用\"我\"/\"self\"；memberId \"self\" 不可增删改（虚拟成员）", () => {
     const userId = "hh_reserved_1";
     for (const reserved of ["我", "self", "Self", " 我 "]) {
