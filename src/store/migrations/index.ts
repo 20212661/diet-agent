@@ -1,9 +1,9 @@
 import Database from "better-sqlite3";
 import { copyFileSync, existsSync, readdirSync, statSync, unlinkSync } from "node:fs";
 import { dirname, extname, basename, join } from "node:path";
-import { deriveRecipeIngredientMetadata } from "../../recipes/ingredientTaxonomy.js";
+import { deriveRecipeIngredientMetadata, splitJoinedIngredients } from "../../recipes/ingredientTaxonomy.js";
 
-export const CURRENT_SCHEMA_VERSION = 26;
+export const CURRENT_SCHEMA_VERSION = 27;
 
 interface Migration {
   version: number;
@@ -544,6 +544,13 @@ const migrations: readonly Migration[] = [
       recomputeDerivedMetadataV26(db);
     },
   },
+  {
+    version: 27,
+    description: "连写食材名拆分（、/，/,，括号内不拆）+ 派生字段重算——修正整串命中夸大\"库存已有\"",
+    up(db) {
+      recomputeDerivedMetadataV26(db, { splitJoined: true });
+    },
+  },
 ];
 
 /**
@@ -586,7 +593,7 @@ function backfillConfirmedByMemberIds(db: Database.Database): void {
  * ——那个函数在 v18/v19/v22 语境下只处理 recipe_book（当时 user_recipes 尚不存在，
  * fresh 库跑 v18 时若 SELECT 该表会失败）。
  */
-function recomputeDerivedMetadataV26(db: Database.Database): void {
+function recomputeDerivedMetadataV26(db: Database.Database, options: { splitJoined?: boolean } = {}): void {
   const parseArray = (value: unknown): string[] => {
     if (typeof value !== "string" || !value.trim()) return [];
     try {
@@ -608,13 +615,35 @@ function recomputeDerivedMetadataV26(db: Database.Database): void {
       WHERE ${table === "recipe_book" ? "id = ?" : "user_id = ? AND id = ?"}
     `);
     for (const row of rows) {
-      const ingredients = [
-        ...parseArray(row.ingredients_json),
-        ...parseArray(row.optional_ingredients_json),
-        ...parseArray(row.vegetables_json),
-        ...parseArray(row.staples_json),
-        ...(typeof row.primary_protein === "string" && row.primary_protein ? [row.primary_protein] : []),
-      ];
+      const collect = (value: unknown) => parseArray(value);
+      const joined = options.splitJoined
+        ? {
+          ingredients: splitJoinedIngredients(collect(row.ingredients_json)),
+          optionalIngredients: splitJoinedIngredients(collect(row.optional_ingredients_json)),
+          vegetables: splitJoinedIngredients(collect(row.vegetables_json)),
+          staples: splitJoinedIngredients(collect(row.staples_json)),
+        }
+        : null;
+      if (joined) {
+        // 拆分后回写食材列表（运行时匹配按逐项判，整串不再遮蔽缺料）
+        const updateLists = db.prepare(`
+          UPDATE ${table} SET ingredients_json = ?, optional_ingredients_json = ?, vegetables_json = ?, staples_json = ?
+          WHERE ${table === "recipe_book" ? "id = ?" : "user_id = ? AND id = ?"}
+        `);
+        const listArgs: unknown[] = [JSON.stringify(joined.ingredients), JSON.stringify(joined.optionalIngredients), JSON.stringify(joined.vegetables), JSON.stringify(joined.staples)];
+        if (table === "user_recipes") listArgs.push(row.user_id as string);
+        listArgs.push(row.id as string);
+        updateLists.run(...listArgs);
+      }
+      const ingredients = joined
+        ? [...joined.ingredients, ...joined.optionalIngredients, ...joined.vegetables, ...joined.staples]
+        : [
+          ...collect(row.ingredients_json),
+          ...collect(row.optional_ingredients_json),
+          ...collect(row.vegetables_json),
+          ...collect(row.staples_json),
+        ];
+      ingredients.push(...(typeof row.primary_protein === "string" && row.primary_protein ? [row.primary_protein] : []));
       const derived = deriveRecipeIngredientMetadata(ingredients);
       const args: unknown[] = [JSON.stringify(derived.allergenTags), JSON.stringify(derived.ingredientIds)];
       if (table === "user_recipes") args.push(row.user_id as string);

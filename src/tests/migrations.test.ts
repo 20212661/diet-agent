@@ -320,6 +320,21 @@ describe("SQLite 版本化迁移", { timeout: 15_000 }, () => {
     db.close();
   });
 
+  it("v27 连写食材拆分：存量串拆开回写 + 派生重算", () => {
+    const db = new Database(":memory:");
+    runMigrations(db, ":memory:");
+    db.pragma("user_version = 26");
+    db.prepare(`INSERT INTO recipe_book (id, name, mode, ingredients_json, optional_ingredients_json, cookware_json,
+      active_minutes, total_minutes, steps_json, ingredient_ids_json, allergen_tags_json, updated_at)
+      VALUES ('r_joined', '家常小炒', 'quick', '["鸡肉、青椒", "酱油，盐"]', '[]', '[]', 10, 20, '[]', '[]', '[]', 'x')`).run();
+
+    const result = runMigrations(db, ":memory:");
+    expect(result).toMatchObject({ from: 26, to: CURRENT_SCHEMA_VERSION });
+    const row = db.prepare("SELECT ingredients_json FROM recipe_book WHERE id = 'r_joined'").get() as { ingredients_json: string };
+    expect(JSON.parse(row.ingredients_json)).toEqual(["鸡肉", "青椒", "酱油", "盐"]);
+    db.close();
+  });
+
   it("拒绝打开比应用更新的数据库", () => {
     const db = new Database(":memory:");
     db.pragma(`user_version = ${CURRENT_SCHEMA_VERSION + 1}`);

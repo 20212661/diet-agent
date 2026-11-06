@@ -12,6 +12,7 @@
  */
 import { chatJson } from "../howtocook/llmClient.js";
 import type { UserRecipeDraft } from "./types.js";
+import { splitJoinedIngredients } from "../../recipes/ingredientTaxonomy.js";
 
 const MODES = ["quick", "oven", "stovetop", "one_pot", "low_energy", "prep", "freezer_reuse"];
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"];
@@ -72,11 +73,11 @@ function sanitizeDraft(raw: Record<string, unknown>): UserRecipeDraft {
       const goals = stringArray(raw.suitableGoals, 3).filter((goal) => ["fat_loss", "muscle_gain", "balanced"].includes(goal));
       return goals.length > 0 ? goals : ["balanced"];
     })(),
-    ingredients,
-    optionalIngredients: stringArray(raw.optionalIngredients, 40),
+    ingredients: splitJoinedIngredients(ingredients).slice(0, 60),
+    optionalIngredients: splitJoinedIngredients(stringArray(raw.optionalIngredients, 40)).slice(0, 40),
     primaryProtein: typeof raw.primaryProtein === "string" && raw.primaryProtein.trim() ? raw.primaryProtein.trim().slice(0, 30) : undefined,
-    vegetables: stringArray(raw.vegetables, 30),
-    staples: stringArray(raw.staples, 20),
+    vegetables: splitJoinedIngredients(stringArray(raw.vegetables, 30)).slice(0, 30),
+    staples: splitJoinedIngredients(stringArray(raw.staples, 20)).slice(0, 20),
     cookware: stringArray(raw.cookware, 10),
     appliances: pickEnumArray(raw.appliances, APPLIANCES),
     activeMinutes: Math.min(activeMinutes, totalMinutes),
