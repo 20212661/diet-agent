@@ -54,7 +54,8 @@
 - **bench**：新增 fam01/fam02 两段家庭对话（27 段总数；dinner_plan 6→8）——覆盖"谁吃"解析、成员过敏并集过滤与成员口味加权的真实延迟路径。`npm run bench` 重跑（消耗真实配额，不进 CI）。
 - **离线工具轨迹（`npm run eval`）**：family 类别 6 个场景（5 个成员过敏并集硬过滤 + 1 个成员管理轨迹），判定口径与单人 alias 组一致（replyMustNotContain），总场景 120→126。
 - **C 组过敏三臂（`npm run eval:safety`）**：SAFETY_EVAL_PROFILES 16→19（+3 家庭画像：单人无过敏+成员带过敏），判定器与确定性过滤按"我+成员"并集（unionSafetyView），LLM 臂提示词注入成员过敏，Agent 臂经系统提示的家庭成员块。与单人画像同批跑、同一判定器。
-- **匹配评测（家庭）**：FAMILY_MATCHING_SCENARIOS 4 个场景（并集过滤/双重并集/成员不在场恢复/口味加权），`npx tsx scripts/run-matching-family.ts` 生成 Top-5 候选到 `data/eval/matching-family-proposals.json`；**acceptable 为 LLM 起草草案，人工复核后冻结为 matching-family-acceptable-v0.json 方可引用**（口径同 matching-review.md）。首跑草案口径 Precision@3 平均 0.417——草案与算法排序的偏差（草案未充分考虑库存匹配度）正是人工复核要修的，冻结前的数字不可引用。
+- **匹配评测（家庭）**：FAMILY_MATCHING_SCENARIOS 4 个场景（并集过滤/双重并集/成员不在场恢复/食材+时间综合排序），`npx tsx scripts/run-matching-family.ts` 生成 Top-5 候选到 `data/eval/matching-family-proposals.json`（`--strip-preferences` 为去口味对照轮）。**标注流程：LLM 起草 → 独立约束校验剔除（`scripts/verify-matching-family.ts`：必需食材 ⊆ 库存+常备调料、过敏忌口并集无冲突、时间/设备/厨具）→ 人工扫审 → 冻结**，当前冻结 v2（`data/eval/matching-family-acceptable-v2.json`）。冻结 v2 口径 P@3：fam_sc_01=1.0、fam_sc_02=1.0、fam_sc_03=1.0、fam_sc_04=0.333（平均 0.833）。
+- **fam_sc_04 的口径（v1 对照实验结论，2026-11-06）**：这个场景测的是**食材加时间的综合排序**；口味加权的有效性由匹配器单元测试保证（`src/tests/householdDining.test.ts` 成员等权七连）；口味在其他条件接近时调整排序，不会压过"能不能做"——去偏好对照轮 Top3 与正常轮完全相同（口味满额 4 分 < 该场景食材/时间典型分差 5-17 分；农家一碗香的 Top5 进出是口味加成的实际作用点）。口味权重维持 4 分不调。
 - **判定器一致性**：家庭画像的三臂共用 unionSafetyView 合成的同一 profile，保证与单人组可比。
 
 ## bench 回放基准

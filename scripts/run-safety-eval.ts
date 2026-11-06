@@ -32,7 +32,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { RecipeJudgement, SafetyEvalProfile } from "../src/eval/safetyEvalCore.js";
-import { resolveDiningMembers } from "../src/services/household.js";
+import { diningProfileForMatching, resolveDiningMembers } from "../src/services/household.js";
 
 // 严格参数校验：任何未知参数直接报错。
 {
@@ -241,13 +241,16 @@ try {
       const detUserId = `safety_${runId}_${profile.id}_det`;
       setupProfileUser(detUserId, profile);
       const inventory = store.getIngredientInventory(detUserId);
+      const dining = resolveDiningMembers(detUserId);
       const outcome = matcher.matchRecipesDetailed({
         recipes,
         availableIngredients: inventory.availableIngredients,
         shoppingList: inventory.shoppingList,
         kitchenProfile: store.getKitchenProfile(detUserId)!,
-        userProfile: store.getUserProfile(detUserId)!,
-        diningMembers: resolveDiningMembers(detUserId),
+        // 家庭画像：过滤画像必须与判定器同口径（"我"+成员过敏/忌口并集），
+        // 否则成员过敏的菜会被过滤漏掉而判违规（与生产 mealPlanBuilder 同一合成方式）
+        userProfile: diningProfileForMatching(detUserId, dining),
+        diningMembers: dining,
         feedback: store.getCookingFeedback(detUserId),
       });
       const names = outcome.matches.slice(0, 3).map((match) => match.recipe.name);

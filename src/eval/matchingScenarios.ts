@@ -126,24 +126,30 @@ export const FAMILY_MATCHING_SCENARIOS: readonly MatchingScenario[] = [
     id: "fam_sc_01", description: "小明过敏虾：全员用餐，虾菜全部出局",
     availableIngredients: ["虾仁", "鸡蛋", "番茄", "青菜", "面条", "鸡腿", "米饭"], kitchen: defaultKitchen,
     household: { members: [{ name: "小明", allergies: ["虾"] }] },
-    acceptable: ["番茄炒蛋", "蒸蛋羹", "番茄鸡蛋面", "紫菜蛋花汤", "香菇滑鸡", "酱油鸡"],
+    acceptable: ["番茄炒蛋", "番茄鸡蛋面", "酱油鸡", "蔬菜鸡蛋粥"],
   },
   {
     id: "fam_sc_02", description: "小明过敏花生、小红忌口香菜：双重并集",
     availableIngredients: ["鸡腿", "土豆", "西兰花", "番茄", "豆腐", "青菜", "洋葱"], kitchen: defaultKitchen,
     household: { members: [{ name: "小明", allergies: ["花生"] }, { name: "小红", avoidFoods: ["香菜"] }] },
-    acceptable: ["咖喱鸡块", "番茄豆腐一锅炖", "蒜蓉西兰花", "烤鸡腿土豆", "豆腐青菜汤", "番茄炒蛋", "香菇滑鸡"],
+    acceptable: ["番茄豆腐一锅炖", "蒜蓉西兰花", "烤鸡腿土豆", "豆腐青菜汤"],
   },
   {
     id: "fam_sc_03", description: "小明过敏虾但今晚不在：虾菜恢复可用（过滤按在场成员）",
     availableIngredients: ["虾仁", "鸡蛋", "番茄", "青菜", "面条", "鸡腿", "米饭"], kitchen: defaultKitchen,
     household: { members: [{ name: "小明", allergies: ["虾"] }], dining: ["我"] },
-    acceptable: ["虾仁鸡蛋滑豆腐", "番茄炒蛋", "蒸蛋羹", "番茄鸡蛋面", "紫菜蛋花汤", "香菇滑鸡"],
+    acceptable: ["番茄炒蛋", "蒸蛋羹", "番茄鸡蛋面", "蔬菜鸡蛋粥"],
   },
   {
-    id: "fam_sc_04", description: "小明爱辣：口味加权应把辣菜排前（不改变可接受集）",
-    availableIngredients: ["鸡腿", "土豆", "青椒", "花生", "干辣椒", "米饭", "青菜"], kitchen: defaultKitchen,
+    // v0：库存为三道辣菜（宫保鸡丁/农家一碗香/回锅肉）配齐必需食材。
+    // v1：加茄子/纯瘦肉/柠檬，让地三鲜、瘦肉土豆片、柠檬香煎鸡胸三道非辣菜同样可做
+    // （食材可得性与辣菜对齐——v0 对照实验显示口味加成只改分值不改排序，场景在测
+    // 食材匹配；v1 让辣/非辣只在口味上有区别，对照轮去掉偏好后区分度应来自口味）。
+    // 对照实验：去掉小明的口味偏好重跑，观察 Top3 是否被非辣菜挤占；两轮结果见
+    // data/eval/matching-family-proposals{,-no-taste}.json。
+    id: "fam_sc_04", description: "小明爱辣：辣菜与非辣菜食材同样齐全，只靠口味加权分高下",
+    availableIngredients: ["鸡胸肉", "花生", "干辣椒", "青椒", "五花肉", "蒜苗", "豆瓣酱", "小米椒", "米饭", "青菜", "鸡腿", "土豆", "茄子", "纯瘦肉", "柠檬"], kitchen: defaultKitchen,
     household: { members: [{ name: "小明", preferences: ["辣"] }] },
-    acceptable: ["宫保鸡丁", "可乐鸡翅", "青椒土豆炒肉", "农家一碗香", "香菇滑鸡", "酱油鸡"],
+    acceptable: ["宫保鸡丁", "农家一碗香", "回锅肉"],
   },
 ];
