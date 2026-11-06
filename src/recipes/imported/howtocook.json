@@ -128,7 +128,7 @@
         "muscle_gain"
       ],
       "ingredients": [
-        "黑鳕鱼，带皮",
+        "黑鳕鱼",
         "青葱",
         "姜",
         "料酒",
@@ -224,12 +224,14 @@
         "生抽",
         "蚝油",
         "盐",
-        "料酒、朗姆酒或啤酒",
+        "料酒",
+        "朗姆酒或啤酒",
         "香菜",
         "蒜"
       ],
       "optionalIngredients": [],
       "ingredientIds": [
+        "beer",
         "cilantro",
         "cooking_wine",
         "garlic",
@@ -2134,8 +2136,13 @@
       "ingredients": [
         "生鸡肝",
         "蒜苗（蒜苗指的是：大蒜幼苗发育到一定时期的青苗。有些地方叫做青蒜，特别说明一下。）",
-        "大葱、姜、料酒",
-        "食用盐、鸡精（味精）、五香粉（十三香）、胡椒粉",
+        "大葱",
+        "姜",
+        "料酒",
+        "食用盐",
+        "鸡精（味精）",
+        "五香粉（十三香）",
+        "胡椒粉",
         "烧烤料或孜然粉（可选）",
         "芝麻（可选）",
         "食用油"
@@ -2143,11 +2150,15 @@
       "optionalIngredients": [],
       "ingredientIds": [
         "bbq_seasoning_or_cumin_powder",
+        "chicken_essence",
         "chicken_liver",
         "cooking_oil",
+        "cooking_wine",
+        "five_spice_powder",
         "garlic",
         "garlic_sprout",
         "ginger",
+        "pepper_powder",
         "salt",
         "scallion",
         "sesame"
@@ -2992,13 +3003,33 @@
         "muscle_gain"
       ],
       "ingredients": [
-        "主料：`大肉`、`鸡蛋`（可选）、`豆皮`（可选）",
-        "辅料：`生姜`、`冰糖`、`生抽`、`老抽`、`料酒`、`香叶`、`八角`、`盐`、`水`、`葱`（记得要开水）"
+        "大肉",
+        "鸡蛋（可选）",
+        "豆皮（可选）",
+        "生姜",
+        "冰糖",
+        "生抽",
+        "老抽",
+        "料酒",
+        "香叶",
+        "八角",
+        "盐",
+        "水",
+        "葱（记得要开水）"
       ],
       "optionalIngredients": [],
       "ingredientIds": [
+        "bay_leaf",
+        "cooking_wine",
         "egg",
-        "soy_sauce"
+        "ginger",
+        "pork",
+        "salt",
+        "soy_sauce",
+        "star_anise",
+        "sugar",
+        "tofu_skin",
+        "water"
       ],
       "allergenTags": [
         "egg",
@@ -3989,13 +4020,23 @@
       "ingredients": [
         "五花肉条（推荐长宽高为 20cm\\*6cm\\*5cm）",
         "生菜",
-        "酱油，盐，味精，料酒，姜蒜，油，豆瓣酱"
+        "酱油",
+        "盐",
+        "味精",
+        "料酒",
+        "姜蒜",
+        "油",
+        "豆瓣酱"
       ],
       "optionalIngredients": [],
       "ingredientIds": [
+        "cooking_oil",
+        "cooking_wine",
         "garlic",
         "lettuce",
+        "msg",
         "pork",
+        "salt",
         "soy_sauce"
       ],
       "allergenTags": [
@@ -4422,7 +4463,8 @@
       "ingredients": [
         "鸡腿肉",
         "盐焗鸡粉",
-        "葱，姜"
+        "葱",
+        "姜"
       ],
       "optionalIngredients": [],
       "ingredientIds": [
@@ -4498,7 +4540,9 @@
       ],
       "ingredients": [
         "牛肉",
-        "葱、姜、蒜",
+        "葱",
+        "姜",
+        "蒜",
         "尖椒",
         "酱油",
         "盐",
@@ -5003,7 +5047,8 @@
         "生抽",
         "老抽",
         "食用油",
-        "蒜末、姜末",
+        "蒜末",
+        "姜末",
         "小葱（可选）"
       ],
       "optionalIngredients": [],
@@ -7178,12 +7223,16 @@
         "balanced"
       ],
       "ingredients": [
-        "袋装螺蛳粉一包，其中应该包含：",
+        "袋装螺蛳粉一包",
         "米粉",
         "螺蛳肉包（可能放在配料包中）",
         "汤料包",
-        "酸笋包、花生包、豆皮包、木耳包等配料包",
-        "醋包、辣椒油等调味包"
+        "酸笋包",
+        "花生包",
+        "豆皮包",
+        "木耳包等配料包",
+        "醋包",
+        "辣椒油等调味包"
       ],
       "optionalIngredients": [],
       "ingredientIds": [
@@ -7194,6 +7243,8 @@
         "rice_noodle",
         "snail_meat",
         "soup_base",
+        "tofu_skin",
+        "vinegar",
         "wood_ear"
       ],
       "allergenTags": [
@@ -7266,7 +7317,8 @@
         "盐",
         "鸡蛋",
         "葱",
-        "酱油、蚝油或者鸡精",
+        "酱油",
+        "蚝油或者鸡精",
         "白砂糖（中和西红柿的酸味，西红柿如果不酸就不用加）",
         "青椒（非线椒）",
         "香油"
@@ -7275,6 +7327,7 @@
       "ingredientIds": [
         "bell_pepper",
         "egg",
+        "oyster_sauce",
         "salt",
         "scallion",
         "sesame_oil",
@@ -8410,8 +8463,13 @@
         "粉丝",
         "胡萝卜",
         "菜籽油",
-        "盐、生抽、老抽、蚝油",
-        "葱、蒜、干辣椒"
+        "盐",
+        "生抽",
+        "老抽",
+        "蚝油",
+        "葱",
+        "蒜",
+        "干辣椒"
       ],
       "optionalIngredients": [],
       "ingredientIds": [
@@ -8419,8 +8477,12 @@
         "carrot",
         "chili",
         "egg",
+        "garlic",
         "glass_noodles",
+        "oyster_sauce",
         "rapeseed_oil",
+        "salt",
+        "scallion",
         "soy_sauce"
       ],
       "allergenTags": [
@@ -9114,8 +9176,11 @@
       ],
       "ingredients": [
         "新鲜菜心",
-        "生抽、蚝油、盐",
-        "大蒜、小米辣",
+        "生抽",
+        "蚝油",
+        "盐",
+        "大蒜",
+        "小米辣",
         "食用油"
       ],
       "optionalIngredients": [],
@@ -9124,6 +9189,8 @@
         "cooking_oil",
         "garlic",
         "millet",
+        "oyster_sauce",
+        "salt",
         "soy_sauce"
       ],
       "allergenTags": [

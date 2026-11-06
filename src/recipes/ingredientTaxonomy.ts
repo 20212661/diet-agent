@@ -85,7 +85,7 @@ export const BASE_INGREDIENT_DEFINITIONS: readonly IngredientDefinition[] = [
   { id: "chicken_wing", aliases: ["鸡翅"] },
   { id: "chicken", aliases: ["鸡肉"] },
   { id: "beef", aliases: ["肥牛卷", "牛腩", "牛肉"] },
-  { id: "pork", aliases: ["猪里脊", "猪肉末", "梅花肉", "五花肉", "肉丝", "肉末", "排骨", "猪肉"] },
+  { id: "pork", aliases: ["猪里脊", "猪肉末", "梅花肉", "五花肉", "肉丝", "肉末", "排骨", "猪肉", "大肉"] },
   { id: "potato", aliases: ["土豆", "马铃薯"] },
   { id: "onion", aliases: ["洋葱"] },
   { id: "carrot", aliases: ["胡萝卜", "红萝卜"] },
@@ -215,6 +215,47 @@ const PROCESSED_SUFFIXES = ["酱", "油", "粉", "糖", "盐", "汁", "膏", "�
 function processedVariantOf(normalized: string, alias: string): boolean {
   if (normalized === alias || !normalized.startsWith(alias)) return false;
   return (PROCESSED_SUFFIXES as readonly string[]).includes(normalized.slice(alias.length));
+}
+
+/**
+ * 拆分连写食材名：HowToCook 历史抽取与 LLM 抽取都可能产出"酱油，盐，味精，
+ * 料酒"这样的整串（此前靠子串"碰对"维持安全推导、匹配侧则夸大"已有"）。
+ * 按、/，/,拆分（2026-11-07 人工指定）；括号（中英文）内的分隔符不拆——
+ * 注释里的顿号枚举（"（可选：黄瓜、白菜）"）是说明不是并列；每段 trim、空段丢弃。
+ */
+const JOIN_SEPARATORS = ["、", "，", ","];
+
+/** 抽取产物的格式前缀标签（Markdown 菜单体），剥离后才是食材名。 */
+const SEGMENT_PREFIX_LABELS = ["主料：", "辅料：", "调料：", "其中应该包含：", "配料："];
+/** 纯烹饪修饰词（跟在食材后描述形态），不是独立食材。 */
+const SEGMENT_NOISE = new Set(["带皮", "带骨", "去皮", "去骨", "切块", "切片", "切丝"]);
+
+export function splitJoinedIngredients(items: readonly string[]): string[] {
+  const result: string[] = [];
+  for (const item of items) {
+    const segments: string[] = [];
+    let depth = 0;
+    let current = "";
+    for (const char of item) {
+      if (char === "（" || char === "(") depth += 1;
+      else if (char === "）" || char === ")") depth = Math.max(0, depth - 1);
+      if (depth === 0 && JOIN_SEPARATORS.includes(char)) {
+        segments.push(current);
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+    segments.push(current);
+    for (let segment of segments) {
+      for (const label of SEGMENT_PREFIX_LABELS) {
+        if (segment.startsWith(label)) segment = segment.slice(label.length);
+      }
+      const trimmed = segment.replace(/`/g, "").trim();
+      if (trimmed && !SEGMENT_NOISE.has(trimmed)) result.push(trimmed);
+    }
+  }
+  return result;
 }
 
 export function normalizeIngredientId(name: string): string {

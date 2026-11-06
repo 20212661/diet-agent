@@ -659,7 +659,9 @@ export const HTC_INGREDIENT_DEFINITIONS: ReadonlyArray<{
   {
     "id": "tofu_skin",
     "aliases": [
-      "千张"
+      "千张",
+      "豆皮",
+      "豆皮包"
     ],
     "allergens": [
       "soy"
