@@ -74,10 +74,38 @@ export const upsertHouseholdMemberTool: ToolDefinition<typeof Params> = defineTo
     const labels: Record<string, string> = {
       name: "成员名", allergies: "过敏", avoidFoods: "忌口", preferences: "口味偏好", notes: "备注",
     };
+    /** 列表字段更新时按差异展示：新增 / 移除分开；过敏原被移除单独醒目（安全相关，防止误删）。 */
+    const listDiffLines = (key: "allergies" | "avoidFoods" | "preferences"): string[] => {
+      const next = filtered[key] !== undefined ? (filtered[key] as string[]) : undefined;
+      if (next === undefined) return []; // 未传：不动，也不展示
+      if (!existing) return [`${labels[key]}：${next.length > 0 ? next.join("、") : "（清空）"}`];
+      const current = existing[key];
+      const added = next.filter((item) => !current.includes(item));
+      const removed = current.filter((item) => !next.includes(item));
+      const lines: string[] = [];
+      if (added.length > 0) lines.push(`${labels[key]}：新增 ${added.join("、")}`);
+      if (removed.length > 0) {
+        lines.push(key === "allergies"
+          ? `⚠️ 将移除过敏：${removed.join("、")}（移除后相关食材不再对该成员硬过滤，请确认）`
+          : `${labels[key]}：移除 ${removed.join("、")}`);
+      }
+      if (lines.length === 0) lines.push(`${labels[key]}：无变化`);
+      return lines;
+    };
+
     const confirmationLines = [`成员名：${finalName}${existing ? "（更新既有成员）" : "（新增成员）"}`];
-    for (const [key, value] of Object.entries(filtered)) {
-      if (key === "name") continue;
-      confirmationLines.push(`${labels[key] ?? key}：${Array.isArray(value) ? value.join("、") : String(value)}`);
+    if (!existing) {
+      for (const [key, value] of Object.entries(filtered)) {
+        if (key === "name") continue;
+        confirmationLines.push(`${labels[key] ?? key}：${Array.isArray(value) ? value.join("、") : String(value)}`);
+      }
+    } else {
+      for (const key of ["allergies", "avoidFoods", "preferences"] as const) {
+        confirmationLines.push(...listDiffLines(key));
+      }
+      if (filtered.notes !== undefined) {
+        confirmationLines.push(`备注：${filtered.notes === "" ? "（清空）" : String(filtered.notes)}`);
+      }
     }
 
     if (!ctx?.hasUI) {
