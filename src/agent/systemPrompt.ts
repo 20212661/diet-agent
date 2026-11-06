@@ -67,6 +67,8 @@ export function buildUserMemoryPrompt(userId: string): string {
       lines.push(`- ${member.name}（memberId: ${member.memberId}）：过敏 ${joinOrNone(member.allergies)}；忌口 ${joinOrNone(member.avoidFoods)}；口味 ${joinOrNone(member.preferences)}`);
     }
     lines.push("");
+    lines.push("排菜默认全部成员一起吃（过敏忌口按并集硬过滤）；用户说明某人不在/只做某些人吃的，把对应成员传给排菜工具的 diningMembers。");
+    lines.push("");
   }
 
   lines.push("### 厨房画像");

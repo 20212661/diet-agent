@@ -20,14 +20,20 @@ function clampText(value: string, max: number): string {
 /**
  * 生成注入块；无 active 任务返回 undefined（记饮食等无关对话不注入排菜状态）。
  * 体积预算：常规任务 < 300 token。
+ * options.diningMemberNames：调用方解析好的成员显示名（本模块保持纯函数、不查库；
+ * 已删除成员由解析方跳过——ID 无名可解时不展示）。
  */
-export function buildTaskStateInjection(state: TaskState | undefined): string | undefined {
+export function buildTaskStateInjection(
+  state: TaskState | undefined,
+  options: { diningMemberNames?: string[] } = {},
+): string | undefined {
   if (!state || state.status !== "active") return undefined;
 
   const lines: string[] = [HEADER];
   lines.push(`工作流：排菜计划（${state.taskId}）`);
   if (state.goal) lines.push(`目标：${clampText(state.goal, TASK_LIMITS.goalMaxLength)}`);
   if (state.stage) lines.push(`阶段：${state.stage}`);
+  if (options.diningMemberNames?.length) lines.push(`本轮用餐成员：${options.diningMemberNames.join("、")}`);
 
   const constraintParts: string[] = [];
   if (state.constraints.timeLimitMinutes !== undefined) constraintParts.push(`每餐≤${state.constraints.timeLimitMinutes}分钟`);

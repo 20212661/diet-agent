@@ -11,6 +11,7 @@ import { formatNutritionCalories } from "../nutrition/nutritionEstimate.js";
 import { recipeBlockReason } from "../recipes/executionConstraints.js";
 import { mealFitsTimeLimits } from "../recipes/mealTiming.js";
 import { isValidIsoDate } from "../utils/date.js";
+import { diningProfileForMatching, resolveDiningMembers } from "../services/household.js";
 
 const Params = Type.Object({
   userId: Type.String({ description: "用户 ID" }),
@@ -35,6 +36,7 @@ const Params = Type.Object({
       { description: "按天的精力水平覆盖" } as const
     )
   ),
+  diningMembers: Type.Optional(Type.Array(Type.String(), { description: "本周一起吃饭的成员（成员名或 memberId，来自 get_household_members；\"我\"/\"self\"=你本人）。不传=全部成员一起吃" } as const)),
 });
 
 type ParamsType = Static<typeof Params>;
@@ -68,7 +70,7 @@ export const generateWeeklyPlanTool: ToolDefinition<typeof Params> = defineTool(
   parameters: Params,
   promptGuidelines: [
     "生成一周菜单时，必须确保 7 天内主菜不重复（除非菜谱库候选不足）。",
-    "必须避开用户的 avoidFoods 和 allergies。",
+    "必须避开用户的 avoidFoods 和 allergies；涉及家庭成员时先调用 get_household_members，把当次用餐成员传入 diningMembers（不传=全部成员），过敏忌口按用餐成员并集硬过滤。",
     "优先使用库存已有食材，优先处理快过期食材。",
     "如果存在 medicalNotes，提醒用户这不是医疗饮食方案。",
   ],
@@ -91,7 +93,10 @@ export const generateWeeklyPlanTool: ToolDefinition<typeof Params> = defineTool(
     }
     const kitchen = store.getKitchenProfile(params.userId);
     const inventory = store.getIngredientInventory(params.userId);
-    const dietProfile = store.getUserProfile(params.userId);
+    // 家庭多人模式："谁吃"的过敏/忌口并集合成画像（"我"的健康字段保持单人语义）
+    const dining = resolveDiningMembers(params.userId, params.diningMembers, { onUnresolved: "strict" });
+    const diningMemberIds = dining.map((member) => member.memberId);
+    const dietProfile = diningProfileForMatching(params.userId, dining);
     const feedback = store.getCookingFeedback(params.userId);
     const recipes = store.getRecipeBookForUser(params.userId);
 
@@ -132,6 +137,7 @@ export const generateWeeklyPlanTool: ToolDefinition<typeof Params> = defineTool(
         shoppingList: inventory.shoppingList,
         kitchenProfile: kitchen,
         userProfile: dietProfile,
+        diningMembers: dining,
         feedback,
         timeLimitMinutes: kitchen.maxActiveMinutes,
         energyLevel,
@@ -240,17 +246,19 @@ export const generateWeeklyPlanTool: ToolDefinition<typeof Params> = defineTool(
       noteMealPlanToolCall(params.userId, "generate_weekly_plan", {
         ok: false,
         styles: params.preferredStyles,
+        diningMembers: diningMemberIds,
       });
       return noMatchResult;
     }
 
     // 持久化
-    const plan = store.upsertWeeklyPlan(params.userId, monday, days);
+    const plan = store.upsertWeeklyPlan(params.userId, monday, days, diningMemberIds);
     // 结构化任务状态（确定性写入）：成功即已保存（weeklyPlanWeekStartDate=周一起始）
     noteMealPlanToolCall(params.userId, "generate_weekly_plan", {
       ok: true,
       weeklyPlanWeekStartDate: monday,
       styles: params.preferredStyles,
+      diningMembers: diningMemberIds,
     });
     noteSuggestedRecipes(params.userId, days.flatMap((day) => [
       day.mainRecipe.id,

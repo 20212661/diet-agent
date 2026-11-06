@@ -411,6 +411,8 @@ export interface WeeklyPlan {
   days: WeeklyDayPlan[];
   /** 计划状态 */
   status: "active" | "archived";
+  /** 生成时的用餐成员 ID（"self"+物理；缺省=仅"我"，与单人时代一致）。重校验按它重放并集。 */
+  diningMembers?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -459,6 +461,8 @@ export interface MealPlan {
   target?: string;
   goal?: UserGoal;
   constraints?: MealPlanConstraints;
+  /** 生成时的用餐成员 ID（"self"+物理；缺省=仅"我"，与单人时代一致）。重校验按它重放并集。 */
+  diningMembers?: string[];
   createdAt: string;
   updatedAt: string;
 }

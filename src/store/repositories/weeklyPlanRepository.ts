@@ -9,6 +9,8 @@ import { getUserProfile } from "./userProfileRepository.js";
 import { getDatabase } from "../database.js";
 import { nowISO, parseJsonArray, stringifyJson } from "../shared.js";
 import { getMealLogsByDate } from "./mealRepository.js";
+import { listHouseholdMembers } from "./householdMemberRepository.js";
+import { mergeDiningProfile, resolveDiningRefs, selfMemberFromProfile, toDiningMember } from "../../services/diningMembers.js";
 import { isTraceableNutrition } from "../../nutrition/nutritionEstimate.js";
 import { mealFitsTimeLimits } from "../../recipes/mealTiming.js";
 
@@ -22,7 +24,7 @@ function getMondayOfWeek(date?: string): string {
   return `${year}-${month}-${dateOfMonth}`;
 }
 
-export function upsertWeeklyPlan(userId: string, weekStartDate: string, days: WeeklyDayPlan[]): WeeklyPlan {
+export function upsertWeeklyPlan(userId: string, weekStartDate: string, days: WeeklyDayPlan[], diningMembers?: string[]): WeeklyPlan {
   const db = getDatabase();
   const now = nowISO();
   const row = db.prepare(
@@ -30,15 +32,19 @@ export function upsertWeeklyPlan(userId: string, weekStartDate: string, days: We
   ).get(userId, weekStartDate) as { created_at: string; updated_at: string } | undefined;
   const updatedAt = row ? nextUpdatedAt(row.updated_at) : now;
   const plan: WeeklyPlan = {
-    userId, weekStartDate, days, status: "active", createdAt: row?.created_at ?? now, updatedAt,
+    userId, weekStartDate, days, status: "active",
+    ...(diningMembers && diningMembers.length > 0 ? { diningMembers } : {}),
+    createdAt: row?.created_at ?? now, updatedAt,
   };
   db.transaction(() => {
     db.prepare(`
-      INSERT INTO weekly_plans (user_id, week_start_date, days_json, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO weekly_plans (user_id, week_start_date, days_json, status, dining_members_json, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(user_id, week_start_date) DO UPDATE SET
-        days_json = excluded.days_json, status = excluded.status, updated_at = excluded.updated_at
-    `).run(userId, weekStartDate, stringifyJson(days), "active", plan.createdAt, updatedAt);
+        days_json = excluded.days_json, status = excluded.status,
+        dining_members_json = excluded.dining_members_json, updated_at = excluded.updated_at
+    `).run(userId, weekStartDate, stringifyJson(days), "active",
+      plan.diningMembers ? stringifyJson(plan.diningMembers) : null, plan.createdAt, updatedAt);
     db.prepare("DELETE FROM weekly_plan_day_status WHERE user_id = ? AND week_start_date = ?").run(userId, weekStartDate);
   })();
   return plan;
@@ -54,7 +60,13 @@ export function getWeeklyPlan(userId: string, weekStartDate?: string): WeeklyPla
   const recipeBook = getRecipeBookForUser(userId);
   const recipesById = new Map(recipeBook.map((recipe) => [recipe.id, recipe]));
   const kitchen = getKitchenProfile(userId);
-  const profile = getUserProfile(userId);
+  // 读取时重校验：按计划保存时的用餐成员重放过敏/忌口并集（已删除成员的引用被忽略）
+  const savedProfile = getUserProfile(userId);
+  const savedDining = resolveDiningRefs(
+    [selfMemberFromProfile(savedProfile), ...listHouseholdMembers(userId).map(toDiningMember)],
+    parseJsonArray<string>(row.dining_members_json as string | null),
+  ).members;
+  const profile = mergeDiningProfile(savedProfile, savedDining);
   const safeRecipeIds = new Set(recipeBook.filter((recipe) => !recipeBlockReason(recipe, kitchen, profile)).map((recipe) => recipe.id));
   const days = parseJsonArray<WeeklyDayPlan>(row.days_json as string).map((day) => {
     const completion = getDatabase().prepare(`
@@ -107,6 +119,7 @@ export function getWeeklyPlan(userId: string, weekStartDate?: string): WeeklyPla
     weekStartDate: row.week_start_date as string,
     days,
     status: row.status as WeeklyPlan["status"],
+    ...(row.dining_members_json ? { diningMembers: parseJsonArray<string>(row.dining_members_json as string) } : {}),
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -172,7 +185,12 @@ export function setWeeklyPlanDayCompleted(
     if (!targetDay) return { status: "conflict" } as const;
     if (completed) {
       const kitchen = getKitchenProfile(userId);
-      const profile = getUserProfile(userId);
+      const baseProfile = getUserProfile(userId);
+      const dining = resolveDiningRefs(
+        [selfMemberFromProfile(baseProfile), ...listHouseholdMembers(userId).map(toDiningMember)],
+        parseJsonArray<string>(row.dining_members_json as string | null),
+      ).members;
+      const profile = mergeDiningProfile(baseProfile, dining);
       const recipe = getRecipeBookForUser(userId).find((r) => r.id === recipeId);
       if (!recipe || recipeBlockReason(recipe, kitchen, profile)) {
         return { status: "conflict" } as const;

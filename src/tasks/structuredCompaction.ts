@@ -20,6 +20,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { getInjectableTask } from "./taskStateService.js";
 import { buildTaskStateInjection } from "./taskStateInjection.js";
+import { diningMemberNames } from "../services/household.js";
 
 /** 最近对话摘尾的字符预算（serializeConversation 已把工具结果截到 2000 字）。 */
 const RECENT_CONVERSATION_CHAR_BUDGET = 6_000;
@@ -55,7 +56,9 @@ export function structuredCompactionHandler(
         console.error(`[compact:debug] env=${process.env.DIET_STRUCTURED_COMPACT ?? "(unset)"} state=${state ? state.taskId : "无"}`);
       }
       if (!state) return undefined;
-      const stateBlock = buildTaskStateInjection(state);
+      const stateBlock = buildTaskStateInjection(state, {
+        diningMemberNames: state.diningMembers ? diningMemberNames(state.userId, state.diningMembers) : undefined,
+      });
       if (!stateBlock) return undefined;
       const conversationText = serializeConversation(convertToLlm(event.preparation.messagesToSummarize));
       return {

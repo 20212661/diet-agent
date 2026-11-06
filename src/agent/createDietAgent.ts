@@ -43,6 +43,7 @@ import { setActiveUserMessage, detectUnsavedMealClaim, MEAL_CLAIM_UNSAVED_NOTICE
 import { waitForPendingExtraction, enqueueExtraction } from "../tasks/extractionQueue.js";
 import { extractAndApplyTaskPatch } from "../tasks/taskStateExtractor.js";
 import { buildTaskStateInjection } from "../tasks/taskStateInjection.js";
+import { diningMemberNames } from "../services/household.js";
 import { captureRuleRejections, extractionSignalCheck, getInjectableTask, hasActiveTask } from "../tasks/taskStateService.js";
 import { structuredCompactionExtension } from "../tasks/structuredCompaction.js";
 import * as store from "../store/index.js";
@@ -613,7 +614,10 @@ export async function runAgentSessionTurn(
   // 与 web 层的消息哈希都继续用原始 message，避免时间块污染两者。
   // 任务状态块（active 且最近活跃才有）：块内自带「数据非指令」标注与限长；
   // NLP 启发式与 web 消息哈希继续用原始 message（见下）。
-  const taskBlock = buildTaskStateInjection(getInjectableTask(userId));
+  const injectableTask = getInjectableTask(userId);
+  const taskBlock = buildTaskStateInjection(injectableTask, {
+    diningMemberNames: injectableTask?.diningMembers ? diningMemberNames(userId, injectableTask.diningMembers) : undefined,
+  });
   const promptMessage = [currentDateTimeContext(), taskBlock, message].filter(Boolean).join("\n\n");
   let promptError: unknown;
   try {

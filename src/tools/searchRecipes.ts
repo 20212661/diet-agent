@@ -7,6 +7,7 @@ import { recipeBlockReason } from "../recipes/executionConstraints.js";
 import { matchRecipes } from "../recipes/recipeMatcher.js";
 import { noteSuggestedRecipes, rejectedRecipeIdsForUser } from "../tasks/taskStateService.js";
 import { getRetriever } from "../rag/index.js";
+import { diningProfileForMatching, resolveDiningMembers } from "../services/household.js";
 import { isAvailable, type EnergyLevel, type IngredientItem } from "../types/diet.js";
 
 const Params = Type.Object({
@@ -18,6 +19,7 @@ const Params = Type.Object({
     Type.Union([Type.Literal("low"), Type.Literal("normal")], { description: "精力状态" } as const)
   ),
   limit: Type.Optional(Type.Number({ description: "返回数量，默认 5，最多 10" } as const)),
+  diningMembers: Type.Optional(Type.Array(Type.String(), { description: "一起吃饭的成员（成员名或 memberId，来自 get_household_members）；不传=全部成员" } as const)),
 });
 
 type ParamsType = Static<typeof Params>;
@@ -53,7 +55,8 @@ export const searchRecipesTool: ToolDefinition<typeof Params> = defineTool({
   ) {
     const kitchen = store.getKitchenProfile(params.userId);
     const inventory = store.getIngredientInventory(params.userId);
-    const userProfile = store.getUserProfile(params.userId);
+    const dining = resolveDiningMembers(params.userId, params.diningMembers, { onUnresolved: "strict" });
+    const userProfile = diningProfileForMatching(params.userId, dining);
     const feedback = store.getCookingFeedback(params.userId);
     // 候选菜谱：有自然语言 query 时优先 RAG 语义召回（top-20），否则用关键词预筛。
     // 用户隔离：候选集=全局库+该用户自己的导入，RAG 召回同样按该集合过滤。
@@ -84,6 +87,7 @@ export const searchRecipesTool: ToolDefinition<typeof Params> = defineTool({
       shoppingList: inventory.shoppingList,
       kitchenProfile: kitchen,
       userProfile,
+      diningMembers: dining,
       feedback,
       timeLimitMinutes: params.timeLimitMinutes,
       energyLevel: params.energyLevel as EnergyLevel | undefined,
