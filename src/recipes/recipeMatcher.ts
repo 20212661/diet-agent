@@ -326,29 +326,33 @@ export function matchRecipesDetailed(input: MatchRecipeInput): MatchRecipeOutcom
       reasons.push("适合烤箱优先偏好");
     }
 
-    // 口味偏好：厨房画像恒为基线（单人语义）；
-    // 多人时叠加物理成员的口味加权——分母是"填了口味偏好的物理成员数"，
-    // 因此某成员与未填口味的成员一起吃，得分和他单独吃时一致。
+    // 口味偏好（成员等权）："我"的口味取自厨房画像，作为普通成员参与——
+    // 只有"我"在本次用餐成员里时才计入；每个填了口味的用餐成员只看命中与否
+    // （任一偏好命中即一次，多项命中不叠加）；得分 = 4 × 命中成员数 ÷ 填了口味的
+    // 用餐成员数（上限 4）。不传 diningMembers = 单人旧行为，逐字节保持。
     const matchedTaste = (recipe.tasteTags ?? []).filter((tag) =>
       tastePrefs.some((tp) => norm(tp).includes(norm(tag)) || norm(tag).includes(norm(tp)))
     );
-    if (matchedTaste.length > 0) {
-      score += 4;
-      reasons.push(`符合口味偏好：${matchedTaste.join("、")}`);
-    }
-    const memberTaste = input.diningMembers?.filter((member) => !member.isSelf && member.preferences.length > 0) ?? [];
-    if (memberTaste.length > 0) {
-      const likedBy: string[] = [];
-      for (const member of memberTaste) {
-        const hits = (recipe.tasteTags ?? []).filter((tag) =>
-          member.preferences.some((tp) => norm(tp).includes(norm(tag)) || norm(tag).includes(norm(tp)))
-        );
-        if (hits.length > 0) {
-          score += (4 * hits.length) / memberTaste.length;
-          likedBy.push(member.name);
+    if (input.diningMembers === undefined) {
+      if (matchedTaste.length > 0) {
+        score += 4;
+        reasons.push(`符合口味偏好：${matchedTaste.join("、")}`);
+      }
+    } else {
+      const voters = input.diningMembers
+        .map((member) => ({ member, prefs: member.isSelf ? tastePrefs : member.preferences }))
+        .filter((entry) => entry.prefs.length > 0);
+      if (voters.length > 0) {
+        const hitNames = voters
+          .filter(({ prefs }) => (recipe.tasteTags ?? []).some((tag) =>
+            prefs.some((tp) => norm(tp).includes(norm(tag)) || norm(tag).includes(norm(tp)))
+          ))
+          .map(({ member }) => member.name);
+        if (hitNames.length > 0) {
+          score += Math.min(4, (4 * hitNames.length) / voters.length);
+          reasons.push(`符合${hitNames.join("、")}的口味偏好`);
         }
       }
-      if (likedBy.length > 0) reasons.push(`符合${likedBy.join("、")}的口味偏好`);
     }
 
     // desiredStyle 命中

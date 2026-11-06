@@ -104,50 +104,65 @@ describe("用餐成员并集硬过滤", () => {
   });
 });
 
-describe("口味按成员加权（分母=填了口味偏好的成员数）", () => {
-  it("两人用餐只有一人填口味：得分与该成员单独用餐一致", () => {
-    const spicy = recipe({});
-    const base = {
-      recipes: [spicy], availableIngredients: [{ name: "鸡肉" }], shoppingList: [],
-      kitchenProfile: kitchen, feedback: [],
-    };
-    const memberA = { memberId: "m_aaaaaaaa", name: "小明", isSelf: false, allergies: [], avoidFoods: [], preferences: ["辣"] };
-    const selfNoPref = { memberId: "self", name: "我", isSelf: true, allergies: [], avoidFoods: [], preferences: [] };
+describe("口味成员等权（命中人数 ÷ 填了口味的用餐成员数，上限 4）", () => {
+  const spicy = recipe({});
+  const sweet = recipe({ id: "r_sweet", name: "糖醋鸡丁", tasteTags: ["甜"] });
+  const spicySweet = recipe({ id: "r_both", name: "宫保鸡丁", tasteTags: ["辣", "甜"] });
+  const selfL = { memberId: "self", name: "我", isSelf: true, allergies: [], avoidFoods: [], preferences: [] };
+  const xiaomingL = { memberId: "m_aaaaaaaa", name: "小明", isSelf: false, allergies: [], avoidFoods: [], preferences: ["辣"] };
+  const xiaohongS = { memberId: "m_bbbbbbbb", name: "小红", isSelf: false, allergies: [], avoidFoods: [], preferences: ["甜"] };
 
-    const alone = matchRecipesDetailed({ ...base, diningMembers: [memberA] }).matches[0]!;
-    const together = matchRecipesDetailed({ ...base, diningMembers: [selfNoPref, memberA] }).matches[0]!;
-    expect(together.score).toBe(alone.score); // "我"没填口味 → 不稀释小明的口味分
-    expect(together.reasons).toContain("符合小明的口味偏好");
-
-    // 未填口味的第二位成员同样不稀释（分母只数填了的人）
-    const memberB = { ...memberA, memberId: "m_bbbbbbbb", name: "小红", preferences: [] };
-    const three = matchRecipesDetailed({ ...base, diningMembers: [selfNoPref, memberA, memberB] }).matches[0]!;
-    expect(three.score).toBe(alone.score);
-  });
-
-  it("两位成员都填口味：按人头归一（合计仍为单人满额，不翻倍）", () => {
-    const spicy = recipe({});
-    const base = {
-      recipes: [spicy], availableIngredients: [{ name: "鸡肉" }], shoppingList: [],
-      kitchenProfile: kitchen, feedback: [],
-    };
-    const memberA = { memberId: "m_aaaaaaaa", name: "小明", isSelf: false, allergies: [], avoidFoods: [], preferences: ["辣"] };
-    const memberB = { memberId: "m_bbbbbbbb", name: "小红", isSelf: false, allergies: [], avoidFoods: [], preferences: ["辣"] };
-    const alone = matchRecipesDetailed({ ...base, diningMembers: [memberA] }).matches[0]!;
-    const both = matchRecipesDetailed({ ...base, diningMembers: [memberA, memberB] }).matches[0]!;
-    expect(both.score).toBe(alone.score); // 2 人 × (4*1/2) = 单人 4×1
-    expect(both.reasons).toContain("符合小明、小红的口味偏好");
-  });
-
-  it("单人回归：不传 diningMembers 时输出与旧口径一致（无成员口味行）", () => {
-    const spicy = recipe({});
-    const kitchenWithTaste = { ...kitchen, tastePreferences: ["辣"] };
-    const result = matchRecipesDetailed({
-      recipes: [spicy], availableIngredients: [{ name: "鸡肉" }], shoppingList: [],
-      kitchenProfile: kitchenWithTaste, feedback: [],
+  const plain = recipe({ id: "r_plain", name: "白切鸡", tasteTags: [] });
+  const run = (kitchenTaste: string[], dining: unknown, target: RecipeRecord = spicy) =>
+    matchRecipesDetailed({
+      recipes: [target], availableIngredients: [{ name: "鸡肉" }], shoppingList: [],
+      kitchenProfile: { ...kitchen, tastePreferences: kitchenTaste }, feedback: [],
+      ...(dining !== undefined ? { diningMembers: dining as never } : {}),
     }).matches[0]!;
+  /** 同条件下无口味标签的菜作基线：分差即纯口味分。 */
+  const tasteBonus = (kitchenTaste: string[], dining: unknown, target: RecipeRecord = spicy) =>
+    run(kitchenTaste, dining, target).score - run(kitchenTaste, dining, plain).score;
+
+  it("单人（不传 diningMembers）命中得 4，与旧口径逐字节一致", () => {
+    const result = run(["辣"], undefined);
     expect(result.reasons).toContain("符合口味偏好：辣");
+    expect(tasteBonus(["辣"], undefined)).toBe(4);
+    // 不传成员时不出现成员口径的理由行
     expect(result.reasons.every((reason) => !reason.includes("的口味偏好"))).toBe(true);
+  });
+
+  it("两人只有'我'填口味（厨房画像）且命中：得 4", () => {
+    const noTasteXiaoming = { ...xiaomingL, preferences: [] };
+    const result = run(["辣"], [selfL, noTasteXiaoming]);
+    expect(tasteBonus(["辣"], [selfL, noTasteXiaoming])).toBe(4);
+    expect(result.reasons).toContain("符合我的口味偏好");
+  });
+
+  it("两人都填都命中：得 4", () => {
+    const result = run(["辣"], [selfL, xiaomingL]); // 我（厨房：辣）+ 小明（辣）
+    expect(tasteBonus(["辣"], [selfL, xiaomingL])).toBe(4);
+    expect(result.reasons).toContain("符合我、小明的口味偏好");
+  });
+
+  it("两人都填、一人命中：得 2", () => {
+    const result = run(["辣"], [selfL, xiaohongS]); // 我命中（辣）、小红不命中（甜≠辣）
+    expect(tasteBonus(["辣"], [selfL, xiaohongS])).toBe(2);
+    expect(result.reasons).toContain("符合我的口味偏好");
+    expect(result.reasons.join()).not.toContain("小红");
+  });
+
+  it("'我'不在用餐成员时厨房口味不参与：只按在场成员计算", () => {
+    // 厨房口味是"甜"（只属于"我"），但"我"不在场：甜命中不产生任何口味分
+    const onlyXiaoming = run(["甜"], [xiaomingL], spicy); // 小明（辣）命中辣
+    expect(tasteBonus(["甜"], [xiaomingL], spicy)).toBe(4); // 命中小明 → 满分，厨房"甜"未叠加
+    expect(onlyXiaoming.reasons).toContain("符合小明的口味偏好");
+    // 反向：只有厨房口味能命中的菜（甜），"我"不在场时得 0 分口味
+    expect(tasteBonus(["甜"], [xiaomingL], sweet)).toBe(0);
+  });
+
+  it("一道菜命中某成员多项偏好仍按一次计", () => {
+    const greedy = { ...xiaomingL, preferences: ["辣", "甜"] }; // 两项都命中 spicySweet
+    expect(tasteBonus([], [greedy], spicySweet)).toBe(4); // 不是 8
   });
 });
 
