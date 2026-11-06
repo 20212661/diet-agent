@@ -29,6 +29,7 @@ export {
 export { addCookingFeedback, getCookingFeedback } from "./repositories/feedbackRepository.js";
 export { getRecipeBook, getRecipeById, upsertRecipe } from "./repositories/recipeRepository.js";
 export {
+  confirmDismissedAllergenWarning,
   deleteUserRecipe,
   getAllUserRecipes,
   getRecipeBookForUser,

@@ -60,9 +60,10 @@ describe("household_members 表访问守卫", () => {
       join("tools", "getHouseholdMembers.ts"),
       join("tools", "upsertHouseholdMember.ts"),
       join("tools", "removeHouseholdMember.ts"),
-      // 展示类消费（系统提示注入/dashboard），不做过滤决策
+      // 展示类消费（系统提示注入/dashboard/菜谱页重提示条），不做过滤决策
       join("agent", "systemPrompt.ts"),
       join("web", "server.ts"),
+      join("web", "routes", "recipes.ts"),
       // 数据导出（隐私三件套，非过滤路径）
       join("privacy", "userData.ts"),
       // 仓储层读取重校验：不能反向依赖 services（store→services→store 循环），

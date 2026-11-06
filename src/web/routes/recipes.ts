@@ -27,6 +27,8 @@ import {
 } from "../../import/userRecipe/saveRecipe.js";
 import { deleteRecipeIndexEntries, indexRecipeIncrementally } from "../../rag/index.js";
 import * as store from "../../store/index.js";
+import { listDiningMembers } from "../../services/household.js";
+import { resurfaceDismissedWarnings, resurfaceReason } from "../../recipes/allergenResurface.js";
 
 const PREVIEW_TEXT_MAX = 20000;
 const PREVIEW_TEXT_MIN = 30;
@@ -133,16 +135,57 @@ export async function handleRecipeImportRoutes(ctx: RouteContext): Promise<boole
   }
 
   if (request.method === "GET" && url.pathname === "/api/recipes/mine") {
-    const recipes = store.getUserRecipes(ctx.userId).map((recipe) => ({
-      id: recipe.id,
-      name: recipe.name,
-      allergenTags: recipe.allergenTags,
-      ingredientCount: recipe.ingredients.length + (recipe.optionalIngredients?.length ?? 0),
-      activeMinutes: recipe.activeMinutes,
-      totalMinutes: recipe.totalMinutes,
-      updatedAt: recipe.updatedAt,
-    }));
+    // 查看场景按全部成员计算重提示（不知道"今晚谁吃"）；提示条只展示，不拦截
+    const members = listDiningMembers(ctx.userId);
+    const recipes = store.getUserRecipes(ctx.userId).map((recipe) => {
+      const resurfaced = resurfaceDismissedWarnings(recipe.dismissedAllergenWarnings, members);
+      return {
+        id: recipe.id,
+        name: recipe.name,
+        allergenTags: recipe.allergenTags,
+        ingredientCount: recipe.ingredients.length + (recipe.optionalIngredients?.length ?? 0),
+        activeMinutes: recipe.activeMinutes,
+        totalMinutes: recipe.totalMinutes,
+        updatedAt: recipe.updatedAt,
+        ...(resurfaced.length > 0 ? { resurfacedWarnings: resurfaced.map((warning) => ({
+          definitionId: warning.definitionId,
+          ingredient: warning.ingredient,
+          allergens: warning.allergens,
+          affectedMembers: warning.affectedMembers,
+          message: resurfaceReason(warning),
+        })) } : {}),
+      };
+    });
     sendJson(response, 200, { recipes });
+    return true;
+  }
+
+  // 查看场景的"已为某成员确认"：把该成员记入警告的确认名单（writeOnce 栅栏）
+  const confirmMatch = /^\/api\/recipes\/mine\/([^/]+)\/warning-confirm$/.exec(url.pathname);
+  if (request.method === "POST" && confirmMatch) {
+    const recipeId = decodeURIComponent(confirmMatch[1]!);
+    let payload: Record<string, unknown>;
+    try {
+      payload = await readJson(request);
+    } catch (error) {
+      sendJson(response, 400, { error: error instanceof Error ? error.message : "请求体无效。" });
+      return true;
+    }
+    try {
+      const result = await ctx.executeWebWriteOnce(url.pathname, { ...payload, recipeId }, () => {
+        const definitionId = typeof payload.definitionId === "string" ? payload.definitionId : "";
+        const memberId = typeof payload.memberId === "string" ? payload.memberId : "";
+        if (!definitionId || !memberId) throw new Error("需要提供 definitionId 与 memberId。");
+        // 校验成员有效（"我"或既有物理成员），防止把任意字符串写进确认名单
+        const members = listDiningMembers(ctx.userId);
+        if (!members.some((member) => member.memberId === memberId)) throw new Error("成员不存在。");
+        const warnings = store.confirmDismissedAllergenWarning(ctx.userId, recipeId, definitionId, memberId);
+        return { saved: true as const, dismissedAllergenWarnings: warnings };
+      });
+      sendJson(response, 200, result);
+    } catch (error) {
+      sendWriteError(response, error, "确认失败。");
+    }
     return true;
   }
 

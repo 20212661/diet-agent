@@ -152,11 +152,19 @@ export function createRecipeImportController({ root, getData, getPendingWrite, t
     if (state.mine.recipes.length === 0) {
       return `<div class="import-section"><h3>我导入的菜谱</h3><p class="support-copy">还没有导入过菜谱。上面粘贴一份试试。</p></div>`;
     }
-    const rows = state.mine.recipes.map((recipe) => `
+    const rows = state.mine.recipes.map((recipe) => {
+      const warningBars = (recipe.resurfacedWarnings ?? []).map((warning) => `
+        <div class="import-finding warning">
+          <div class="finding-main"><strong>⚠️ ${esc(warning.message)}</strong>
+            <small>推荐时这道菜会先被拦下，直到涉及的成员都确认"与菜无关"。</small></div>
+          <div class="finding-actions">${warning.affectedMembers.map((member) => `<button type="button" class="text-button" data-warning-confirm="${esc(recipe.id)}" data-warning-definition="${esc(warning.definitionId)}" data-warning-member="${esc(member.memberId)}" data-warning-name="${esc(member.name)}">已为${esc(member.name)}确认</button>`).join("")}</div>
+        </div>`).join("");
+      return `
       <div class="import-finding"><div class="finding-main"><strong>${esc(recipe.name)}</strong>
         <small>${recipe.ingredientCount} 项食材 · 主动 ${recipe.activeMinutes} 分钟 / 总计 ${recipe.totalMinutes} 分钟 · 过敏原：${recipe.allergenTags.length ? esc(recipe.allergenTags.join("、")) : "无已知"}</small></div>
         <div class="finding-actions"><button type="button" class="text-button" data-recipe-delete="${esc(recipe.id)}">删除</button></div>
-      </div>`).join("");
+      </div>${warningBars}`;
+    }).join("");
     return `<div class="import-section"><h3>我导入的菜谱（${state.mine.recipes.length}）</h3>${rows}</div>`;
   }
 
@@ -272,6 +280,27 @@ export function createRecipeImportController({ root, getData, getPendingWrite, t
     }
   }
 
+  async function requestWarningConfirm(recipeId, definitionId, memberId, memberName) {
+    if (!window.confirm(`确认"${memberName}"与这道菜无关？确认后为${memberName}排菜时不再因这条警告拦下它。`)) return;
+    const endpoint = `/api/recipes/mine/${encodeURIComponent(recipeId)}/warning-confirm`;
+    const pending = getPendingWrite(endpoint, { definitionId, memberId });
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Diet-User-Id": encodeURIComponent(pending.userId) },
+        body: JSON.stringify({ ...pending.payload, operationId: pending.operationId }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "确认失败。");
+      localStorage.removeItem(pending.key);
+      toast(`已为${memberName}确认。`);
+      await loadMine();
+      rerender();
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "确认失败，请重试。");
+    }
+  }
+
   function addOmissionIngredient(definitionId, alias) {
     const textarea = $("#ri-ingredients");
     if (textarea) {
@@ -317,6 +346,11 @@ export function createRecipeImportController({ root, getData, getPendingWrite, t
     }
     const deleteTarget = event.target.closest("[data-recipe-delete]");
     if (deleteTarget) { requestDelete(deleteTarget.dataset.recipeDelete); return; }
+    const confirmTarget = event.target.closest("[data-warning-confirm]");
+    if (confirmTarget) {
+      requestWarningConfirm(confirmTarget.dataset.warningConfirm, confirmTarget.dataset.warningDefinition, confirmTarget.dataset.warningMember, confirmTarget.dataset.warningName);
+      return;
+    }
   });
 
   return { render, loadMine };

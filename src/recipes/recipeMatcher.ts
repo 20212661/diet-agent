@@ -18,6 +18,7 @@ import { isAvailable, isAvailableOn } from "../types/diet.js";
 import { getVerifiedCalories } from "../nutrition/nutritionEstimate.js";
 import { normalizeIngredientId } from "./ingredientTaxonomy.js";
 import { assessFoodSafety } from "./foodSafety.js";
+import { resurfaceDismissedWarnings, resurfaceReason } from "./allergenResurface.js";
 import type { DiningMember } from "../services/diningMembers.js";
 
 // ---- 输入输出类型 ----
@@ -180,6 +181,18 @@ export function matchRecipesDetailed(input: MatchRecipeInput): MatchRecipeOutcom
         blockers.add(`部分食材无法确认是否符合过敏/忌口要求：${uncertain.join("、")}`);
       }
       continue;
+    }
+
+    // ========== 1b. 被忽略过敏原警告的跨成员重提示（家庭多人模式） ==========
+    // 导入时"与菜无关"的忽略只对已确认成员负责：命中未确认用餐成员的过敏原
+    // 时按 needs_verification 拦截并写明涉及哪位成员（确认后不再拦）。
+    // 不传 diningMembers（单人旧调用）不启用——忽略人本人已确认。
+    if (input.diningMembers && recipe.dismissedAllergenWarnings?.length) {
+      const resurfaced = resurfaceDismissedWarnings(recipe.dismissedAllergenWarnings, input.diningMembers);
+      if (resurfaced.length > 0) {
+        for (const warning of resurfaced) blockers.add(resurfaceReason(warning));
+        continue;
+      }
     }
 
     // ========== 2. 食材匹配 ==========
