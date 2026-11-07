@@ -3233,6 +3233,7 @@
       "carrot",
       "ginger",
       "pork",
+      "pork_ribs",
       "potato",
       "star_anise"
     ],
@@ -5709,6 +5710,7 @@
       "ginger",
       "goji",
       "pork",
+      "pork_ribs",
       "red_date"
     ],
     "allergenTags": []

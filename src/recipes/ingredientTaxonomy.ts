@@ -85,7 +85,7 @@ export const BASE_INGREDIENT_DEFINITIONS: readonly IngredientDefinition[] = [
   { id: "chicken_wing", aliases: ["鸡翅"] },
   { id: "chicken", aliases: ["鸡肉"] },
   { id: "beef", aliases: ["肥牛卷", "牛腩", "牛肉"] },
-  { id: "pork", aliases: ["猪里脊", "猪肉末", "梅花肉", "五花肉", "肉丝", "肉末", "排骨", "猪肉", "大肉"] },
+  { id: "pork", aliases: ["猪里脊", "猪肉末", "梅花肉", "五花肉", "肉丝", "肉末", "猪肉", "大肉"] },
   { id: "potato", aliases: ["土豆", "马铃薯"] },
   { id: "onion", aliases: ["洋葱"] },
   { id: "carrot", aliases: ["胡萝卜", "红萝卜"] },

@@ -365,7 +365,9 @@ export const HTC_INGREDIENT_DEFINITIONS: ReadonlyArray<{
   {
     "id": "pork_ribs",
     "aliases": [
-      "肋排"
+      "肋排",
+      "排骨",
+      "排骨（推荐精排）"
     ],
     "allergens": [],
     "possibleAllergens": []
