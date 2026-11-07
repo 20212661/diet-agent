@@ -19,6 +19,7 @@ import { getVerifiedCalories } from "../nutrition/nutritionEstimate.js";
 import { normalizeIngredientId } from "./ingredientTaxonomy.js";
 import { assessFoodSafety } from "./foodSafety.js";
 import { resurfaceDismissedWarnings, resurfaceReason } from "./allergenResurface.js";
+import { resolvePrimaryProtein, isPrimaryProteinMissing } from "./proteinInference.js";
 import type { DiningMember } from "../services/diningMembers.js";
 
 // ---- 输入输出类型 ----
@@ -43,6 +44,12 @@ export interface MatchRecipeInput {
    * 不传或无物理成员填口味 → 沿用厨房画像单一口味列表（单人行为不变）。
    */
   diningMembers?: readonly DiningMember[];
+  /**
+   * 主要蛋白缺失时的处理（修复 B 对照实验；默认 penalty10=现状）：
+   * penalty30=该项扣分加重到 -30；exclude=排除候选；shop_group=单独归入
+   * needsShopping 分组（不进 matches，调用方按"需要先买菜"展示）。
+   */
+  missingPrimaryProteinPolicy?: "penalty10" | "penalty30" | "exclude" | "shop_group";
 }
 
 export interface MatchRecipeResult {
@@ -56,6 +63,8 @@ export interface MatchRecipeResult {
 export interface MatchRecipeOutcome {
   status: "matched" | "no_match";
   matches: MatchRecipeResult[];
+  /** shop_group 策略下"缺主要蛋白（需要先买菜）"的候选，不参与排序。 */
+  needsShopping: MatchRecipeResult[];
   blockingReasons: string[];
   adjustableConditions: string[];
 }
@@ -153,7 +162,9 @@ export function matchRecipesDetailed(input: MatchRecipeInput): MatchRecipeOutcom
   const currentGoal = userProfile?.goal;
 
   const results: MatchRecipeResult[] = [];
+  const shopGroup: MatchRecipeResult[] = [];
   const blockers = new Set<string>();
+  const policy = input.missingPrimaryProteinPolicy ?? "penalty10";
 
   for (const recipe of candidateRecipes) {
     let score = 0;
@@ -217,10 +228,24 @@ export function matchRecipesDetailed(input: MatchRecipeInput): MatchRecipeOutcom
       score -= matchedFromShopping.length * 2;
     }
 
-    // 缺少必需食材
-    score -= missing.length * 10;
+    // 缺少必需食材；主要蛋白缺失时按 policy 处理（修复 B，默认 penalty10=现状）
+    const primaryProtein = resolvePrimaryProtein(recipe);
+    const proteinMissing = primaryProtein ? isPrimaryProteinMissing(primaryProtein, missing) : false;
+    if (proteinMissing && (policy === "exclude" || policy === "shop_group")) {
+      if (policy === "exclude") {
+        blockers.add(`缺少主要蛋白（${primaryProtein!.value}），不作为候选`);
+        continue;
+      }
+      shopGroup.push({ recipe, score, reasons: [...reasons, `需要先买菜：主要蛋白 ${primaryProtein!.value} 缺失`], missingIngredients: missing, ingredientReadiness });
+      continue;
+    }
+    const missingPenalty = missing.reduce((sum, item) =>
+      sum + (primaryProtein && isPrimaryProteinMissing(primaryProtein, [item]) && policy === "penalty30" ? 30 : 10), 0);
+    score -= missingPenalty;
     if (missing.length > 0) {
-      reasons.push(`缺少食材：${missing.join("、")}`);
+      reasons.push(proteinMissing && policy === "penalty30"
+        ? `缺少食材：${missing.join("、")}（其中主要蛋白 ${primaryProtein!.value} 缺失，重扣）`
+        : `缺少食材：${missing.join("、")}`);
     }
 
     // 可选食材命中
@@ -459,6 +484,7 @@ export function matchRecipesDetailed(input: MatchRecipeInput): MatchRecipeOutcom
   return {
     status: results.length > 0 ? "matched" : "no_match",
     matches: results,
+    needsShopping: shopGroup,
     blockingReasons: [...blockers],
     adjustableConditions: results.length === 0
       ? ["增加可用设备或厨具", "购买符合过敏与忌口要求的食材", "放宽主动操作时间上限"]
