@@ -496,3 +496,8 @@ export function matchRecipesDetailed(input: MatchRecipeInput): MatchRecipeOutcom
 export function matchRecipes(input: MatchRecipeInput): MatchRecipeResult[] {
   return matchRecipesDetailed(input).matches;
 }
+
+/** shop_group 策略下的"需要先买菜"分组（调用方展示用）。 */
+export function needsShoppingOf(input: MatchRecipeInput): MatchRecipeResult[] {
+  return matchRecipesDetailed(input).needsShopping;
+}

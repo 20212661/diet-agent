@@ -10,6 +10,7 @@ import { recipeBlockReason } from "../recipes/executionConstraints.js";
 import { mealFitsTimeLimits } from "../recipes/mealTiming.js";
 import { assessFoodSafety } from "../recipes/foodSafety.js";
 import { diningProfileForMatching, resolveDiningMembers } from "../services/household.js";
+import { resolvePrimaryProtein } from "../recipes/proteinInference.js";
 import { safeCookingAdvice } from "../recipes/cookingAdvice.js";
 
 const Params = Type.Object({
@@ -85,6 +86,8 @@ export const generateCookingPlanTool: ToolDefinition<typeof Params> = defineTool
     const timeLimit = params.timeLimitMinutes ?? kitchen.maxActiveMinutes;
 
     // 使用 matcher 评分
+    // "今晚做什么"路径：缺主蛋白的菜归入 needsShopping 分组（不参与排序），
+    // 能直接做的排前面——见 proteinInference.ts 注释
     const matchOutcome = matchRecipesDetailed({
       recipes,
       rejectedRecipeIds: rejectedRecipeIdsForUser(params.userId),
@@ -94,11 +97,13 @@ export const generateCookingPlanTool: ToolDefinition<typeof Params> = defineTool
       userProfile: dietProfile,
       diningMembers: dining,
       feedback,
+      missingPrimaryProteinPolicy: "shop_group",
       timeLimitMinutes: timeLimit,
       energyLevel: params.energyLevel,
       desiredStyle: params.desiredStyle,
     });
     const matches = matchOutcome.matches.filter(({ recipe }) => !recipeBlockReason(recipe, kitchen, dietProfile, timeLimit));
+    const needsShopping = matchOutcome.needsShopping.filter(({ recipe }) => !recipeBlockReason(recipe, kitchen, dietProfile, timeLimit));
     // 结构化任务状态：记录本轮候选（规则层否决捕获的输入）
     noteSuggestedRecipes(params.userId, matches.slice(0, 8).map(({ recipe }) => recipe.id));
 

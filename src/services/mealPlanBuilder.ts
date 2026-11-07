@@ -197,6 +197,8 @@ export function buildAndSaveMealPlan(params: MealPlanRequest) {
     const activeItems: IngredientItem[] = inventory.availableIngredients.filter((item) => isAvailableOn(item, dateText));
     const allAvailableNames = activeItems.map((item) => item.name);
     const usedToday = new Set<string>();
+    // 当天排菜（days=1）走"今晚做什么"路径：缺主蛋白的菜不参与排序；
+    // 多天计划走 penalty10（采购清单会补上缺失食材）
     const matches = matchRecipes({
       recipes,
       rejectedRecipeIds: rejectedRecipeIdsForUser(params.userId),
@@ -210,6 +212,7 @@ export function buildAndSaveMealPlan(params: MealPlanRequest) {
       timeLimitMinutes,
       energyLevel,
       desiredStyle: [...preferredStyles, ...(params.target ? [params.target] : [])].join(" ") || undefined,
+      ...(daysCount === 1 ? { missingPrimaryProteinPolicy: "shop_group" as const } : {}),
     }).filter(({ recipe }) => !recipeBlockReason(recipe, kitchen, userProfile, timeLimitMinutes));
 
     const plannedMeals: PlannedMeal[] = [];
