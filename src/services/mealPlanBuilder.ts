@@ -6,6 +6,7 @@ import { assessFoodSafety } from "../recipes/foodSafety.js";
 import { normalizeIngredientId } from "../recipes/ingredientTaxonomy.js";
 import { executionBlockReason, recipeBlockReason, type ExecutableMeal } from "../recipes/executionConstraints.js";
 import { diningProfileForMatching, resolveDiningMembers } from "./household.js";
+import { DEFAULT_PANTRY_STAPLES } from "../recipes/ingredientTaxonomy.js";
 import type { KitchenProfile } from "../types/diet.js";
 import { isAvailableOn, type EnergyLevel, type IngredientItem, type MealPlanDay, type MealType, type PlannedMeal, type UserGoal, type UserProfile } from "../types/diet.js";
 
@@ -212,7 +213,7 @@ export function buildAndSaveMealPlan(params: MealPlanRequest) {
       timeLimitMinutes,
       energyLevel,
       desiredStyle: [...preferredStyles, ...(params.target ? [params.target] : [])].join(" ") || undefined,
-      ...(daysCount === 1 ? { missingPrimaryProteinPolicy: "shop_group" as const } : {}),
+      ...(daysCount === 1 ? { missingPrimaryProteinPolicy: "shop_group" as const, pantryStaples: kitchen.pantryStaples ?? DEFAULT_PANTRY_STAPLES } : {}),
     }).filter(({ recipe }) => !recipeBlockReason(recipe, kitchen, userProfile, timeLimitMinutes));
 
     const plannedMeals: PlannedMeal[] = [];

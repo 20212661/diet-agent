@@ -16,7 +16,7 @@ import type {
 } from "../types/diet.js";
 import { isAvailable, isAvailableOn } from "../types/diet.js";
 import { getVerifiedCalories } from "../nutrition/nutritionEstimate.js";
-import { normalizeIngredientId } from "./ingredientTaxonomy.js";
+import { normalizeIngredientId, DEFAULT_PANTRY_STAPLES } from "./ingredientTaxonomy.js";
 import { assessFoodSafety } from "./foodSafety.js";
 import { resurfaceDismissedWarnings, resurfaceReason } from "./allergenResurface.js";
 import { resolvePrimaryProtein, isPrimaryProteinMissing } from "./proteinInference.js";
@@ -44,6 +44,12 @@ export interface MatchRecipeInput {
    * 不传或无物理成员填口味 → 沿用厨房画像单一口味列表（单人行为不变）。
    */
   diningMembers?: readonly DiningMember[];
+  /**
+   * 常备调料（缺料计算视为"已有"；不影响过敏判定与评分）。默认取
+   * KitchenProfile.pantryStaples（未设置时 DEFAULT_PANTRY_STAPLES）。
+   * 显式传入可覆盖厨房画像（评测用）。
+   */
+  pantryStaples?: readonly string[];
   /**
    * 主要蛋白缺失时的处理（修复 B 对照实验；默认 penalty10=现状）：
    * penalty30=该项扣分加重到 -30；exclude=排除候选；shop_group=单独归入
@@ -141,6 +147,9 @@ export function matchRecipesDetailed(input: MatchRecipeInput): MatchRecipeOutcom
     desiredStyle,
     ingredientMatcher = ingredientMatched,
   } = input;
+  // 常备调料：调用方显式传入（或厨房画像自定义）才生效——"今晚"路径 opt-in，
+  // 周计划/测试/旧调用不传 = 不过滤（向后兼容，missing 保持旧行为）
+  const pantryStaples = input.pantryStaples ?? input.kitchenProfile.pantryStaples ?? [];
 
   // 被否决的菜在评分前直接排除（任务结束/无任务时为空集，不过滤）
   const rejected = new Set(rejectedRecipeIds ?? []);
@@ -171,7 +180,11 @@ export function matchRecipesDetailed(input: MatchRecipeInput): MatchRecipeOutcom
     const reasons: string[] = [];
     const ingredientReadiness = computeIngredientReadiness(recipe.ingredients, activeIngredients, shoppingList, input.date);
     // Compatibility contract: missing means absent from owned inventory, including items already on the shopping list.
-    const missing = ingredientReadiness.filter((item) => item.status !== "owned").map((item) => item.ingredient);
+    // 常备调料视为"已有"：只影响 missing 计算（+shop_group 分组门），不影响评分与过敏
+    const missing = ingredientReadiness
+      .filter((item) => item.status !== "owned")
+      .map((item) => item.ingredient)
+      .filter((item) => !pantryStaples.some((staple) => ingredientMatcher(staple, [item]) || ingredientMatcher(item, [staple])));
 
     // ========== 1. 忌口/过敏检查 ==========
     const allRecipeFoods = [
@@ -231,12 +244,17 @@ export function matchRecipesDetailed(input: MatchRecipeInput): MatchRecipeOutcom
     // 缺少必需食材；主要蛋白缺失时按 policy 处理（修复 B，默认 penalty10=现状）
     const primaryProtein = resolvePrimaryProtein(recipe);
     const proteinMissing = primaryProtein ? isPrimaryProteinMissing(primaryProtein, missing) : false;
-    if (proteinMissing && (policy === "exclude" || policy === "shop_group")) {
-      if (policy === "exclude") {
-        blockers.add(`缺少主要蛋白（${primaryProtein!.value}），不作为候选`);
+    if (policy === "shop_group") {
+      // "今晚做什么"路径：必需食材全部齐全（含常备调料）才能进"能直接做"分组
+      if (missing.length > 0) {
+        const lacking = primaryProtein && isPrimaryProteinMissing(primaryProtein, missing)
+          ? `主要蛋白 ${primaryProtein.value}`
+          : missing.slice(0, 3).join("、");
+        shopGroup.push({ recipe, score, reasons: [...reasons, `需要先买菜：缺${lacking}`], missingIngredients: missing, ingredientReadiness });
         continue;
       }
-      shopGroup.push({ recipe, score, reasons: [...reasons, `需要先买菜：主要蛋白 ${primaryProtein!.value} 缺失`], missingIngredients: missing, ingredientReadiness });
+    } else if (proteinMissing && policy === "exclude") {
+      blockers.add(`缺少主要蛋白（${primaryProtein!.value}），不作为候选`);
       continue;
     }
     const missingPenalty = missing.reduce((sum, item) =>

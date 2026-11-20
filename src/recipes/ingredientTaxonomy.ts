@@ -230,6 +230,20 @@ const SEGMENT_PREFIX_LABELS = ["主料：", "辅料：", "调料：", "其中应
 /** 纯烹饪修饰词（跟在食材后描述形态），不是独立食材。 */
 const SEGMENT_NOISE = new Set(["带皮", "带骨", "去皮", "去骨", "切块", "切片", "切丝"]);
 
+/**
+ * 默认常备调料清单（家喻户晓的基础调味/香辛料，保守口径不含过敏原载体）。
+ * 匹配器在缺料计算时视为"已有"（不影响过敏判定——过敏检查看的是菜谱自身
+ * 食材面，不看库存）；标注校验脚本（verify-matching-family.ts）共用此清单。
+ * 用户可在厨房画像中自定义增删（KitchenProfile.pantryStaples）。
+ */
+export const DEFAULT_PANTRY_STAPLES: readonly string[] = [
+  "盐", "食盐", "食用盐", "糖", "白糖", "冰糖", "生抽", "老抽", "酱油", "醋", "料酒", "食用油", "油",
+  "淀粉", "生粉", "水", "温水", "热水", "冷水",
+  "葱", "小葱", "大葱", "香葱", "姜", "蒜", "白胡椒粉", "黑胡椒粉", "胡椒粉",
+  "五香粉", "花椒", "干辣椒", "八角", "香叶", "桂皮",
+  "蒜片", "姜片", "蒜末", "姜末", "蒜蓉", "姜丝", "葱花", "葱段", "葱白", "剩米饭",
+];
+
 export function splitJoinedIngredients(items: readonly string[]): string[] {
   const result: string[] = [];
   for (const item of items) {

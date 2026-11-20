@@ -30,13 +30,23 @@ export interface PrimaryProtein {
   source: "field" | "inferred";
 }
 
-/** 解析菜谱的主要蛋白：字段优先（导入抽取），为空时按食材顺序推断第一个蛋白类。 */
+/**
+ * 解析菜谱的主要蛋白：
+ * 1. 字段值（导入抽取）——但字段 ID 必须能对应到食材清单里的某一项；
+ * 2. 否则从食材清单顺序推断第一个蛋白类食材（如排骨炖土豆的字段"猪肉"
+ *    不在食材里，推断出"排骨"）。
+ */
 export function resolvePrimaryProtein(recipe: Pick<RecipeLike, "primaryProtein" | "ingredients">): PrimaryProtein | undefined {
+  const inferred = recipe.ingredients.find((ingredient) => PRIMARY_PROTEIN_IDS.has(normalizeIngredientId(ingredient)));
   if (recipe.primaryProtein && recipe.primaryProtein.trim()) {
-    return { value: recipe.primaryProtein, source: "field" };
+    // 字段 ID 在食材清单里 → 用字段值（可追溯）
+    const fieldId = normalizeIngredientId(recipe.primaryProtein);
+    if (inferred && normalizeIngredientId(inferred) === fieldId) {
+      return { value: recipe.primaryProtein, source: "field" };
+    }
+    // 字段 ID 不在食材里（排骨炖土豆："猪肉"≠"排骨"）→ 用推断值
   }
-  const hit = recipe.ingredients.find((ingredient) => PRIMARY_PROTEIN_IDS.has(normalizeIngredientId(ingredient)));
-  return hit ? { value: hit, source: "inferred" } : undefined;
+  return inferred ? { value: inferred, source: "inferred" } : undefined;
 }
 
 interface RecipeLike {

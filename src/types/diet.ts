@@ -161,6 +161,8 @@ export interface KitchenProfile {
   maxTotalMinutes: number;
   tastePreferences: string[];
   cookingPreferences: string[];
+  /** 常备调料（匹配器缺料计算时视为"已有"；未设置时用 DEFAULT_PANTRY_STAPLES）。 */
+  pantryStaples?: string[];
   updatedAt: string;
 }
 

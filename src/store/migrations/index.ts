@@ -3,12 +3,16 @@ import { copyFileSync, existsSync, readdirSync, statSync, unlinkSync } from "nod
 import { dirname, extname, basename, join } from "node:path";
 import { deriveRecipeIngredientMetadata, splitJoinedIngredients } from "../../recipes/ingredientTaxonomy.js";
 
-export const CURRENT_SCHEMA_VERSION = 27;
+export const CURRENT_SCHEMA_VERSION = 28;
 
 interface Migration {
   version: number;
   description: string;
   up(db: Database.Database): void;
+}
+
+function tableExistsSafe(db: Database.Database, tableName: string): boolean {
+  return !!db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(tableName);
 }
 
 function tableHasColumn(db: Database.Database, tableName: string, columnName: string): boolean {
@@ -549,6 +553,16 @@ const migrations: readonly Migration[] = [
     description: "连写食材名拆分（、/，/,，括号内不拆）+ 派生字段重算——修正整串命中夸大\"库存已有\"",
     up(db) {
       recomputeDerivedMetadataV26(db, { splitJoined: true });
+    },
+  },
+  {
+    version: 28,
+    description: "厨房画像加常备调料列（pantry_staples_json；NULL=用默认清单）",
+    up(db) {
+      // v18 legacy fixture 不建 kitchen_profiles（base schema 被跳过），守卫表存在
+      if (tableHasColumn(db, "kitchen_profiles", "user_id") || tableExistsSafe(db, "kitchen_profiles")) {
+        addColumnIfMissing(db, "kitchen_profiles", "pantry_staples_json TEXT", "pantry_staples_json");
+      }
     },
   },
 ];

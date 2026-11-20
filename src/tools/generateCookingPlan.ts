@@ -11,6 +11,7 @@ import { mealFitsTimeLimits } from "../recipes/mealTiming.js";
 import { assessFoodSafety } from "../recipes/foodSafety.js";
 import { diningProfileForMatching, resolveDiningMembers } from "../services/household.js";
 import { resolvePrimaryProtein } from "../recipes/proteinInference.js";
+import { DEFAULT_PANTRY_STAPLES } from "../recipes/ingredientTaxonomy.js";
 import { safeCookingAdvice } from "../recipes/cookingAdvice.js";
 
 const Params = Type.Object({
@@ -98,6 +99,7 @@ export const generateCookingPlanTool: ToolDefinition<typeof Params> = defineTool
       diningMembers: dining,
       feedback,
       missingPrimaryProteinPolicy: "shop_group",
+      pantryStaples: kitchen.pantryStaples ?? DEFAULT_PANTRY_STAPLES,
       timeLimitMinutes: timeLimit,
       energyLevel: params.energyLevel,
       desiredStyle: params.desiredStyle,

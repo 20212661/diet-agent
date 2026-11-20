@@ -32,26 +32,32 @@ export function upsertKitchenProfile(
     maxTotalMinutes: row.max_total_minutes as number,
     tastePreferences: parseJsonArray<string>(row.taste_preferences_json as string),
     cookingPreferences: parseJsonArray<string>(row.cooking_preferences_json as string),
+    ...(row.pantry_staples_json != null
+      ? { pantryStaples: parseJsonArray<string>(row.pantry_staples_json as string) }
+      : {}),
   } : undefined;
   const merged: KitchenProfile = { ...defaults, ...existing, ...patch, userId, updatedAt: nextUpdatedAt(row?.updated_at as string | undefined) };
 
   db.prepare(`
     INSERT INTO kitchen_profiles (user_id, burners, has_oven, has_microwave, has_rice_cooker,
       cookware_json, max_active_minutes, max_total_minutes, taste_preferences_json,
-      cooking_preferences_json, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      cooking_preferences_json, pantry_staples_json, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(user_id) DO UPDATE SET
       burners = excluded.burners, has_oven = excluded.has_oven,
       has_microwave = excluded.has_microwave, has_rice_cooker = excluded.has_rice_cooker,
       cookware_json = excluded.cookware_json, max_active_minutes = excluded.max_active_minutes,
       max_total_minutes = excluded.max_total_minutes,
       taste_preferences_json = excluded.taste_preferences_json,
-      cooking_preferences_json = excluded.cooking_preferences_json, updated_at = excluded.updated_at
+      cooking_preferences_json = excluded.cooking_preferences_json,
+      pantry_staples_json = excluded.pantry_staples_json, updated_at = excluded.updated_at
   `).run(
     merged.userId, merged.burners, merged.hasOven ? 1 : 0, merged.hasMicrowave ? 1 : 0,
     merged.hasRiceCooker ? 1 : 0, stringifyJson(merged.cookware), merged.maxActiveMinutes,
     merged.maxTotalMinutes, stringifyJson(merged.tastePreferences),
-    stringifyJson(merged.cookingPreferences), merged.updatedAt
+    stringifyJson(merged.cookingPreferences),
+    merged.pantryStaples !== undefined ? stringifyJson(merged.pantryStaples) : null,
+    merged.updatedAt
   );
   return merged;
 }
@@ -72,6 +78,9 @@ export function getKitchenProfile(userId: string): KitchenProfile {
     maxTotalMinutes: row.max_total_minutes as number,
     tastePreferences: parseJsonArray<string>(row.taste_preferences_json as string),
     cookingPreferences: parseJsonArray<string>(row.cooking_preferences_json as string),
+    ...(row.pantry_staples_json != null
+      ? { pantryStaples: parseJsonArray<string>(row.pantry_staples_json as string) }
+      : {}),
     updatedAt: row.updated_at as string,
   };
 }
